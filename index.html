@@ -51,6 +51,10 @@ const IconList = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/
 
 // --- KONFIGURATION ---
 const EXPENSE_TYPES = ['Travelcosts', 'Hotel', 'Other'];
+const DEFAULT_HOURLY_RATE = 80;
+const HOURS_PER_WEEK = 40;
+const WEEKS_IN_YEAR = 52;
+const DEFAULT_WEEKS_AHEAD = 12;
 
 // Hilfsfunktion KW
 const getWeekString = (date) => {
@@ -99,7 +103,7 @@ function App() {
     const [selectedProjectDetails, setSelectedProjectDetails] = useState(null);
 
     // Zeitspanne für Auslastungs-Berechnung
-    const [weeksAhead, setWeeksAhead] = useState(12);
+    const [weeksAhead, setWeeksAhead] = useState(DEFAULT_WEEKS_AHEAD);
 
     // Modals
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -114,7 +118,7 @@ function App() {
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '' });
     const [editingEmpId, setEditingEmpId] = useState(null);
-    const [projForm, setProjForm] = useState({ name: '', category: '', startWeek: '', ibnWeek: '', color: 'bg-indigo-500', hourlyRate: 80, billable: true });
+    const [projForm, setProjForm] = useState({ name: '', category: '', startWeek: '', ibnWeek: '', color: 'bg-indigo-500', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
     // Category Forms
@@ -150,7 +154,7 @@ function App() {
         const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
         const w = [];
         const today = new Date();
-        for(let i=0; i<52; i++) {
+        for(let i=0; i<WEEKS_IN_YEAR; i++) {
             const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (i*7));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
@@ -268,7 +272,9 @@ function App() {
                 if (parsed.projCategories) setProjCategories(parsed.projCategories);
                 if (parsed.basicTasks) setBasicTasks(parsed.basicTasks);
                 if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
-            } catch (err) {}
+            } catch (err) {
+                alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+            }
         };
         reader.readAsText(file);
     };
@@ -290,7 +296,7 @@ function App() {
 
     const handleInvoiceExport = () => {
         const proj = projects.find(p => p.id === selectedProjectDetails);
-        const rate = proj.hourlyRate !== undefined ? proj.hourlyRate : 80;
+        const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
         const rows = [];
         
         rows.push(["Rechnung für Projekt:", proj.name]);
@@ -305,7 +311,7 @@ function App() {
             if (invoiceSelection.emps[empId]) {
                 const emp = employees.find(e => e.id === empId);
                 const empAss = assignments.filter(a => a.reference === proj.id && a.empId === empId);
-                const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * 40), 0);
+                const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * HOURS_PER_WEEK), 0);
                 if (hours > 0 && proj.billable !== false) {
                     const cost = hours * rate;
                     total += cost;
@@ -339,6 +345,16 @@ function App() {
     };
 
     // --- SUB-COMPONENTS ---
+    const ModalHeader = ({ title, subtitle, onClose }) => (
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div>
+                <h3 className="text-slate-900 text-lg font-medium">{title}</h3>
+                {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><IconX size={20}/></button>
+        </div>
+    );
+
     const AssignmentModal = () => {
         if (!isAssignModalOpen || !assignContext) return null;
         
@@ -355,10 +371,7 @@ function App() {
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <h3 className="text-slate-900 text-lg font-medium">Planung bearbeiten</h3>
-                        <button onClick={() => setIsAssignModalOpen(false)} className="text-slate-400 hover:text-slate-600"><IconX size={20}/></button>
-                    </div>
+                    <ModalHeader title="Planung bearbeiten" onClose={() => setIsAssignModalOpen(false)} />
                     <div className="p-6 space-y-4">
                         <div className="text-sm text-slate-500 mb-4">
                             Mitarbeiter: <span className="text-slate-900 font-medium">{emp?.name}</span> <br/>
@@ -450,10 +463,7 @@ function App() {
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <h3 className="text-slate-900 text-lg font-medium">Reisekosten erfassen</h3>
-                        <button onClick={() => setIsExpenseModalOpen(false)} className="text-slate-400 hover:text-slate-600"><IconX size={20}/></button>
-                    </div>
+                    <ModalHeader title="Reisekosten erfassen" onClose={() => setIsExpenseModalOpen(false)} />
                     <div className="p-6 space-y-4">
                         <div>
                             <label className="block text-sm text-slate-700 mb-1 font-medium">Mitarbeiter</label>
@@ -497,7 +507,7 @@ function App() {
         if (!isInvoiceModalOpen || !selectedProjectDetails) return null;
 
         const proj = projects.find(p => p.id === selectedProjectDetails);
-        const rate = proj.hourlyRate !== undefined ? proj.hourlyRate : 80;
+        const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
 
         const projAssignments = assignments.filter(a => a.reference === selectedProjectDetails);
         const empIds = [...new Set(projAssignments.map(a => a.empId))];
@@ -508,13 +518,7 @@ function App() {
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <div>
-                            <h3 className="text-slate-900 text-lg font-medium">Rechnung konfigurieren</h3>
-                            <p className="text-sm text-slate-500">Projekt: {proj.name}</p>
-                        </div>
-                        <button onClick={() => setIsInvoiceModalOpen(false)} className="text-slate-400 hover:text-slate-600"><IconX size={20}/></button>
-                    </div>
+                    <ModalHeader title="Rechnung konfigurieren" subtitle={`Projekt: ${proj.name}`} onClose={() => setIsInvoiceModalOpen(false)} />
                     
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                         {proj.billable !== false && (
@@ -524,7 +528,7 @@ function App() {
                                     {empIds.map(empId => {
                                         const emp = employees.find(e => e.id === empId);
                                         const empAss = projAssignments.filter(a => a.empId === empId);
-                                        const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * 40), 0);
+                                        const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * HOURS_PER_WEEK), 0);
                                         if (hours === 0) return null;
                                         
                                         const cost = hours * rate;
@@ -846,7 +850,7 @@ function App() {
                                                     </td>
                                                     {weeks.map(w => {
                                                         const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
-                                                        const projAss = assignments.filter(a => a.projectId === proj.id || a.reference === proj.id).filter(a => a.week === w.id);
+                                                        const projAss = assignments.filter(a => a.reference === proj.id && a.week === w.id);
                                                         
                                                         return (
                                                             <td key={w.id} 
@@ -1058,7 +1062,7 @@ function App() {
                         {(proj.billable !== false) && (
                             <div className="flex items-center gap-3 ml-auto">
                                 <span className="text-slate-700 font-medium">Stundenlohn (€/h):</span>
-                                <input type="number" value={proj.hourlyRate !== undefined ? proj.hourlyRate : 80} onChange={updateRate} className="w-24 p-2 border border-slate-300 rounded-md text-slate-900 text-lg text-center font-medium" />
+                                <input type="number" value={proj.hourlyRate ?? DEFAULT_HOURLY_RATE} onChange={updateRate} className="w-24 p-2 border border-slate-300 rounded-md text-slate-900 text-lg text-center font-medium" />
                             </div>
                         )}
                         
@@ -1097,9 +1101,9 @@ function App() {
                                     const empAss = projAssignments.filter(a => a.empId === empId);
                                     
                                     const weeksAssigned = empAss.map(a => a.week.split('-W')[1]).join(', ');
-                                    const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * 40), 0);
-                                    
-                                    const laborCost = (proj.billable !== false) ? hours * (proj.hourlyRate !== undefined ? proj.hourlyRate : 80) : 0;
+                                    const hours = empAss.reduce((acc, a) => acc + (a.percent / 100 * HOURS_PER_WEEK), 0);
+
+                                    const laborCost = (proj.billable !== false) ? hours * (proj.hourlyRate ?? DEFAULT_HOURLY_RATE) : 0;
                                     
                                     const empExpenses = expenses.filter(e => e.projectId === proj.id && e.empId === empId);
                                     const travel = empExpenses.filter(e => e.type === 'Travelcosts').reduce((acc, e) => acc + e.amount, 0);
@@ -1133,12 +1137,12 @@ function App() {
                                     <tr>
                                         <td colSpan="2" className="p-4 text-right text-slate-900 text-lg font-medium">Projekt Summen:</td>
                                         <td className="p-4 text-slate-900 text-lg font-medium">{totalProjectHours}</td>
-                                        <td className="p-4 text-slate-900 text-lg font-medium">{((proj.billable !== false) ? totalProjectHours * (proj.hourlyRate !== undefined ? proj.hourlyRate : 80) : 0).toFixed(2)}</td>
+                                        <td className="p-4 text-slate-900 text-lg font-medium">{((proj.billable !== false) ? totalProjectHours * (proj.hourlyRate ?? DEFAULT_HOURLY_RATE) : 0).toFixed(2)}</td>
                                         <td className="p-4 text-slate-900 text-lg font-medium">{totalProjectTravel.toFixed(2)}</td>
                                         <td className="p-4 text-slate-900 text-lg font-medium">{totalProjectHotel.toFixed(2)}</td>
                                         <td className="p-4 text-slate-900 text-lg font-medium">{totalProjectOther.toFixed(2)}</td>
                                         <td className="p-4 text-indigo-600 text-xl font-medium">
-                                            {(((proj.billable !== false) ? totalProjectHours * (proj.hourlyRate !== undefined ? proj.hourlyRate : 80) : 0) + totalProjectTravel + totalProjectHotel + totalProjectOther).toFixed(2)}
+                                            {(((proj.billable !== false) ? totalProjectHours * (proj.hourlyRate ?? DEFAULT_HOURLY_RATE) : 0) + totalProjectTravel + totalProjectHotel + totalProjectOther).toFixed(2)}
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -1161,7 +1165,7 @@ function App() {
                 setProjects(projects.map(p => p.id === editingProjectId ? { ...p, ...projForm } : p));
                 setEditingProjectId(null);
             } else {
-                setProjects([...projects, { id: `p-${Date.now()}`, ...projForm, billable: true, hourlyRate: 80 }]);
+                setProjects([...projects, { id: `p-${Date.now()}`, ...projForm, billable: true, hourlyRate: DEFAULT_HOURLY_RATE }]);
             }
             setProjForm({ name: '', category: projCategories[0] || '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-indigo-500' });
         };
