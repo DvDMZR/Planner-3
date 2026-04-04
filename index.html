@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Einsatzplanung 3.0 – v0.4</title>
+    <title>Einsatzplanung 3.0 – v0.4.1</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -147,6 +147,7 @@ function App() {
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
     const [copyContext, setCopyContext] = useState(null);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [pastProjectsExpanded, setPastProjectsExpanded] = useState(false);
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [invoiceSelection, setInvoiceSelection] = useState({ emps: {}, costs: {} });
@@ -942,7 +943,7 @@ function App() {
                 <div className="bg-gea-500 text-white p-2 rounded-lg"><IconBriefcase size={20} /></div>
                 <div>
                     <h1 className="text-white text-xl tracking-tight font-medium">Einsatzplanung 3.0</h1>
-                    <span className="text-xs text-slate-400 font-medium">v0.4</span>
+                    <span className="text-xs text-slate-400 font-medium">v0.4.1</span>
                 </div>
             </div>
             <nav className="flex-1 py-4 space-y-1 px-3">
@@ -1638,7 +1639,6 @@ function App() {
         const activeProjects = projects.filter(p => p.ibnWeek >= now);
         const pastProjects = projects.filter(p => p.ibnWeek < now);
         const activeCats = [...new Set(activeProjects.map(p => p.category))];
-        const [pastExpanded, setPastExpanded] = useState(false);
 
         const ProjectRow = ({ p }) => {
             const effStatus = computeAutoStatus(p);
@@ -1747,13 +1747,13 @@ function App() {
                     {/* Past projects */}
                     {pastProjects.length > 0 && (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <button onClick={() => setPastExpanded(e => !e)}
+                            <button onClick={() => setPastProjectsExpanded(e => !e)}
                                 className="w-full p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-3 hover:bg-slate-100 transition-colors">
-                                <span className="text-slate-400">{pastExpanded ? <IconChevronDown size={18}/> : <IconChevronRight size={18}/>}</span>
+                                <span className="text-slate-400">{pastProjectsExpanded ? <IconChevronDown size={18}/> : <IconChevronRight size={18}/>}</span>
                                 <span className="text-slate-600 font-medium">Vergangene Projekte</span>
                                 <span className="ml-2 px-2 py-0.5 bg-white border border-slate-200 rounded-full text-xs text-slate-500 font-medium">{pastProjects.length}</span>
                             </button>
-                            {pastExpanded && (
+                            {pastProjectsExpanded && (
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-slate-50/50 border-b border-slate-100">
                                         <tr>
