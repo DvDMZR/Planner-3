@@ -693,18 +693,41 @@ function App() {
         const projAssignments = assignments.filter(a => a.reference === projectId);
         const empIds = [...new Set(projAssignments.map(a => a.empId))];
         const projEmployees = employees.filter(e => empIds.includes(e.id));
+        const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
-        const [form, setForm] = useState(existingItem ? { ...existingItem } : {
+        const initPeriods = () => {
+            if (existingItem?.presencePeriods?.length > 0) return existingItem.presencePeriods;
+            if (existingItem?.week) return [{ week: existingItem.week, fromDay: 'Mo', toDay: 'Fr' }];
+            return [{ week: '', fromDay: 'Mo', toDay: 'Fr' }];
+        };
+
+        const [form, setForm] = useState(existingItem ? {
+            empId: existingItem.empId || '',
+            type: existingItem.type || COST_TYPES[0],
+            description: existingItem.description || '',
+            hours: existingItem.hours != null ? String(existingItem.hours) : '',
+            hourlyRate: existingItem.hourlyRate != null ? String(existingItem.hourlyRate) : '',
+            amount: existingItem.amount != null ? String(existingItem.amount) : '',
+            reisekostenAmount: existingItem.reisekostenAmount != null ? String(existingItem.reisekostenAmount) : (existingItem.travelAmount != null ? String(existingItem.travelAmount) : ''),
+            unterkunftAmount: existingItem.unterkunftAmount != null ? String(existingItem.unterkunftAmount) : (existingItem.hotelAmount != null ? String(existingItem.hotelAmount) : ''),
+            otherTravelAmount: existingItem.otherTravelAmount != null ? String(existingItem.otherTravelAmount) : '',
+        } : {
             empId: projEmployees[0]?.id || '',
             type: COST_TYPES[0],
             description: '',
-            week: '',
             hours: '',
             hourlyRate: '',
             amount: '',
-            travelAmount: '',
-            hotelAmount: '',
+            reisekostenAmount: '',
+            unterkunftAmount: '',
+            otherTravelAmount: '',
         });
+
+        const [periods, setPeriods] = useState(initPeriods());
+
+        const updatePeriod = (i, field, val) => setPeriods(prev => prev.map((p, idx) => idx === i ? {...p, [field]: val} : p));
+        const addPeriod = () => setPeriods(prev => [...prev, { week: '', fromDay: 'Mo', toDay: 'Fr' }]);
+        const removePeriod = (i) => setPeriods(prev => prev.filter((_, idx) => idx !== i));
 
         const autoAmount = (form.hours !== '' && form.hourlyRate !== '')
             ? (parseFloat(form.hours) || 0) * (parseFloat(form.hourlyRate) || 0)
@@ -713,18 +736,21 @@ function App() {
         const handleSave = () => {
             if (!form.empId) return;
             const computedAmount = autoAmount !== null ? autoAmount : parseFloat(form.amount) || 0;
+            const validPeriods = periods.filter(p => p.week);
             const item = {
                 id: existingItem?.id || `ci-${Date.now()}`,
                 projectId,
                 empId: form.empId,
                 type: form.type,
                 description: form.description,
-                week: form.week || null,
+                week: validPeriods[0]?.week || null,
+                presencePeriods: validPeriods.length > 0 ? validPeriods : null,
                 hours: form.hours !== '' ? parseFloat(form.hours) : null,
                 hourlyRate: form.hourlyRate !== '' ? parseFloat(form.hourlyRate) : null,
                 amount: computedAmount,
-                travelAmount: form.type === 'Reisekosten' && form.travelAmount !== '' ? parseFloat(form.travelAmount) : null,
-                hotelAmount: form.type === 'Reisekosten' && form.hotelAmount !== '' ? parseFloat(form.hotelAmount) : null,
+                reisekostenAmount: form.type === 'Reisekosten' && form.reisekostenAmount !== '' ? parseFloat(form.reisekostenAmount) : null,
+                unterkunftAmount: form.type === 'Reisekosten' && form.unterkunftAmount !== '' ? parseFloat(form.unterkunftAmount) : null,
+                otherTravelAmount: form.type === 'Reisekosten' && form.otherTravelAmount !== '' ? parseFloat(form.otherTravelAmount) : null,
             };
             if (existingItem) {
                 setCostItems(costItems.map(c => c.id === existingItem.id ? item : c));
@@ -739,14 +765,20 @@ function App() {
             onClose();
         };
 
+        const periodsSummary = periods.filter(p => p.week).map(p => {
+            const kw = p.week.split('-W')[1];
+            return `KW${kw} (${p.fromDay}–${p.toDay})`;
+        }).join(', ');
+
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden">
                     <ModalHeader
                         title={existingItem ? 'Kostenpunkt bearbeiten' : 'Kostenpunkt erfassen'}
                         onClose={onClose}
                     />
-                    <div className="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+                    <div className="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+                        {/* Mitarbeiter + Kostenart */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs text-slate-500 mb-1 font-medium">Mitarbeiter</label>
@@ -768,6 +800,7 @@ function App() {
                             </div>
                         </div>
 
+                        {/* Beschreibung */}
                         <div>
                             <label className="block text-xs text-slate-500 mb-1 font-medium">Beschreibung</label>
                             <input type="text" value={form.description}
@@ -776,59 +809,88 @@ function App() {
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-xs text-slate-500 mb-1 font-medium">KW (optional)</label>
-                                <input type="week" value={form.week || ''}
-                                    onChange={e => setForm({...form, week: e.target.value})}
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
+                        {/* Anwesenheitszeiträume */}
+                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                            <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                <span className="text-xs font-medium text-slate-600">Anwesenheitszeiträume (optional)</span>
+                                <button onClick={addPeriod} className="text-xs text-gea-600 hover:text-gea-700 font-medium flex items-center gap-1">
+                                    <IconPlus size={12}/> Zeitraum hinzufügen
+                                </button>
                             </div>
+                            <div className="p-3 space-y-2">
+                                {periods.map((p, i) => (
+                                    <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+                                        <input type="week" value={p.week}
+                                            onChange={e => updatePeriod(i, 'week', e.target.value)}
+                                            className="p-2 border border-slate-300 rounded text-sm"/>
+                                        <select value={p.fromDay} onChange={e => updatePeriod(i, 'fromDay', e.target.value)}
+                                            className="p-2 border border-slate-300 rounded text-sm">
+                                            {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                        <select value={p.toDay} onChange={e => updatePeriod(i, 'toDay', e.target.value)}
+                                            className="p-2 border border-slate-300 rounded text-sm">
+                                            {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                        <button onClick={() => removePeriod(i)} disabled={periods.length === 1}
+                                            className="text-slate-400 hover:text-rose-500 disabled:opacity-30 p-1">
+                                            <IconX size={14}/>
+                                        </button>
+                                    </div>
+                                ))}
+                                {periodsSummary && <p className="text-xs text-slate-400 mt-1">{periodsSummary}</p>}
+                            </div>
+                        </div>
+
+                        {/* Stunden + Stundensatz */}
+                        <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-xs text-slate-500 mb-1 font-medium">Stunden (optional)</label>
                                 <input type="number" min="0" step="0.5" value={form.hours}
                                     onChange={e => setForm({...form, hours: e.target.value})}
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                                    placeholder="z.B. 8"/>
+                                    className="w-full p-2 border border-slate-300 rounded-md text-sm" placeholder="z.B. 8"/>
                             </div>
                             <div>
                                 <label className="block text-xs text-slate-500 mb-1 font-medium">€/Std. (optional)</label>
                                 <input type="number" min="0" step="1" value={form.hourlyRate}
                                     onChange={e => setForm({...form, hourlyRate: e.target.value})}
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                                    placeholder={`${DEFAULT_HOURLY_RATE}`}/>
+                                    className="w-full p-2 border border-slate-300 rounded-md text-sm" placeholder={`${DEFAULT_HOURLY_RATE}`}/>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-500 mb-1 font-medium">
+                                    Betrag (€)
+                                    {autoAmount !== null && <span className="ml-1 text-gea-600">= {autoAmount.toFixed(2)}</span>}
+                                </label>
+                                <input type="number" min="0" step="0.01"
+                                    value={autoAmount !== null ? autoAmount.toFixed(2) : form.amount}
+                                    onChange={e => setForm({...form, amount: e.target.value})}
+                                    disabled={autoAmount !== null}
+                                    className={`w-full p-2 border border-slate-300 rounded-md text-sm ${autoAmount !== null ? 'bg-slate-50 text-slate-400' : ''}`}
+                                    placeholder="0.00"/>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">
-                                Betrag (€)
-                                {autoAmount !== null && <span className="ml-2 text-gea-600 font-medium">→ Auto: {autoAmount.toFixed(2)} €</span>}
-                            </label>
-                            <input type="number" min="0" step="0.01"
-                                value={autoAmount !== null ? autoAmount.toFixed(2) : form.amount}
-                                onChange={e => setForm({...form, amount: e.target.value})}
-                                disabled={autoAmount !== null}
-                                className={`w-full p-2 border border-slate-300 rounded-md text-sm ${autoAmount !== null ? 'bg-slate-50 text-slate-400' : ''}`}
-                                placeholder="0.00"/>
-                        </div>
-
+                        {/* Reisekosten Split */}
                         {form.type === 'Reisekosten' && (
                             <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
                                 <p className="text-xs text-slate-500 font-medium">Reisekosten aufsplitten (optional)</p>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-3">
                                     <div>
-                                        <label className="block text-xs text-slate-500 mb-1">Fahrtkosten (€)</label>
-                                        <input type="number" min="0" step="0.01" value={form.travelAmount}
-                                            onChange={e => setForm({...form, travelAmount: e.target.value})}
-                                            className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
-                                            placeholder="0.00"/>
+                                        <label className="block text-xs text-slate-500 mb-1">Reisekosten (€)</label>
+                                        <input type="number" min="0" step="0.01" value={form.reisekostenAmount}
+                                            onChange={e => setForm({...form, reisekostenAmount: e.target.value})}
+                                            className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white" placeholder="0.00"/>
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-slate-500 mb-1">Hotel (€)</label>
-                                        <input type="number" min="0" step="0.01" value={form.hotelAmount}
-                                            onChange={e => setForm({...form, hotelAmount: e.target.value})}
-                                            className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white"
-                                            placeholder="0.00"/>
+                                        <label className="block text-xs text-slate-500 mb-1">Unterkunft (€)</label>
+                                        <input type="number" min="0" step="0.01" value={form.unterkunftAmount}
+                                            onChange={e => setForm({...form, unterkunftAmount: e.target.value})}
+                                            className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white" placeholder="0.00"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-slate-500 mb-1">Sonstiges (€)</label>
+                                        <input type="number" min="0" step="0.01" value={form.otherTravelAmount}
+                                            onChange={e => setForm({...form, otherTravelAmount: e.target.value})}
+                                            className="w-full p-2 border border-slate-300 rounded-md text-sm bg-white" placeholder="0.00"/>
                                     </div>
                                 </div>
                             </div>
@@ -1471,9 +1533,11 @@ function App() {
                                                         return (
                                                             <td key={w} className="p-1 text-center border-r border-slate-100">
                                                                 {a ? (
-                                                                    <div className="mx-auto w-9 h-7 rounded flex items-center justify-center bg-gea-100 text-gea-700 font-medium leading-none">
+                                                                    <button
+                                                                        onClick={() => { setAssignContext({ empId, week: w, existing: a }); setIsAssignModalOpen(true); }}
+                                                                        className="mx-auto w-9 h-7 rounded flex items-center justify-center bg-gea-100 text-gea-700 font-medium leading-none hover:bg-gea-200 transition-colors cursor-pointer">
                                                                         {a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h
-                                                                    </div>
+                                                                    </button>
                                                                 ) : (
                                                                     <div className="mx-auto w-9 h-7 rounded bg-slate-50"></div>
                                                                 )}
@@ -1532,13 +1596,21 @@ function App() {
                                                     }`}>{ci.type}</span>
                                                 </td>
                                                 <td className="p-3 text-slate-600">{ci.description || '–'}</td>
-                                                <td className="p-3 text-center text-slate-500 text-xs">{ci.week ? `KW${ci.week.split('-W')[1]}` : '–'}</td>
+                                                <td className="p-3 text-center text-slate-500 text-xs">
+                                                    {ci.presencePeriods?.length > 0
+                                                        ? ci.presencePeriods.map(p => `KW${p.week.split('-W')[1]} ${p.fromDay}–${p.toDay}`).join(', ')
+                                                        : (ci.week ? `KW${ci.week.split('-W')[1]}` : '–')}
+                                                </td>
                                                 <td className="p-3 text-right text-slate-600">{ci.hours != null ? `${ci.hours}h` : '–'}</td>
                                                 <td className="p-3 text-right text-slate-600">{ci.hourlyRate != null ? `${ci.hourlyRate} €` : '–'}</td>
                                                 <td className="p-3 text-right text-slate-900 font-medium">{(ci.amount || 0).toFixed(2)} €</td>
                                                 <td className="p-3 text-right text-xs text-slate-400">
-                                                    {ci.type === 'Reisekosten' && (ci.travelAmount != null || ci.hotelAmount != null) && (
-                                                        <span>F:{(ci.travelAmount||0).toFixed(0)}€ H:{(ci.hotelAmount||0).toFixed(0)}€</span>
+                                                    {ci.type === 'Reisekosten' && (ci.reisekostenAmount != null || ci.unterkunftAmount != null || ci.otherTravelAmount != null) && (
+                                                        <span className="space-x-1">
+                                                            {ci.reisekostenAmount != null && <span>R:{(ci.reisekostenAmount).toFixed(0)}€</span>}
+                                                            {ci.unterkunftAmount != null && <span>U:{(ci.unterkunftAmount).toFixed(0)}€</span>}
+                                                            {ci.otherTravelAmount != null && <span>S:{(ci.otherTravelAmount).toFixed(0)}€</span>}
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="p-3 text-right">
