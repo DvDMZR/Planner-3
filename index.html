@@ -1089,7 +1089,7 @@ function App() {
                                 
                                 return (
                                     <React.Fragment key={category}>
-                                        <tr className="bg-slate-100 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-200/60 transition-colors group" onClick={() => toggleCategory(category)}>
+                                        <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
                                             <td className="p-3 text-slate-700 sticky left-0 z-10 bg-inherit border-r border-l-4 border-l-gea-500 border-slate-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                                                 <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-medium">
                                                     <span className="text-slate-400 group-hover:text-gea-500 transition-colors">
@@ -1101,7 +1101,7 @@ function App() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            {weeks.map(w => <td key={`header-${w.id}`} className="border-r border-b border-slate-300 bg-slate-100/60"></td>)}
+                                            {weeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
                                         </tr>
                                         
                                         {!isCollapsed && catEmps.map(emp => (
@@ -1387,7 +1387,7 @@ function App() {
                                 
                                 return (
                                     <React.Fragment key={category}>
-                                        <tr className="bg-slate-100 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-200/60 transition-colors group" onClick={() => toggleCategory(category)}>
+                                        <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
                                             <td className="p-3 text-slate-700 sticky left-0 z-10 bg-inherit border-r border-l-4 border-l-gea-500 border-slate-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                                                 <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-medium">
                                                     <span className="text-slate-400 group-hover:text-gea-500 transition-colors">
