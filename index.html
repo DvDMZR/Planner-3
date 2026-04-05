@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Einsatzplanung 3.0 – v0.4.4</title>
+    <title>Einsatzplanung 3.0 – v0.4.5</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -445,6 +445,7 @@ function App() {
         document.body.removeChild(link);
 
         setIsInvoiceModalOpen(false);
+        setProjects(prev => prev.map(p => p.id === selectedProjectDetails ? {...p, invoiceStatus: 'exportiert'} : p));
     };
 
     // --- SUB-COMPONENTS ---
@@ -559,6 +560,18 @@ function App() {
                     setBasicTasks(prev => [...prev, trimmed]);
                 }
                 data = { ...formData, type: 'basic', reference: trimmed };
+            }
+            // Overbooking check
+            const weeklyH = getEmpWeeklyHours(formData.empId);
+            const { total: currentTotal } = getUtilization(formData.empId, formData.week);
+            const existingH = assignContext?.existing
+                ? (assignContext.existing.hours ?? ((assignContext.existing.percent ?? 100) / 100 * weeklyH))
+                : 0;
+            const newH = data.hours ?? weeklyH;
+            const newTotal = currentTotal - (existingH / weeklyH * 100) + (newH / weeklyH * 100);
+            if (newTotal > 100) {
+                const empName = employees.find(e => e.id === formData.empId)?.name || '';
+                if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
             }
             handleSaveAssignment(data);
         };
@@ -1061,7 +1074,7 @@ function App() {
                 <div className="bg-gea-500 text-white p-2 rounded-lg"><IconBriefcase size={20} /></div>
                 <div>
                     <h1 className="text-white text-xl tracking-tight font-medium">Einsatzplanung 3.0</h1>
-                    <span className="text-xs text-slate-400 font-medium">v0.4.4</span>
+                    <span className="text-xs text-slate-400 font-medium">v0.4.5</span>
                 </div>
             </div>
             <nav className="flex-1 py-4 space-y-1 px-3">
@@ -1136,9 +1149,10 @@ function App() {
                                                 {weeks.map(w => {
                                                     const { total, isOfftime, assignments: wAss } = getUtilization(emp.id, w.id);
                                                     const isOverbooked = total > 100;
+                                                    const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
                                                     return (
                                                         <td key={w.id}
-                                                            className={`p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${isOfftime ? 'bg-slate-50 diagonal-stripes' : (wAss.length === 0 ? 'bg-emerald-50/40' : '')} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`}
+                                                            className={`p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`}
                                                             onClick={() => { if (!isDeleteMode) { setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); } }}
                                                             onDragOver={e => { if (!isDeleteMode) e.preventDefault(); }}
                                                             onDrop={e => { if (!isDeleteMode) handleDrop(e, w.id, emp.id, true); }}>
@@ -1164,6 +1178,7 @@ function App() {
                                                                         dotColor = 'bg-slate-500';
                                                                     }
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * HOURS_PER_WEEK) / HOURS_PER_WEEK * 100);
+                                                                    if (isOverbooked) color = 'bg-rose-50 border-rose-300 text-rose-800';
 
                                                                     return (
                                                                         <div key={a.id}
@@ -1454,11 +1469,11 @@ function App() {
 
                                                         let bgColor = 'bg-slate-50';
                                                         let textColor = 'text-slate-400';
-                                                        
+
                                                         if (avgMonth === 0 && hasOfftime) { bgColor = 'bg-slate-200'; textColor = 'text-slate-600'; }
-                                                        else if (avgMonth > 100) { bgColor = 'bg-rose-500'; textColor = 'text-white'; }
-                                                        else if (avgMonth === 100) { bgColor = 'bg-emerald-500'; textColor = 'text-white'; }
-                                                        else if (avgMonth > 0) { bgColor = 'bg-gea-200'; textColor = 'text-gea-800'; }
+                                                        else if (avgMonth >= 100) { bgColor = 'bg-rose-500'; textColor = 'text-white'; }
+                                                        else if (avgMonth >= 80) { bgColor = 'bg-amber-400'; textColor = 'text-white'; }
+                                                        else if (avgMonth > 0) { bgColor = 'bg-emerald-500'; textColor = 'text-white'; }
 
                                                         const label = avgMonth > 0 ? `${avgMonth}%` : (hasOfftime ? 'OFF' : '-');
 
@@ -1542,6 +1557,16 @@ function App() {
                                 className="w-4 h-4 text-gea-600 rounded"/>
                             <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
                         </label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-500">Rechnung:</span>
+                            <select value={proj.invoiceStatus ?? 'offen'}
+                                onChange={e => setProjects(prev => prev.map(p => p.id === proj.id ? {...p, invoiceStatus: e.target.value} : p))}
+                                className="text-sm border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
+                                <option value="offen">Offen</option>
+                                <option value="exportiert">Exportiert</option>
+                                <option value="bezahlt">Bezahlt</option>
+                            </select>
+                        </div>
                         <button onClick={openInvoiceModal} className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
                             <IconFileText size={15}/> Rechnung
                         </button>
@@ -2015,6 +2040,13 @@ function App() {
 
     const renderOverview = () => {
         const fmt = n => n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const currentWeekStr = getWeekString(new Date());
+        const activeEmps = employees.filter(e => e.active !== false);
+        const activeProjects = projects.filter(p => computeAutoStatus(p) === 'active').length;
+        const weekUtils = activeEmps.map(e => getUtilization(e.id, currentWeekStr).total);
+        const avgUtil = activeEmps.length > 0 ? Math.round(weekUtils.reduce((a,b)=>a+b,0) / activeEmps.length) : 0;
+        const overbookedCount = weekUtils.filter(u => u > 100).length;
+
         const rows = projects.map(p => {
             const projAss = assignments.filter(a => a.reference === p.id && a.type === 'project');
             let totalHours = 0, totalLaborCost = 0;
@@ -2036,6 +2068,28 @@ function App() {
         return (
             <div className="flex-1 overflow-auto p-8 bg-slate-50">
                 <div className="max-w-6xl mx-auto space-y-6">
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Aktive Projekte</p>
+                            <p className="text-3xl font-bold text-slate-800 mt-1">{activeProjects}</p>
+                            <p className="text-xs text-slate-400 mt-1">von {projects.length} gesamt</p>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Mitarbeiter</p>
+                            <p className="text-3xl font-bold text-slate-800 mt-1">{activeEmps.length}</p>
+                            <p className="text-xs text-slate-400 mt-1">aktiv</p>
+                        </div>
+                        <div className={`bg-white border rounded-xl p-5 shadow-sm ${avgUtil >= 100 ? 'border-rose-300' : avgUtil >= 80 ? 'border-amber-300' : 'border-slate-200'}`}>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Ø Auslastung diese KW</p>
+                            <p className={`text-3xl font-bold mt-1 ${avgUtil >= 100 ? 'text-rose-600' : avgUtil >= 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{avgUtil}%</p>
+                            <p className="text-xs text-slate-400 mt-1">{currentWeekStr}</p>
+                        </div>
+                        <div className={`bg-white border rounded-xl p-5 shadow-sm ${overbookedCount > 0 ? 'border-rose-300' : 'border-slate-200'}`}>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Überlastet diese KW</p>
+                            <p className={`text-3xl font-bold mt-1 ${overbookedCount > 0 ? 'text-rose-600' : 'text-slate-800'}`}>{overbookedCount}</p>
+                            <p className="text-xs text-slate-400 mt-1">{overbookedCount > 0 ? 'Mitarbeiter &gt;100%' : 'Alles im Rahmen'}</p>
+                        </div>
+                    </div>
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl text-slate-900 font-medium">Projektübersicht</h2>
                         <div className="flex items-center gap-4 text-sm text-slate-500">
@@ -2052,6 +2106,7 @@ function App() {
                                 <tr>
                                     <th className="p-4 text-slate-500 font-medium">Projekt</th>
                                     <th className="p-4 text-slate-500 font-medium">Status</th>
+                                    <th className="p-4 text-slate-500 font-medium">Rechnung</th>
                                     <th className="p-4 text-slate-500 font-medium">IBN</th>
                                     <th className="p-4 text-slate-500 font-medium text-right">Stunden</th>
                                     <th className="p-4 text-slate-500 font-medium text-right">Lohnkosten</th>
@@ -2073,6 +2128,13 @@ function App() {
                                             </div>
                                         </td>
                                         <td className="p-4"><StatusBadge status={computeAutoStatus(p)}/></td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                p.invoiceStatus === 'bezahlt' ? 'bg-emerald-100 text-emerald-700' :
+                                                p.invoiceStatus === 'exportiert' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-amber-100 text-amber-700'
+                                            }`}>{p.invoiceStatus ?? 'offen'}</span>
+                                        </td>
                                         <td className="p-4 text-slate-500 text-xs font-mono">{p.ibnWeek || '–'}</td>
                                         <td className="p-4 text-right text-slate-700 tabular-nums">{fmt(totalHours)} h</td>
                                         <td className="p-4 text-right text-slate-700 tabular-nums">
@@ -2090,7 +2152,7 @@ function App() {
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                                     <tr>
-                                        <td className="p-4 text-slate-500 font-medium text-sm" colSpan={3}>Gesamt</td>
+                                        <td className="p-4 text-slate-500 font-medium text-sm" colSpan={4}>Gesamt</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(totalHoursAll)} h</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.totalLaborCost,0))} €</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.zusatzkosten,0))} €</td>
@@ -2099,7 +2161,7 @@ function App() {
                                 </tfoot>
                             )}
                             {rows.length === 0 && (
-                                <tbody><tr><td colSpan={7} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
+                                <tbody><tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
                             )}
                         </table>
                     </div>
