@@ -155,7 +155,7 @@ function App() {
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
     const [editingEmpId, setEditingEmpId] = useState(null);
-    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', startWeek: '', ibnWeek: '', color: 'bg-gea-500', hourlyRate: DEFAULT_HOURLY_RATE, billable: true, status: 'active' });
+    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', startWeek: '', ibnWeek: '', color: 'bg-gea-500', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
     // Category Forms
@@ -257,7 +257,7 @@ function App() {
 
     const computeAutoStatus = (p) => {
         if (p.costsSubmitted) return 'costs_submitted';
-        if (p.status === 'completed' || p.status === 'costs_submitted') return p.status;
+        if (p.projectCompleted) return 'completed';
         const now = getWeekString(new Date());
         const projCosts = costItems.filter(c => c.projectId === p.id);
         const projAss = assignments.filter(a => a.reference === p.id);
@@ -1452,19 +1452,20 @@ function App() {
                         </div>
                     </div>
 
-                    {/* Status + costsSubmitted */}
+                    {/* Status + checkboxes */}
                     <div className="flex items-center gap-3 flex-wrap">
                         <StatusBadge status={computeAutoStatus(proj)}/>
-                        <select value={proj.status || ''}
-                            onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, status: e.target.value || null} : p))}
-                            className="p-2 border border-slate-300 rounded-md text-sm bg-white font-medium text-slate-500">
-                            <option value="">Auto-Status</option>
-                            {PROJECT_STATUSES.filter(s => s.value === 'completed' || s.value === 'costs_submitted').map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox"
+                                checked={!!proj.projectCompleted}
+                                onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, projectCompleted: e.target.checked} : p))}
+                                className="w-4 h-4 text-gea-600 rounded"/>
+                            <span className="text-sm font-medium text-slate-700">Projekt abgeschlossen</span>
+                        </label>
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox"
                                 checked={!!proj.costsSubmitted}
-                                onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, costsSubmitted: e.target.checked, status: e.target.checked ? 'costs_submitted' : (proj.status === 'costs_submitted' ? 'completed' : proj.status)} : p))}
+                                onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, costsSubmitted: e.target.checked} : p))}
                                 className="w-4 h-4 text-gea-600 rounded"/>
                             <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
                         </label>
@@ -1679,17 +1680,17 @@ function App() {
             } else {
                 setProjects([...projects, { id: `p-${Date.now()}`, ...projForm, billable: true, hourlyRate: DEFAULT_HOURLY_RATE }]);
             }
-            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500', status: 'active' });
+            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
         };
 
         const handleEditProject = (p) => {
-            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: p.color || 'bg-gea-500', status: p.status || 'active' });
+            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: p.color || 'bg-gea-500' });
             setEditingProjectId(p.id);
         };
 
         const cancelEditProject = () => {
             setEditingProjectId(null);
-            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500', status: 'active' });
+            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
         };
 
         const now = getWeekString(new Date());
@@ -1751,13 +1752,6 @@ function App() {
                             <div>
                                 <label className="block text-xs text-slate-500 mb-1 font-medium">IBN (KW)</label>
                                 <input type="week" value={projForm.ibnWeek} onChange={e=>setProjForm({...projForm, ibnWeek: e.target.value})} className="w-full p-2 border border-slate-300 rounded text-sm"/>
-                            </div>
-                            <div>
-                                <label className="block text-xs text-slate-500 mb-1 font-medium">Status-Override</label>
-                                <select value={projForm.status || 'active'} onChange={e=>setProjForm({...projForm, status: e.target.value})} className="w-full p-2 border border-slate-300 rounded text-sm">
-                                    <option value="">Auto</option>
-                                    {PROJECT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                                </select>
                             </div>
                             <div className="flex gap-2">
                                 {editingProjectId && <button onClick={cancelEditProject} className="bg-slate-200 text-slate-600 px-3 py-2 rounded text-sm hover:bg-slate-300 h-[38px] font-medium transition-colors">Abbruch</button>}
