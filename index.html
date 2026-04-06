@@ -100,6 +100,63 @@ const getWeekString = (date) => {
 
 const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 
+// ─── SHAREPOINT SYNC ──────────────────────────────────────────────────────────
+// Auto-detect SharePoint Online context from the current URL
+const SP_CONTEXT = (() => {
+    const loc = window.location;
+    if (loc.protocol === 'file:' || !loc.hostname.includes('sharepoint.com')) return null;
+    const pathParts = decodeURIComponent(loc.pathname).split('/').filter(Boolean);
+    let siteParts = [];
+    if ((pathParts[0] === 'personal' || pathParts[0] === 'sites') && pathParts[1]) {
+        siteParts = [pathParts[0], pathParts[1]];
+    }
+    const siteUrl = loc.origin + (siteParts.length ? '/' + siteParts.join('/') : '');
+    const currentPath = decodeURIComponent(loc.pathname);
+    const folderPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    return { siteUrl, folderPath, stateFilePath: folderPath + '/planner-state.json' };
+})();
+
+// Escape single quotes and spaces for SharePoint REST API paths
+const SP_ENC = (path) => path.replace(/'/g, "''").replace(/ /g, '%20');
+
+async function spGetDigest(siteUrl) {
+    const r = await fetch(`${siteUrl}/_api/contextinfo`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose' }
+    });
+    if (!r.ok) throw new Error('digest ' + r.status);
+    return (await r.json()).d.GetContextWebInformation.FormDigestValue;
+}
+
+async function spLoad(ctx) {
+    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')/$value`, {
+        credentials: 'include', headers: { 'Accept': 'text/plain' }
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('load ' + r.status);
+    return JSON.parse(await r.text());
+}
+
+async function spGetTimestamp(ctx) {
+    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')?$select=TimeLastModified`, {
+        credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' }
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('ts ' + r.status);
+    return (await r.json()).d.TimeLastModified;
+}
+
+async function spSave(ctx, data) {
+    const digest = await spGetDigest(ctx.siteUrl);
+    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(ctx.folderPath)}')/Files/Add(url='planner-state.json',overwrite=true)`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Accept': 'application/json;odata=verbose', 'X-RequestDigest': digest, 'Content-Type': 'application/octet-stream' },
+        body: JSON.stringify(data)
+    });
+    if (!r.ok) throw new Error('save ' + r.status);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Gaußsche Osterformel
 const getEasterDate = (year) => {
     const a = year % 19, b = Math.floor(year/100), c = year % 100;
@@ -253,80 +310,164 @@ function App() {
     const [newOfftimeTask, setNewOfftimeTask] = useState('');
     const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, offtime: false, empCats: false, projCats: false });
 
+    // SharePoint sync
+    const syncStatusRef = useRef(SP_CONTEXT ? 'connecting' : 'local');
+    const lastKnownTsRef = useRef(null);
+    const isRemoteUpdateRef = useRef(false);
+    const spSaveTimer = useRef(null);
+    const [syncStatus, setSyncStatusState] = useState(SP_CONTEXT ? 'connecting' : 'local');
+    const setSyncStatus = (s) => { syncStatusRef.current = s; setSyncStatusState(s); };
+
     // --- INIT ---
     useEffect(() => {
-        const savedData = localStorage.getItem('teamMasterProData');
-        let currentEmpCats = ['CMS', 'AS', 'ME', 'HM', 'Other'];
-        
-        if (savedData) {
-            const parsed = JSON.parse(savedData);
-            setEmployees(parsed.employees || []);
-            setProjects(parsed.projects || []);
-            setAssignments(parsed.assignments || []);
-            setExpenses(parsed.expenses || []);
-            // Load costItems or migrate old expenses
-            if (parsed.costItems) {
-                setCostItems(parsed.costItems);
-            } else if (parsed.expenses && parsed.expenses.length > 0) {
-                const migrated = parsed.expenses.map(e => ({
-                    id: e.id,
-                    projectId: e.projectId,
-                    empId: e.empId,
-                    type: e.type === 'Travelcosts' || e.type === 'Hotel' ? 'Reisekosten' : (e.type === 'Other' ? 'Sonstiges' : 'Reisekosten'),
-                    description: e.type === 'Hotel' ? 'Hotel' : (e.type === 'Travelcosts' ? 'Reise' : e.type),
-                    week: null,
-                    hours: null,
-                    hourlyRate: null,
-                    amount: e.amount,
-                    travelAmount: e.type === 'Travelcosts' ? e.amount : null,
-                    hotelAmount: e.type === 'Hotel' ? e.amount : null,
-                }));
-                setCostItems(migrated);
-            }
-            if (parsed.empCategories) { setEmpCategories(parsed.empCategories); currentEmpCats = parsed.empCategories; }
-            if (parsed.projCategories) setProjCategories(parsed.projCategories);
-            if (parsed.basicTasks) setBasicTasks(parsed.basicTasks);
-            if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
-            if (parsed.invoiceRecipient) setInvoiceRecipient(parsed.invoiceRecipient);
-        } else {
-            const init = generateInitialData(currentEmpCats);
-            setEmployees(init.employees);
-            setProjects(init.projects);
-            setAssignments(init.assignments);
-            setExpenses(init.expenses);
-        }
+        const loadData = async () => {
+            let parsedData = null;
+            let currentEmpCats = ['CMS', 'AS', 'ME', 'HM', 'Other'];
 
-        const w = [];
-        const today = new Date();
-        for(let i=0; i<WEEKS_IN_YEAR; i++) {
-            const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (i*7));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            const kw = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            
-            w.push({ 
-                id: `${d.getFullYear()}-W${kw.toString().padStart(2, '0')}`, 
-                label: `KW ${kw}`,
-                sub: `${d.getDate()}.${d.getMonth()+1}.`,
-                month: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
-            });
-        }
-        setWeeks(w);
-        
-        setEmpForm(prev => ({...prev, category: currentEmpCats[0] || ''}));
-        setProjForm(prev => ({...prev, startWeek: w[0].id, ibnWeek: w[10]?.id || w[w.length-1].id}));
+            // 1. Try SharePoint first
+            if (SP_CONTEXT) {
+                try {
+                    parsedData = await spLoad(SP_CONTEXT);
+                    if (parsedData) {
+                        const ts = await spGetTimestamp(SP_CONTEXT);
+                        lastKnownTsRef.current = ts;
+                        isRemoteUpdateRef.current = true; // Loaded from SP – don't write back
+                    }
+                    setSyncStatus('idle');
+                } catch(e) {
+                    setSyncStatus('offline');
+                }
+            }
+
+            // 2. Fallback to localStorage
+            if (!parsedData) {
+                const savedData = localStorage.getItem('teamMasterProData');
+                if (savedData) { try { parsedData = JSON.parse(savedData); } catch(e) {} }
+            }
+
+            // 3. Apply data
+            if (parsedData) {
+                setEmployees(parsedData.employees || []);
+                setProjects(parsedData.projects || []);
+                setAssignments(parsedData.assignments || []);
+                setExpenses(parsedData.expenses || []);
+                // Load costItems or migrate old expenses
+                if (parsedData.costItems) {
+                    setCostItems(parsedData.costItems);
+                } else if (parsedData.expenses && parsedData.expenses.length > 0) {
+                    const migrated = parsedData.expenses.map(e => ({
+                        id: e.id,
+                        projectId: e.projectId,
+                        empId: e.empId,
+                        type: e.type === 'Travelcosts' || e.type === 'Hotel' ? 'Reisekosten' : (e.type === 'Other' ? 'Sonstiges' : 'Reisekosten'),
+                        description: e.type === 'Hotel' ? 'Hotel' : (e.type === 'Travelcosts' ? 'Reise' : e.type),
+                        week: null, hours: null, hourlyRate: null,
+                        amount: e.amount,
+                        travelAmount: e.type === 'Travelcosts' ? e.amount : null,
+                        hotelAmount: e.type === 'Hotel' ? e.amount : null,
+                    }));
+                    setCostItems(migrated);
+                }
+                if (parsedData.empCategories) { setEmpCategories(parsedData.empCategories); currentEmpCats = parsedData.empCategories; }
+                if (parsedData.projCategories) setProjCategories(parsedData.projCategories);
+                if (parsedData.basicTasks) setBasicTasks(parsedData.basicTasks);
+                if (parsedData.offtimeTasks) setOfftimeTasks(parsedData.offtimeTasks);
+                if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
+            } else {
+                const init = generateInitialData(currentEmpCats);
+                setEmployees(init.employees);
+                setProjects(init.projects);
+                setAssignments(init.assignments);
+                setExpenses(init.expenses);
+            }
+
+            const w = [];
+            const today = new Date();
+            for(let i=0; i<WEEKS_IN_YEAR; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (i*7));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+                const kw = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+                w.push({
+                    id: `${d.getFullYear()}-W${kw.toString().padStart(2, '0')}`,
+                    label: `KW ${kw}`,
+                    sub: `${d.getDate()}.${d.getMonth()+1}.`,
+                    month: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
+                });
+            }
+            setWeeks(w);
+            setEmpForm(prev => ({...prev, category: currentEmpCats[0] || ''}));
+            setProjForm(prev => ({...prev, startWeek: w[0].id, ibnWeek: w[10]?.id || w[w.length-1].id}));
+        };
+        loadData();
     }, []);
 
     // Save on change
     useEffect(() => {
-        if (employees.length > 0) {
-            localStorage.setItem('teamMasterProData', JSON.stringify({
-                employees, projects, assignments, expenses, costItems,
-                empCategories, projCategories, basicTasks, offtimeTasks,
-                invoiceRecipient
-            }));
+        if (employees.length === 0) return;
+
+        // Skip writes triggered by remote updates (SharePoint polling or initial load)
+        if (isRemoteUpdateRef.current) {
+            isRemoteUpdateRef.current = false;
+            return;
+        }
+
+        const stateData = {
+            employees, projects, assignments, expenses, costItems,
+            empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient
+        };
+
+        // Always save locally
+        localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
+
+        // Debounced save to SharePoint (1.5 s after last change)
+        if (SP_CONTEXT) {
+            if (spSaveTimer.current) clearTimeout(spSaveTimer.current);
+            spSaveTimer.current = setTimeout(async () => {
+                setSyncStatus('syncing');
+                try {
+                    await spSave(SP_CONTEXT, stateData);
+                    const ts = await spGetTimestamp(SP_CONTEXT);
+                    lastKnownTsRef.current = ts;
+                    setSyncStatus('idle');
+                } catch(e) {
+                    setSyncStatus('offline');
+                }
+            }, 1500);
         }
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks]);
+
+    // SharePoint polling – pick up changes from other users every 3 seconds
+    useEffect(() => {
+        if (!SP_CONTEXT) return;
+        const poll = async () => {
+            if (syncStatusRef.current === 'syncing' || syncStatusRef.current === 'connecting') return;
+            try {
+                const ts = await spGetTimestamp(SP_CONTEXT);
+                if (ts && lastKnownTsRef.current && ts !== lastKnownTsRef.current) {
+                    const data = await spLoad(SP_CONTEXT);
+                    if (data) {
+                        lastKnownTsRef.current = ts;
+                        isRemoteUpdateRef.current = true;
+                        setEmployees(data.employees || []);
+                        setProjects(data.projects || []);
+                        setAssignments(data.assignments || []);
+                        setExpenses(data.expenses || []);
+                        if (data.costItems) setCostItems(data.costItems);
+                        if (data.empCategories) setEmpCategories(data.empCategories);
+                        if (data.projCategories) setProjCategories(data.projCategories);
+                        if (data.basicTasks) setBasicTasks(data.basicTasks);
+                        if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+                        if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+                        setSyncStatus('updated');
+                        setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+                    }
+                }
+            } catch(e) { /* Transient errors ignored */ }
+        };
+        const interval = setInterval(poll, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Ensure form defaults align with categories
     useEffect(() => {
@@ -1279,6 +1420,24 @@ function App() {
                 <button onClick={() => { setActiveTab('setup_cats'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_cats' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconList size={18}/> Kategorien</button>
                 <button onClick={() => { setActiveTab('data'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'data' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconSettings size={18}/> System & Export</button>
             </nav>
+            {SP_CONTEXT && (
+                <div className="px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                        syncStatus === 'idle'       ? 'bg-emerald-400' :
+                        syncStatus === 'syncing'    ? 'bg-amber-400 animate-pulse' :
+                        syncStatus === 'updated'    ? 'bg-blue-400' :
+                        syncStatus === 'offline'    ? 'bg-rose-500' :
+                                                     'bg-amber-400 animate-pulse'
+                    }`}/>
+                    <span className="text-gea-400 text-xs truncate">
+                        {syncStatus === 'idle'       ? 'Synchronisiert' :
+                         syncStatus === 'syncing'    ? 'Speichert ...' :
+                         syncStatus === 'updated'    ? 'Aktualisiert ✓' :
+                         syncStatus === 'offline'    ? 'Offline – lokal' :
+                                                      'Verbindet ...'}
+                    </span>
+                </div>
+            )}
         </aside>
     );
 
@@ -2564,9 +2723,18 @@ function App() {
                         </button>
                     </div>
                     
-                    <button onClick={() => {
+                    <button onClick={async () => {
                         if(confirm('Alle Daten unwiderruflich löschen?')) {
                             localStorage.removeItem('teamMasterProData');
+                            if (SP_CONTEXT) {
+                                try {
+                                    const digest = await spGetDigest(SP_CONTEXT.siteUrl);
+                                    await fetch(`${SP_CONTEXT.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(SP_CONTEXT.stateFilePath)}')/recycle()`, {
+                                        method: 'POST', credentials: 'include',
+                                        headers: { 'X-RequestDigest': digest, 'Accept': 'application/json;odata=verbose' }
+                                    });
+                                } catch(e) {}
+                            }
                             window.location.reload();
                         }
                     }} className="w-full mt-8 text-rose-500 hover:bg-rose-50 py-3 rounded-lg text-sm font-medium transition-colors">
