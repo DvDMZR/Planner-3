@@ -222,6 +222,7 @@ function App() {
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [invoiceSelection, setInvoiceSelection] = useState({ emps: {}, costs: {} });
+    const [invoiceRecipient, setInvoiceRecipient] = useState('');
     const [isProjFormOpen, setIsProjFormOpen] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
@@ -286,6 +287,7 @@ function App() {
             if (parsed.projCategories) setProjCategories(parsed.projCategories);
             if (parsed.basicTasks) setBasicTasks(parsed.basicTasks);
             if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
+            if (parsed.invoiceRecipient) setInvoiceRecipient(parsed.invoiceRecipient);
         } else {
             const init = generateInitialData(currentEmpCats);
             setEmployees(init.employees);
@@ -320,7 +322,8 @@ function App() {
         if (employees.length > 0) {
             localStorage.setItem('teamMasterProData', JSON.stringify({
                 employees, projects, assignments, expenses, costItems,
-                empCategories, projCategories, basicTasks, offtimeTasks
+                empCategories, projCategories, basicTasks, offtimeTasks,
+                invoiceRecipient
             }));
         }
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks]);
@@ -542,6 +545,44 @@ function App() {
 
         setIsInvoiceModalOpen(false);
         setProjects(prev => prev.map(p => p.id === selectedProjectDetails ? {...p, invoiceStatus: 'exportiert'} : p));
+    };
+
+    const handleInvoiceSendEmail = () => {
+        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const rows = [];
+        let total = 0;
+
+        Object.keys(invoiceSelection.emps).forEach(empId => {
+            if (invoiceSelection.emps[empId]) {
+                const emp = employees.find(e => e.id === empId);
+                const empAss = assignments.filter(a => a.reference === proj.id && a.empId === empId);
+                const hours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
+                if (hours > 0 && proj.billable !== false) {
+                    const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
+                    const cost = hours * rate;
+                    total += cost;
+                    rows.push(`  - ${emp?.name || 'Unbekannt'}: ${hours} Std. x ${rate} EUR/h = ${cost.toFixed(2)} EUR`);
+                }
+            }
+        });
+        costItems.filter(c => c.projectId === proj.id).forEach(ci => {
+            if (invoiceSelection.costs[ci.id]) {
+                total += ci.amount || 0;
+                rows.push(`  - ${ci.type}${ci.description ? ' (' + ci.description + ')' : ''}: ${(ci.amount || 0).toFixed(2)} EUR`);
+            }
+        });
+
+        const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
+        const body = encodeURIComponent(
+            `Guten Tag,\n\nanbei sende ich die Rechnung fuer folgendes Projekt:\n\n` +
+            `Projekt: ${proj.name}\n` +
+            `Projektnummer: ${proj.projectNumber || '-'}\n` +
+            `Datum: ${new Date().toLocaleDateString('de-DE')}\n\n` +
+            `Positionen:\n${rows.join('\n')}\n\n` +
+            `Gesamtsumme (Netto): ${total.toFixed(2)} EUR\n\n` +
+            `Mit freundlichen Gruessen`
+        );
+        window.location.href = `mailto:${invoiceRecipient}?subject=${subject}&body=${body}`;
     };
 
     // --- SUB-COMPONENTS ---
@@ -1199,6 +1240,11 @@ function App() {
                         </div>
                         <div className="flex gap-2">
                             <button onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
+                            {invoiceRecipient && (
+                                <button onClick={handleInvoiceSendEmail} className="px-4 py-2 text-sm text-white bg-gea-500 rounded-md hover:bg-gea-600 flex items-center gap-2 font-medium">
+                                    ✉ Per E-Mail
+                                </button>
+                            )}
                             <button onClick={handleInvoiceExport} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 flex items-center gap-2 font-medium">
                                 <IconFileText size={16}/> CSV Export
                             </button>
@@ -2495,8 +2541,17 @@ function App() {
             <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
                 <IconSettings size={48} className="mx-auto text-slate-300 mb-6"/>
                 <h2 className="text-xl text-slate-900 mb-2 font-medium">Datenverwaltung</h2>
-                <p className="text-sm text-slate-500 mb-8">Exportiere deine Planung als JSON-Backup oder stelle Daten aus einem Backup wieder her.</p>
-                
+                <p className="text-sm text-slate-500 mb-6">Exportiere deine Planung als JSON-Backup oder stelle Daten aus einem Backup wieder her.</p>
+
+                <div className="mb-6 text-left border border-slate-200 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Rechnungsempfänger (E-Mail)</label>
+                    <input type="email" value={invoiceRecipient}
+                        onChange={e => setInvoiceRecipient(e.target.value)}
+                        placeholder="rechnung@kunde.de"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
+                    <p className="text-xs text-slate-400 mt-1">Standard-Empfänger für den "Per E-Mail"-Button im Rechnungsdialog.</p>
+                </div>
+
                 <div className="space-y-4">
                     <button onClick={exportData} className="w-full bg-gea-600 hover:bg-gea-700 text-white py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
                         <IconDownload size={20}/> Vollständiges Backup (JSON)
