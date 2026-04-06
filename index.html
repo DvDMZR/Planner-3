@@ -185,6 +185,18 @@ function App() {
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
     const currentWeekColRef = useRef(null);
+    const resourceScrollRef = useRef(null);
+    const timelineScrollRef = useRef(null);
+
+    // Scroll current week to the left edge (right after sticky column)
+    const scrollToCurrentWeek = (containerRef, stickyWidth) => {
+        const container = containerRef?.current;
+        const th = currentWeekColRef?.current;
+        if (!container || !th) return;
+        const thRect = th.getBoundingClientRect();
+        const cRect = container.getBoundingClientRect();
+        container.scrollLeft = container.scrollLeft + (thRect.left - cRect.left) - stickyWidth;
+    };
 
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
@@ -284,10 +296,12 @@ function App() {
 
     // Auto-scroll to current week when switching to resource or project tab
     useEffect(() => {
-        if (activeTab === 'resource' || activeTab === 'project') {
-            const timer = setTimeout(() => {
-                currentWeekColRef.current?.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
-            }, 80);
+        if (activeTab === 'resource') {
+            const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 80);
+            return () => clearTimeout(timer);
+        }
+        if (activeTab === 'project') {
+            const timer = setTimeout(() => scrollToCurrentWeek(timelineScrollRef, 256), 80);
             return () => clearTimeout(timer);
         }
     }, [activeTab]);
@@ -1199,8 +1213,8 @@ function App() {
                             <option value={currentYear + 1}>{currentYear + 1}</option>
                         </select>
                         <button onClick={() => {
-                            if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }), 80); }
-                            else { currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); }
+                            if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }
+                            else { scrollToCurrentWeek(resourceScrollRef, 288); }
                         }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
                             Heute
                         </button>
@@ -1215,7 +1229,7 @@ function App() {
                         </button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-auto relative">
+                <div ref={resourceScrollRef} className="flex-1 overflow-auto relative">
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
@@ -1410,8 +1424,8 @@ function App() {
                                 <option value={currentYear + 1}>{currentYear + 1}</option>
                             </select>
                             <button onClick={() => {
-                                if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 80); }
-                                else { currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
+                                if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => scrollToCurrentWeek(timelineScrollRef, 256), 120); }
+                                else { scrollToCurrentWeek(timelineScrollRef, 256); }
                             }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
                                 Heute
                             </button>
@@ -1419,7 +1433,7 @@ function App() {
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-auto relative">
+                    <div ref={timelineScrollRef} className="flex-1 overflow-auto relative">
                         <table className="w-full border-collapse text-sm text-left">
                             <thead className="sticky top-0 bg-white z-20 shadow-sm">
                                 <tr>
