@@ -53,7 +53,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // --- INLINE ICONS ---
 const IconUsers = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
@@ -96,6 +96,34 @@ const getWeekString = (date) => {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
     const kw = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
     return `${d.getUTCFullYear()}-W${kw.toString().padStart(2, '0')}`;
+};
+
+const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+const generateWeeksForYear = (year) => {
+    const w = [];
+    // Jan 4 liegt immer in ISO-Woche 1
+    const jan4 = new Date(year, 0, 4);
+    const dayOfWeek = jan4.getDay() || 7;
+    const monday = new Date(jan4.getFullYear(), jan4.getMonth(), jan4.getDate() - dayOfWeek + 1);
+    for (let i = 0; i < 54; i++) {
+        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i * 7);
+        const dUTC = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        dUTC.setUTCDate(dUTC.getUTCDate() + 4 - (dUTC.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(dUTC.getUTCFullYear(), 0, 1));
+        const kw = Math.ceil(((dUTC - yearStart) / 86400000 + 1) / 7);
+        const weekYear = dUTC.getUTCFullYear();
+        if (weekYear > year) break;
+        if (weekYear === year) {
+            w.push({
+                id: `${weekYear}-W${kw.toString().padStart(2, '0')}`,
+                label: `KW ${kw}`,
+                sub: `${d.getDate()}.${d.getMonth() + 1}.`,
+                month: `${MONTH_NAMES[d.getMonth()]} ${weekYear}`
+            });
+        }
+    }
+    return w;
 };
 
 // --- DUMMY DATA GENERATOR ---
@@ -154,6 +182,9 @@ function App() {
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [invoiceSelection, setInvoiceSelection] = useState({ emps: {}, costs: {} });
     const [isProjFormOpen, setIsProjFormOpen] = useState(false);
+    const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+    const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
+    const currentWeekColRef = useRef(null);
 
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
@@ -210,7 +241,6 @@ function App() {
             setExpenses(init.expenses);
         }
 
-        const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
         const w = [];
         const today = new Date();
         for(let i=0; i<WEEKS_IN_YEAR; i++) {
@@ -526,6 +556,53 @@ function App() {
         const s = PROJECT_STATUSES.find(x => x.value === status) || PROJECT_STATUSES[0];
         return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>;
     };
+
+    const HelpModal = () => (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" style={{maxHeight:'85vh',overflowY:'auto'}}>
+                <ModalHeader title="Hilfe & Legende" onClose={() => setIsHelpModalOpen(false)}/>
+                <div className="p-6 space-y-6 text-sm">
+                    <div>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Zell-Farben im Ressourcenplaner</h3>
+                        <div className="space-y-2.5">
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-emerald-50 border border-slate-200"></div><span className="text-slate-700">Frei / Verfügbar — keine Einsätze geplant</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-amber-50 border border-slate-200"></div><span className="text-slate-700">Auslastung ≥ 80% — Achtung, fast voll</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-rose-50 border border-slate-200"></div><span className="text-slate-700">Überlastet — Einsatz {'>'} 100%</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 diagonal-stripes border border-slate-200"></div><span className="text-slate-700">Abwesenheit (Urlaub, Krank, Gleitzeit …)</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-gea-100 border border-gea-300"></div><span className="text-slate-700">Aktuelle Woche — farbig hervorgehoben</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-slate-100 border border-slate-200 opacity-60"></div><span className="text-slate-700">Vergangene Woche — gedimmt angezeigt</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Bedienung</h3>
+                        <div className="space-y-2 text-slate-700">
+                            <p><span className="font-semibold">Klick auf Zelle</span> → Einsatz anlegen oder bearbeiten (Prozent oder Stunden, Projekt oder Abwesenheit)</p>
+                            <p><span className="font-semibold">Drag &amp; Drop</span> (Projekt-Zeitstrahl) → Mitarbeiter aus der linken Liste in eine Projektwoche ziehen</p>
+                            <p><span className="font-semibold">Löschmodus</span> → roten Button oben rechts aktivieren, dann Einsätze anklicken um sie zu löschen</p>
+                            <p><span className="font-semibold">Heute-Button</span> (Zeitstrahl) → springt zur aktuellen Kalenderwoche</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Projekt-Status</h3>
+                        <div className="space-y-2">
+                            {PROJECT_STATUSES.map(s => (
+                                <div key={s.value} className="flex items-start gap-3">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 mt-0.5 ${s.color}`}>{s.label}</span>
+                                    <span className="text-slate-600 text-xs">{
+                                        s.value === 'planned' ? 'Start-Woche liegt noch in der Zukunft' :
+                                        s.value === 'active' ? 'Projekt hat begonnen und läuft aktuell' :
+                                        s.value === 'missing_costs' ? 'IBN-Woche ist vorbei, aber noch keine Kostenpunkte erfasst' :
+                                        s.value === 'completed' ? 'Projekt wurde als abgeschlossen markiert' :
+                                        'Kosten wurden bereits übermittelt'
+                                    }</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     const AssignmentModal = () => {
         if (!isAssignModalOpen || !assignContext) return null;
@@ -1102,11 +1179,17 @@ function App() {
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
                     <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
-                    <button
-                        onClick={() => setIsDeleteMode(m => !m)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
-                        <IconX size={14}/> {isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsHelpModalOpen(true)}
+                            className="w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center" title="Hilfe & Legende">
+                            ?
+                        </button>
+                        <button
+                            onClick={() => setIsDeleteMode(m => !m)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
+                            <IconX size={14}/> {isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'}
+                        </button>
+                    </div>
                 </div>
                 <div className="flex-1 overflow-auto relative">
                     <table className="w-full border-collapse text-sm text-left">
@@ -1231,6 +1314,9 @@ function App() {
     const renderProjectTimeline = () => {
         const activeProjCategories = [...new Set(projects.map(p => p.category))];
         const activeEmpCategories = [...new Set(employees.filter(e => e.active).map(e => e.category))];
+        const timelineWeeks = generateWeeksForYear(timelineYear);
+        const currentYear = new Date().getFullYear();
+        const currentWeekStr = getWeekString(new Date());
 
         return (
             <div className="flex-1 flex h-full overflow-hidden bg-white">
@@ -1268,11 +1354,8 @@ function App() {
                                                     key={emp.id} 
                                                     draggable
                                                     onDragStart={(e) => e.dataTransfer.setData('empId', emp.id)}
-                                                    className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-gea-300 transition-colors flex items-center gap-3"
+                                                    className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab active:cursor-grabbing hover:border-gea-300 transition-colors flex items-center gap-2"
                                                 >
-                                                    <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs border border-slate-200 shadow-sm font-medium flex-shrink-0">
-                                                        {emp.name.charAt(0)}
-                                                    </div>
                                                     <div className="min-w-0">
                                                         <div className="text-sm text-slate-900 font-medium truncate">{emp.name}</div>
                                                     </div>
@@ -1290,7 +1373,19 @@ function App() {
                     <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center">
                         <h3 className="text-slate-900 text-lg font-medium">Projekt-Planung</h3>
                         <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-500">Zieh Mitarbeiter von links in die Kalenderwochen der Projekte.</span>
+                            <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
+                                className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
+                                <option value={currentYear - 1}>{currentYear - 1}</option>
+                                <option value={currentYear}>{currentYear}</option>
+                                <option value={currentYear + 1}>{currentYear + 1}</option>
+                            </select>
+                            <button onClick={() => {
+                                if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 80); }
+                                else { currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
+                            }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
+                                Heute
+                            </button>
+                            <span className="text-xs text-slate-500">Zieh Mitarbeiter von links in die Kalenderwochen.</span>
                         </div>
                     </div>
                     
@@ -1299,13 +1394,19 @@ function App() {
                             <thead className="sticky top-0 bg-white z-20 shadow-sm">
                                 <tr>
                                     <th className="p-3 border-b border-r border-slate-200 w-64 bg-slate-50 sticky left-0 z-30 text-slate-600 font-medium">Projekt</th>
-                                    {weeks.map(w => <th key={w.id} className="p-2 border-b border-r border-slate-200 min-w-[120px] text-center text-slate-600 bg-slate-50 font-medium">{w.label}</th>)}
+                                    {timelineWeeks.map(w => (
+                                        <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
+                                            className={`p-2 border-b border-r min-w-[120px] text-center font-medium ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                            <div>{w.label}</div>
+                                            <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
                                 {projects.length === 0 ? (
                                     <tr>
-                                        <td colSpan={weeks.length + 1} className="p-8 text-center text-slate-400">
+                                        <td colSpan={timelineWeeks.length + 1} className="p-8 text-center text-slate-400">
                                             Noch keine Projekte angelegt.
                                         </td>
                                     </tr>
@@ -1323,7 +1424,7 @@ function App() {
                                                         {category}
                                                     </div>
                                                 </td>
-                                                {weeks.map(w => <td key={`header-${category}-${w.id}`} className="border-r border-slate-200"></td>)}
+                                                {timelineWeeks.map(w => <td key={`header-${category}-${w.id}`} className="border-r border-slate-200"></td>)}
                                             </tr>
                                             
                                             {!isCollapsed && catProjects.map(proj => (
@@ -1334,7 +1435,7 @@ function App() {
                                                             <div className="text-slate-900 font-medium">{proj.name}</div>
                                                         </div>
                                                     </td>
-                                                    {weeks.map(w => {
+                                                    {timelineWeeks.map(w => {
                                                         const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
                                                         const projAss = assignments.filter(a => a.reference === proj.id && a.week === w.id);
                                                         
@@ -2357,6 +2458,7 @@ function App() {
             {isCopyModalOpen && <CopyModal />}
             {isInvoiceModalOpen && <InvoiceModal />}
             {isProjFormOpen && ProjFormModal()}
+            {isHelpModalOpen && HelpModal()}
         </div>
     );
 }
