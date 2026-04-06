@@ -282,6 +282,16 @@ function App() {
         }
     }, [empCategories, projCategories]);
 
+    // Auto-scroll to current week when switching to resource or project tab
+    useEffect(() => {
+        if (activeTab === 'resource' || activeTab === 'project') {
+            const timer = setTimeout(() => {
+                currentWeekColRef.current?.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
+            }, 80);
+            return () => clearTimeout(timer);
+        }
+    }, [activeTab]);
+
     // --- LOGIC ---
     const getEmpWeeklyHours = (empId) => {
         const emp = employees.find(e => e.id === empId);
@@ -1174,12 +1184,26 @@ function App() {
     const renderResourceView = () => {
         const activeCategories = [...new Set(employees.filter(e => e.active).map(e => e.category))];
         const currentWeek = getWeekString(new Date());
+        const currentYear = new Date().getFullYear();
+        const resourceWeeks = generateWeeksForYear(timelineYear);
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
                     <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
                     <div className="flex items-center gap-2">
+                        <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
+                            className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
+                            <option value={currentYear - 1}>{currentYear - 1}</option>
+                            <option value={currentYear}>{currentYear}</option>
+                            <option value={currentYear + 1}>{currentYear + 1}</option>
+                        </select>
+                        <button onClick={() => {
+                            if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }), 80); }
+                            else { currentWeekColRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' }); }
+                        }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
+                            Heute
+                        </button>
                         <button onClick={() => setIsHelpModalOpen(true)}
                             className="w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center" title="Hilfe & Legende">
                             ?
@@ -1196,10 +1220,16 @@ function App() {
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
                                 <th className="p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium">Mitarbeiter</th>
-                                {weeks.map(w => {
+                                {resourceWeeks.map(w => {
                                     const isCurrent = w.id === currentWeek;
                                     const isPast = w.id < currentWeek;
-                                    return <th key={w.id} className={`p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>{w.label}</th>;
+                                    return (
+                                        <th key={w.id} ref={isCurrent ? currentWeekColRef : null}
+                                            className={`p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
+                                            <div>{w.label}</div>
+                                            <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
+                                        </th>
+                                    );
                                 })}
                             </tr>
                         </thead>
@@ -1222,7 +1252,7 @@ function App() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            {weeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                            {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
                                         </tr>
                                         
                                         {!isCollapsed && catEmps.map(emp => (
@@ -1230,7 +1260,7 @@ function App() {
                                                 <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
-                                                {weeks.map(w => {
+                                                {resourceWeeks.map(w => {
                                                     const { total, isOfftime, assignments: wAss } = getUtilization(emp.id, w.id);
                                                     const isOverbooked = total > 100;
                                                     const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
