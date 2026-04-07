@@ -492,7 +492,10 @@ function App() {
         loadData();
     }, []);
 
-    // Save on change
+    // Save on change. localStorage + FS writes are debounced (~400ms) so
+    // rapid edits (slider drags, typing) don't trigger a JSON.stringify on
+    // every keystroke. SharePoint stays at 1.5s.
+    const localSaveTimer = useRef(null);
     useEffect(() => {
         if (employees.length === 0) return;
 
@@ -507,17 +510,20 @@ function App() {
             empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient
         };
 
-        // Always save locally
-        localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
+        if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
+        localSaveTimer.current = setTimeout(() => {
+            try {
+                localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
+            } catch(e) {
+                console.warn('[LS] save failed', e);
+            }
+            if (FS_MODE && dirHandleRef.current) {
+                fsSave(dirHandleRef.current, stateData).catch(err => {
+                    console.warn('[FS] save failed', err);
+                });
+            }
+        }, 400);
 
-        // Save to local OneDrive folder if connected
-        if (FS_MODE && dirHandleRef.current) {
-            fsSave(dirHandleRef.current, stateData).catch(err => {
-                console.warn('[FS] save failed', err);
-            });
-        }
-
-        // Debounced save to SharePoint (1.5 s after last change)
         if (SP_CONTEXT) {
             if (spSaveTimer.current) clearTimeout(spSaveTimer.current);
             spSaveTimer.current = setTimeout(async () => {
@@ -533,11 +539,28 @@ function App() {
                 }
             }, 1500);
         }
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient]);
 
-    // Apply a freshly-loaded remote snapshot to local state. Used by both
-    // SharePoint and FileSystem polling paths to avoid duplicated logic.
-    const applyRemoteSnapshot = (data) => {
+    // Flush pending local save before the page unloads so a fast tab close
+    // doesn't drop the most recent edits.
+    useEffect(() => {
+        const flush = () => {
+            if (!localSaveTimer.current) return;
+            clearTimeout(localSaveTimer.current);
+            localSaveTimer.current = null;
+            try {
+                const stateData = {
+                    employees, projects, assignments, expenses, costItems,
+                    empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient
+                };
+                localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
+            } catch(e) {}
+        };
+        window.addEventListener('beforeunload', flush);
+        return () => window.removeEventListener('beforeunload', flush);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient]);
+
+    const applyRemoteSnapshot = (data, { notify = true } = {}) => {
         isRemoteUpdateRef.current = true;
         setEmployees(data.employees || []);
         setProjects(data.projects || []);
@@ -549,12 +572,14 @@ function App() {
         if (data.basicTasks) setBasicTasks(data.basicTasks);
         if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-        setSyncStatus('updated');
-        setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+        if (notify) {
+            setSyncStatus('updated');
+            setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+        }
     };
 
     // SharePoint polling – pick up changes from other users every 3 seconds.
-    // Pauses automatically when the tab is hidden to save bandwidth/battery.
+    // Pauses while the tab is hidden to save bandwidth/battery.
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
@@ -576,7 +601,6 @@ function App() {
     }, []);
 
     // File System polling – Änderungen von Kollegen alle 3 Sek. erkennen.
-    // Pausiert ebenfalls wenn der Tab nicht sichtbar ist.
     useEffect(() => {
         if (!FS_MODE) return;
         const poll = async () => {
@@ -617,12 +641,17 @@ function App() {
     }, [activeTab]);
 
     // --- LOGIC ---
-    // Lookup maps – rebuilt only when the underlying collections change.
     const employeeById = useMemo(() => {
         const m = new Map();
         employees.forEach(e => m.set(e.id, e));
         return m;
     }, [employees]);
+
+    const projectById = useMemo(() => {
+        const m = new Map();
+        projects.forEach(p => m.set(p.id, p));
+        return m;
+    }, [projects]);
 
     const assignmentsByEmpWeek = useMemo(() => {
         const m = new Map();
@@ -645,6 +674,17 @@ function App() {
         return m;
     }, [assignments]);
 
+    const assignmentsByProjectWeek = useMemo(() => {
+        const m = new Map();
+        assignments.forEach(a => {
+            const key = a.reference + '\u0000' + a.week;
+            let arr = m.get(key);
+            if (!arr) { arr = []; m.set(key, arr); }
+            arr.push(a);
+        });
+        return m;
+    }, [assignments]);
+
     const costItemsByProject = useMemo(() => {
         const m = new Map();
         costItems.forEach(c => {
@@ -659,8 +699,6 @@ function App() {
         return employeeById.get(empId)?.weeklyHours ?? HOURS_PER_WEEK;
     }, [employeeById]);
 
-    // Memoized auto-status per project. Depends on assignments/costItems via
-    // the lookup maps above + projects reference.
     const projectStatusById = useMemo(() => {
         const now = getWeekString(new Date());
         const m = new Map();
@@ -791,11 +829,8 @@ function App() {
         reader.readAsText(file);
     };
 
-    // Compute invoice lines for a project given the current selection.
-    // Returns { laborLines: [{empId, emp, hours, rate, cost}], costLines: [{ci, emp}], total }
     const buildInvoiceData = (proj, selection) => {
         const projAss = assignmentsByProject.get(proj.id) || [];
-        // Pre-group assignments by empId so we iterate once instead of per-emp.
         const hoursByEmp = new Map();
         for (let i = 0; i < projAss.length; i++) {
             const a = projAss[i];
@@ -831,11 +866,11 @@ function App() {
             });
         });
 
-        return { laborLines, costLines, total, projCosts };
+        return { laborLines, costLines, total };
     };
 
     const openInvoiceModal = () => {
-        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const proj = projectById.get(selectedProjectDetails);
         if (!proj) return;
         const projAss = assignmentsByProject.get(proj.id) || [];
         const empIds = [...new Set(projAss.map(a => a.empId))];
@@ -852,7 +887,7 @@ function App() {
     };
 
     const handleInvoiceExport = () => {
-        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const proj = projectById.get(selectedProjectDetails);
         if (!proj) return;
         const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
 
@@ -889,7 +924,7 @@ function App() {
     };
 
     const handleInvoiceSendEmail = () => {
-        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const proj = projectById.get(selectedProjectDetails);
         if (!proj) return;
         const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
         const rows = [];
@@ -1043,7 +1078,7 @@ function App() {
     const AssignmentModal = () => {
         if (!isAssignModalOpen || !assignContext) return null;
 
-        const empWeeklyHours = employees.find(e => e.id === assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
+        const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
         const [formData, setFormData] = useState(assignContext.existing || {
             empId: assignContext.empId,
             week: assignContext.week,
@@ -1053,7 +1088,7 @@ function App() {
         });
         const [newTaskName, setNewTaskName] = useState('');
 
-        const emp = employees.find(e => e.id === formData.empId);
+        const emp = employeeById.get(formData.empId);
         const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
 
         const handleTypeChange = (type) => {
@@ -1084,7 +1119,7 @@ function App() {
             const newH = data.hours ?? weeklyH;
             const newTotal = currentTotal - (existingH / weeklyH * 100) + (newH / weeklyH * 100);
             if (newTotal > 100) {
-                const empName = employees.find(e => e.id === formData.empId)?.name || '';
+                const empName = employeeById.get(formData.empId)?.name || '';
                 if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
             }
             handleSaveAssignment(data);
@@ -1197,7 +1232,7 @@ function App() {
 
         let label = assignment.reference;
         if (assignment.type === 'project') {
-            const p = projects.find(p => p.id === assignment.reference);
+            const p = projectById.get(assignment.reference);
             label = p ? p.name : assignment.reference;
         }
 
@@ -1496,7 +1531,7 @@ function App() {
     const InvoiceModal = () => {
         if (!isInvoiceModalOpen || !selectedProjectDetails) return null;
 
-        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const proj = projectById.get(selectedProjectDetails);
         if (!proj) return null;
         const { laborLines, costLines, total: currentTotal } = buildInvoiceData(proj, invoiceSelection);
 
@@ -1578,7 +1613,7 @@ function App() {
             const result = await fsLoad(handle);
             if (result) {
                 lastFsModifiedRef.current = result.lastModified;
-                applyRemoteSnapshot(result.data);
+                applyRemoteSnapshot(result.data, { notify: false });
             }
         } catch(e) {}
     };
@@ -1756,7 +1791,7 @@ function App() {
                                                                     let dotColor = 'bg-slate-400';
 
                                                                     if (a.type === 'project') {
-                                                                        const p = projects.find(p => p.id === a.reference);
+                                                                        const p = projectById.get(a.reference);
                                                                         label = p ? p.name : 'Unbekannt';
                                                                         if (p) { color = 'bg-white border-slate-200 text-slate-800'; dotColor = p.color; }
                                                                     } else if (a.type === 'offtime') {
@@ -1940,7 +1975,7 @@ function App() {
                                                     </td>
                                                     {timelineWeeks.map(w => {
                                                         const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
-                                                        const projAss = assignments.filter(a => a.reference === proj.id && a.week === w.id);
+                                                        const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
                                                         
                                                         return (
                                                             <td key={w.id} 
@@ -1950,7 +1985,7 @@ function App() {
                                                             >
                                                                 <div className="flex flex-col gap-1 min-h-[60px]">
                                                                     {projAss.map(a => {
-                                                                        const emp = employees.find(e => e.id === a.empId);
+                                                                        const emp = employeeById.get(a.empId);
                                                                         return (
                                                                             <div key={a.id} 
                                                                                 onClick={(e) => { e.stopPropagation(); setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); }}
@@ -2104,12 +2139,12 @@ function App() {
     };
 
     const renderProjectDetails = () => {
-        const proj = projects.find(p => p.id === selectedProjectDetails);
+        const proj = projectById.get(selectedProjectDetails);
         if (!proj) return null;
 
-        const projAssignments = assignments.filter(a => a.reference === proj.id && a.type === 'project');
+        const projAssignments = (assignmentsByProject.get(proj.id) || []).filter(a => a.type === 'project');
         const assignedEmpIds = [...new Set(projAssignments.map(a => a.empId))];
-        const projCostItems = costItems.filter(c => c.projectId === proj.id);
+        const projCostItems = costItemsByProject.get(proj.id) || [];
 
         // Presence grid: sorted weeks that have at least one assignment
         const presenceWeeks = [...new Set(projAssignments.map(a => a.week))].sort();
@@ -2213,7 +2248,7 @@ function App() {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {assignedEmpIds.map(empId => {
-                                            const emp = employees.find(e => e.id === empId);
+                                            const emp = employeeById.get(empId);
                                             const empAss = projAssignments.filter(a => a.empId === empId);
                                             const empHours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
                                             return (
@@ -2275,7 +2310,7 @@ function App() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {projCostItems.map(ci => {
-                                        const emp = employees.find(e => e.id === ci.empId);
+                                        const emp = employeeById.get(ci.empId);
                                         return (
                                             <tr key={ci.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="p-3 text-slate-800 font-medium">{emp?.name || '–'}</td>
@@ -2423,7 +2458,7 @@ function App() {
                         <div className="flex justify-end gap-3">
                             <button onClick={() => handleEditProject(p)} className="text-gea-600 text-xs font-medium hover:text-gea-700">Bearbeiten</button>
                             <button onClick={() => {
-                                const assCount = assignments.filter(a => a.reference === p.id).length;
+                                const assCount = (assignmentsByProject.get(p.id) || []).length;
                                 const msg = assCount > 0
                                     ? `Projekt „${p.name}" wirklich löschen?\n\n${assCount} Einsatz-Planung(en) werden ebenfalls gelöscht.`
                                     : `Projekt „${p.name}" wirklich löschen?`;
@@ -2660,14 +2695,18 @@ function App() {
         const overbookedCount = weekUtils.filter(u => u > 100).length;
 
         const rows = projects.filter(p => ['active', 'planned'].includes(computeAutoStatus(p))).map(p => {
-            const projAss = assignments.filter(a => a.reference === p.id && a.type === 'project');
+            const projAss = assignmentsByProject.get(p.id) || [];
             let totalHours = 0, totalLaborCost = 0;
-            projAss.forEach(a => {
+            for (let i = 0; i < projAss.length; i++) {
+                const a = projAss[i];
+                if (a.type !== 'project') continue;
                 const h = a.hours ?? ((a.percent ?? 100) / 100 * HOURS_PER_WEEK);
                 totalHours += h;
                 if (p.billable !== false) totalLaborCost += h * (p.hourlyRate ?? DEFAULT_HOURLY_RATE);
-            });
-            const zusatzkosten = costItems.filter(c => c.projectId === p.id).reduce((acc, c) => acc + (c.amount || 0), 0);
+            }
+            const projCosts = costItemsByProject.get(p.id) || [];
+            let zusatzkosten = 0;
+            for (let i = 0; i < projCosts.length; i++) zusatzkosten += projCosts[i].amount || 0;
             return { p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten: totalLaborCost + zusatzkosten };
         }).sort((a, b) => {
             const statusOrder = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
