@@ -157,6 +157,56 @@ async function spSave(ctx, data) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── FILE SYSTEM SYNC (lokal via OneDrive) ───────────────────────────────────
+const FS_MODE = window.location.protocol === 'file:' && 'showDirectoryPicker' in window;
+
+async function idbGetHandle() {
+    return new Promise(resolve => {
+        const req = indexedDB.open('PlannerSyncDB', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+        req.onsuccess = e => {
+            const tx = e.target.result.transaction('handles', 'readonly');
+            const get = tx.objectStore('handles').get('syncFolder');
+            get.onsuccess = () => resolve(get.result || null);
+            get.onerror = () => resolve(null);
+        };
+        req.onerror = () => resolve(null);
+    });
+}
+
+async function idbSaveHandle(handle) {
+    return new Promise(resolve => {
+        const req = indexedDB.open('PlannerSyncDB', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+        req.onsuccess = e => {
+            const tx = e.target.result.transaction('handles', 'readwrite');
+            tx.objectStore('handles').put(handle, 'syncFolder');
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        };
+        req.onerror = () => resolve(false);
+    });
+}
+
+async function fsLoad(dirHandle) {
+    try {
+        const fh = await dirHandle.getFileHandle('planner-state.json');
+        const file = await fh.getFile();
+        return { data: JSON.parse(await file.text()), lastModified: file.lastModified };
+    } catch(e) {
+        if (e.name === 'NotFoundError') return null;
+        throw e;
+    }
+}
+
+async function fsSave(dirHandle, data) {
+    const fh = await dirHandle.getFileHandle('planner-state.json', { create: true });
+    const writable = await fh.createWritable();
+    await writable.write(JSON.stringify(data));
+    await writable.close();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Gaußsche Osterformel
 const getEasterDate = (year) => {
     const a = year % 19, b = Math.floor(year/100), c = year % 100;
@@ -318,11 +368,41 @@ function App() {
     const [syncStatus, setSyncStatusState] = useState(SP_CONTEXT ? 'connecting' : 'local');
     const setSyncStatus = (s) => { syncStatusRef.current = s; setSyncStatusState(s); };
 
+    // File System sync (OneDrive lokal)
+    const dirHandleRef = useRef(null);
+    const lastFsModifiedRef = useRef(0);
+    const [fsStatus, setFsStatus] = useState(FS_MODE ? 'checking' : 'off');
+    // fsStatus: 'checking' | 'needs-setup' | 'needs-permission' | 'connected' | 'off'
+
     // --- INIT ---
     useEffect(() => {
         const loadData = async () => {
             let parsedData = null;
             let currentEmpCats = ['CMS', 'AS', 'ME', 'HM', 'Other'];
+
+            // 0. Try File System (local OneDrive folder)
+            if (FS_MODE) {
+                const handle = await idbGetHandle();
+                if (handle) {
+                    dirHandleRef.current = handle;
+                    const perm = await handle.queryPermission({ mode: 'readwrite' });
+                    if (perm === 'granted') {
+                        try {
+                            const result = await fsLoad(handle);
+                            if (result) {
+                                parsedData = result.data;
+                                lastFsModifiedRef.current = result.lastModified;
+                                isRemoteUpdateRef.current = true;
+                            }
+                        } catch(e) {}
+                        setFsStatus('connected');
+                    } else {
+                        setFsStatus('needs-permission'); // Popup erscheint
+                    }
+                } else {
+                    setFsStatus('needs-setup'); // Popup erscheint
+                }
+            }
 
             // 1. Try SharePoint first
             if (SP_CONTEXT) {
@@ -420,6 +500,11 @@ function App() {
         // Always save locally
         localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
 
+        // Save to local OneDrive folder if connected
+        if (FS_MODE && dirHandleRef.current) {
+            fsSave(dirHandleRef.current, stateData).catch(() => {});
+        }
+
         // Debounced save to SharePoint (1.5 s after last change)
         if (SP_CONTEXT) {
             if (spSaveTimer.current) clearTimeout(spSaveTimer.current);
@@ -462,6 +547,36 @@ function App() {
                         setSyncStatus('updated');
                         setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
                     }
+                }
+            } catch(e) { /* Transient errors ignored */ }
+        };
+        const interval = setInterval(poll, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // File System polling – Änderungen von Kollegen alle 3 Sek. erkennen
+    useEffect(() => {
+        if (!FS_MODE) return;
+        const poll = async () => {
+            if (!dirHandleRef.current) return;
+            try {
+                const result = await fsLoad(dirHandleRef.current);
+                if (result && result.lastModified > lastFsModifiedRef.current) {
+                    lastFsModifiedRef.current = result.lastModified;
+                    const data = result.data;
+                    isRemoteUpdateRef.current = true;
+                    setEmployees(data.employees || []);
+                    setProjects(data.projects || []);
+                    setAssignments(data.assignments || []);
+                    setExpenses(data.expenses || []);
+                    if (data.costItems) setCostItems(data.costItems);
+                    if (data.empCategories) setEmpCategories(data.empCategories);
+                    if (data.projCategories) setProjCategories(data.projCategories);
+                    if (data.basicTasks) setBasicTasks(data.basicTasks);
+                    if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+                    if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+                    setSyncStatus('updated');
+                    setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
                 }
             } catch(e) { /* Transient errors ignored */ }
         };
@@ -1396,6 +1511,53 @@ function App() {
         );
     };
 
+    // --- FILE SYSTEM SYNC HANDLERS ---
+
+    const applyFsData = async (handle) => {
+        try {
+            const result = await fsLoad(handle);
+            if (result) {
+                const data = result.data;
+                lastFsModifiedRef.current = result.lastModified;
+                isRemoteUpdateRef.current = true;
+                setEmployees(data.employees || []);
+                setProjects(data.projects || []);
+                setAssignments(data.assignments || []);
+                setExpenses(data.expenses || []);
+                if (data.costItems) setCostItems(data.costItems);
+                if (data.empCategories) setEmpCategories(data.empCategories);
+                if (data.projCategories) setProjCategories(data.projCategories);
+                if (data.basicTasks) setBasicTasks(data.basicTasks);
+                if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+                if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+            }
+        } catch(e) {}
+    };
+
+    const handleSetupFolder = async () => {
+        try {
+            const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            await idbSaveHandle(handle);
+            dirHandleRef.current = handle;
+            await applyFsData(handle);
+            setFsStatus('connected');
+            setSyncStatus('idle');
+        } catch(e) { /* Nutzer hat abgebrochen */ }
+    };
+
+    const handleActivateSync = async () => {
+        const handle = dirHandleRef.current;
+        if (!handle) return;
+        try {
+            const result = await handle.requestPermission({ mode: 'readwrite' });
+            if (result === 'granted') {
+                await applyFsData(handle);
+                setFsStatus('connected');
+                setSyncStatus('idle');
+            }
+        } catch(e) {}
+    };
+
     // --- VIEWS ---
 
     const renderSidebar = () => (
@@ -1420,7 +1582,7 @@ function App() {
                 <button onClick={() => { setActiveTab('setup_cats'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_cats' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconList size={18}/> Kategorien</button>
                 <button onClick={() => { setActiveTab('data'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'data' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconSettings size={18}/> System & Export</button>
             </nav>
-            {SP_CONTEXT && (
+            {(SP_CONTEXT || fsStatus === 'connected') && (
                 <div className="px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
                         syncStatus === 'idle'       ? 'bg-emerald-400' :
@@ -2768,6 +2930,27 @@ function App() {
             {isCopyModalOpen && <CopyModal />}
             {isInvoiceModalOpen && <InvoiceModal />}
             {isProjFormOpen && ProjFormModal()}
+
+            {/* OneDrive-Sync Popup */}
+            {FS_MODE && (fsStatus === 'needs-setup' || fsStatus === 'needs-permission') && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+                        <div className="w-12 h-12 bg-gea-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gea-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        {fsStatus === 'needs-setup' ? (<>
+                            <h2 className="text-lg font-semibold text-slate-900 mb-2">Synchronisation einrichten</h2>
+                            <p className="text-sm text-slate-500 mb-6">Wähle einmalig den Ordner, in dem <strong>index.html</strong> liegt. OneDrive verteilt Änderungen danach automatisch an alle Nutzer.</p>
+                            <button onClick={handleSetupFolder} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">Ordner wählen</button>
+                        </>) : (<>
+                            <h2 className="text-lg font-semibold text-slate-900 mb-2">Synchronisation aktivieren</h2>
+                            <p className="text-sm text-slate-500 mb-6">Klicke auf <strong>Aktivieren</strong> – der Browser fragt kurz nach Dateizugriff. Danach läuft die Synchronisation automatisch.</p>
+                            <button onClick={handleActivateSync} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">Aktivieren</button>
+                        </>)}
+                        <button onClick={() => setFsStatus('off')} className="w-full text-slate-400 hover:text-slate-600 text-sm py-2 transition-colors">Ohne Sync starten</button>
+                    </div>
+                </div>
+            )}
             {isHelpModalOpen && HelpModal()}
         </div>
     );
