@@ -722,6 +722,53 @@ function App() {
         return projectStatusById.get(p.id) ?? 'planned';
     }, [projectStatusById]);
 
+    // Derived collections – memoized so render functions don't rebuild them
+    // on every keystroke / polling tick.
+    const activeEmployees = useMemo(
+        () => employees.filter(e => e.active !== false),
+        [employees]
+    );
+
+    const activeEmpsByCategory = useMemo(() => {
+        const m = new Map();
+        activeEmployees.forEach(e => {
+            let arr = m.get(e.category);
+            if (!arr) { arr = []; m.set(e.category, arr); }
+            arr.push(e);
+        });
+        return m;
+    }, [activeEmployees]);
+
+    const activeEmpCategories = useMemo(
+        () => Array.from(activeEmpsByCategory.keys()),
+        [activeEmpsByCategory]
+    );
+
+    const projectsByCategory = useMemo(() => {
+        const m = new Map();
+        projects.forEach(p => {
+            let arr = m.get(p.category);
+            if (!arr) { arr = []; m.set(p.category, arr); }
+            arr.push(p);
+        });
+        return m;
+    }, [projects]);
+
+    const projCategoriesFromProjects = useMemo(
+        () => Array.from(projectsByCategory.keys()),
+        [projectsByCategory]
+    );
+
+    // Cache weeks per year – generateWeeksForYear does Easter math + 54
+    // iterations, expensive to redo on every render.
+    const weeksByYearCacheRef = useRef(new Map());
+    const getWeeksForYear = useCallback((year) => {
+        const cache = weeksByYearCacheRef.current;
+        if (!cache.has(year)) cache.set(year, generateWeeksForYear(year));
+        return cache.get(year);
+    }, []);
+    const timelineWeeks = useMemo(() => getWeeksForYear(timelineYear), [timelineYear, getWeeksForYear]);
+
     const getUtilization = useCallback((empId, week) => {
         const weeklyHours = getEmpWeeklyHours(empId);
         const weekAss = assignmentsByEmpWeek.get(empId + '\u0000' + week) || [];
@@ -1688,10 +1735,10 @@ function App() {
     );
 
     const renderResourceView = () => {
-        const activeCategories = [...new Set(employees.filter(e => e.active).map(e => e.category))];
+        const activeCategories = activeEmpCategories;
         const currentWeek = getWeekString(new Date());
         const currentYear = new Date().getFullYear();
-        const resourceWeeks = generateWeeksForYear(timelineYear);
+        const resourceWeeks = timelineWeeks;
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
@@ -1743,8 +1790,8 @@ function App() {
                         <tbody>
                             {activeCategories.map(category => {
                                 const isCollapsed = collapsedCategories[category];
-                                const catEmps = employees.filter(e => e.active && e.category === category);
-                                
+                                const catEmps = activeEmpsByCategory.get(category) || [];
+
                                 return (
                                     <React.Fragment key={category}>
                                         <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
@@ -1849,9 +1896,7 @@ function App() {
     };
 
     const renderProjectTimeline = () => {
-        const activeProjCategories = [...new Set(projects.map(p => p.category))];
-        const activeEmpCategories = [...new Set(employees.filter(e => e.active).map(e => e.category))];
-        const timelineWeeks = generateWeeksForYear(timelineYear);
+        const activeProjCategories = projCategoriesFromProjects;
         const currentYear = new Date().getFullYear();
         const currentWeekStr = getWeekString(new Date());
 
@@ -1865,7 +1910,7 @@ function App() {
                     <div className="flex-1 overflow-auto">
                         {activeEmpCategories.map(category => {
                             const isCollapsed = collapsedCategories[category];
-                            const catEmps = employees.filter(e => e.active && e.category === category);
+                            const catEmps = activeEmpsByCategory.get(category) || [];
                             
                             return (
                                 <div key={category} className="border-b border-slate-200 bg-slate-50/80">
@@ -1950,7 +1995,7 @@ function App() {
                                     </tr>
                                 ) : activeProjCategories.map(category => {
                                     const isCollapsed = collapsedProjCategories[category];
-                                    const catProjects = projects.filter(p => p.category === category);
+                                    const catProjects = projectsByCategory.get(category) || [];
                                     if (catProjects.length === 0) return null;
 
                                     return (
@@ -2025,7 +2070,7 @@ function App() {
             weeksByMonth[w.month].push(w.id);
         });
 
-        const activeCategories = [...new Set(employees.filter(e => e.active).map(e => e.category))];
+        const activeCategories = activeEmpCategories;
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
@@ -2057,8 +2102,8 @@ function App() {
                         <tbody>
                             {activeCategories.map(category => {
                                 const isCollapsed = collapsedCategories[category];
-                                const catEmps = employees.filter(e => e.active && e.category === category);
-                                
+                                const catEmps = activeEmpsByCategory.get(category) || [];
+
                                 return (
                                     <React.Fragment key={category}>
                                         <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
@@ -2688,8 +2733,9 @@ function App() {
     const renderOverview = () => {
         const fmt = n => n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const currentWeekStr = getWeekString(new Date());
-        const activeEmps = employees.filter(e => e.active !== false);
-        const activeProjects = projects.filter(p => computeAutoStatus(p) === 'active').length;
+        const activeEmps = activeEmployees;
+        let activeProjects = 0;
+        projects.forEach(p => { if (computeAutoStatus(p) === 'active') activeProjects++; });
         const weekUtils = activeEmps.map(e => getUtilization(e.id, currentWeekStr).total);
         const avgUtil = activeEmps.length > 0 ? Math.round(weekUtils.reduce((a,b)=>a+b,0) / activeEmps.length) : 0;
         const overbookedCount = weekUtils.filter(u => u > 100).length;
