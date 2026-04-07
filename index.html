@@ -53,7 +53,28 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// Monotonic ID helper – avoids collisions from Date.now() when multiple
+// items are created within the same millisecond (rename, bulk copy, ...).
+let _idCounter = 0;
+const makeId = (prefix = 'id') =>
+    `${prefix}-${Date.now().toString(36)}-${(_idCounter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+// Migrate legacy `expenses` entries to the new `costItems` shape.
+const migrateExpensesToCostItems = (expenses) =>
+    (expenses || []).map(e => ({
+        id: e.id,
+        projectId: e.projectId,
+        empId: e.empId,
+        type: (e.type === 'Travelcosts' || e.type === 'Hotel') ? 'Reisekosten'
+              : (e.type === 'Other' ? 'Sonstiges' : 'Reisekosten'),
+        description: e.type === 'Hotel' ? 'Hotel' : (e.type === 'Travelcosts' ? 'Reise' : e.type),
+        week: null, hours: null, hourlyRate: null,
+        amount: e.amount,
+        travelAmount: e.type === 'Travelcosts' ? e.amount : null,
+        hotelAmount: e.type === 'Hotel' ? e.amount : null,
+    }));
 
 // --- INLINE ICONS ---
 const IconUsers = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
@@ -435,18 +456,7 @@ function App() {
                 if (parsedData.costItems) {
                     setCostItems(parsedData.costItems);
                 } else if (parsedData.expenses && parsedData.expenses.length > 0) {
-                    const migrated = parsedData.expenses.map(e => ({
-                        id: e.id,
-                        projectId: e.projectId,
-                        empId: e.empId,
-                        type: e.type === 'Travelcosts' || e.type === 'Hotel' ? 'Reisekosten' : (e.type === 'Other' ? 'Sonstiges' : 'Reisekosten'),
-                        description: e.type === 'Hotel' ? 'Hotel' : (e.type === 'Travelcosts' ? 'Reise' : e.type),
-                        week: null, hours: null, hourlyRate: null,
-                        amount: e.amount,
-                        travelAmount: e.type === 'Travelcosts' ? e.amount : null,
-                        hotelAmount: e.type === 'Hotel' ? e.amount : null,
-                    }));
-                    setCostItems(migrated);
+                    setCostItems(migrateExpensesToCostItems(parsedData.expenses));
                 }
                 if (parsedData.empCategories) { setEmpCategories(parsedData.empCategories); currentEmpCats = parsedData.empCategories; }
                 if (parsedData.projCategories) setProjCategories(parsedData.projCategories);
@@ -502,7 +512,9 @@ function App() {
 
         // Save to local OneDrive folder if connected
         if (FS_MODE && dirHandleRef.current) {
-            fsSave(dirHandleRef.current, stateData).catch(() => {});
+            fsSave(dirHandleRef.current, stateData).catch(err => {
+                console.warn('[FS] save failed', err);
+            });
         }
 
         // Debounced save to SharePoint (1.5 s after last change)
@@ -516,16 +528,37 @@ function App() {
                     lastKnownTsRef.current = ts;
                     setSyncStatus('idle');
                 } catch(e) {
+                    console.warn('[SP] save failed', e);
                     setSyncStatus('offline');
                 }
             }, 1500);
         }
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks]);
 
-    // SharePoint polling – pick up changes from other users every 3 seconds
+    // Apply a freshly-loaded remote snapshot to local state. Used by both
+    // SharePoint and FileSystem polling paths to avoid duplicated logic.
+    const applyRemoteSnapshot = (data) => {
+        isRemoteUpdateRef.current = true;
+        setEmployees(data.employees || []);
+        setProjects(data.projects || []);
+        setAssignments(data.assignments || []);
+        setExpenses(data.expenses || []);
+        if (data.costItems) setCostItems(data.costItems);
+        if (data.empCategories) setEmpCategories(data.empCategories);
+        if (data.projCategories) setProjCategories(data.projCategories);
+        if (data.basicTasks) setBasicTasks(data.basicTasks);
+        if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+        if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+        setSyncStatus('updated');
+        setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+    };
+
+    // SharePoint polling – pick up changes from other users every 3 seconds.
+    // Pauses automatically when the tab is hidden to save bandwidth/battery.
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
+            if (document.visibilityState === 'hidden') return;
             if (syncStatusRef.current === 'syncing' || syncStatusRef.current === 'connecting') return;
             try {
                 const ts = await spGetTimestamp(SP_CONTEXT);
@@ -533,19 +566,7 @@ function App() {
                     const data = await spLoad(SP_CONTEXT);
                     if (data) {
                         lastKnownTsRef.current = ts;
-                        isRemoteUpdateRef.current = true;
-                        setEmployees(data.employees || []);
-                        setProjects(data.projects || []);
-                        setAssignments(data.assignments || []);
-                        setExpenses(data.expenses || []);
-                        if (data.costItems) setCostItems(data.costItems);
-                        if (data.empCategories) setEmpCategories(data.empCategories);
-                        if (data.projCategories) setProjCategories(data.projCategories);
-                        if (data.basicTasks) setBasicTasks(data.basicTasks);
-                        if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
-                        if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-                        setSyncStatus('updated');
-                        setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+                        applyRemoteSnapshot(data);
                     }
                 }
             } catch(e) { /* Transient errors ignored */ }
@@ -554,29 +575,18 @@ function App() {
         return () => clearInterval(interval);
     }, []);
 
-    // File System polling – Änderungen von Kollegen alle 3 Sek. erkennen
+    // File System polling – Änderungen von Kollegen alle 3 Sek. erkennen.
+    // Pausiert ebenfalls wenn der Tab nicht sichtbar ist.
     useEffect(() => {
         if (!FS_MODE) return;
         const poll = async () => {
+            if (document.visibilityState === 'hidden') return;
             if (!dirHandleRef.current) return;
             try {
                 const result = await fsLoad(dirHandleRef.current);
                 if (result && result.lastModified > lastFsModifiedRef.current) {
                     lastFsModifiedRef.current = result.lastModified;
-                    const data = result.data;
-                    isRemoteUpdateRef.current = true;
-                    setEmployees(data.employees || []);
-                    setProjects(data.projects || []);
-                    setAssignments(data.assignments || []);
-                    setExpenses(data.expenses || []);
-                    if (data.costItems) setCostItems(data.costItems);
-                    if (data.empCategories) setEmpCategories(data.empCategories);
-                    if (data.projCategories) setProjCategories(data.projCategories);
-                    if (data.basicTasks) setBasicTasks(data.basicTasks);
-                    if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
-                    if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-                    setSyncStatus('updated');
-                    setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
+                    applyRemoteSnapshot(result.data);
                 }
             } catch(e) { /* Transient errors ignored */ }
         };
@@ -607,33 +617,85 @@ function App() {
     }, [activeTab]);
 
     // --- LOGIC ---
-    const getEmpWeeklyHours = (empId) => {
-        const emp = employees.find(e => e.id === empId);
-        return emp?.weeklyHours ?? HOURS_PER_WEEK;
-    };
+    // Lookup maps – rebuilt only when the underlying collections change.
+    const employeeById = useMemo(() => {
+        const m = new Map();
+        employees.forEach(e => m.set(e.id, e));
+        return m;
+    }, [employees]);
 
-    const computeAutoStatus = (p) => {
-        if (p.costsSubmitted) return 'costs_submitted';
-        if (p.projectCompleted) return 'completed';
+    const assignmentsByEmpWeek = useMemo(() => {
+        const m = new Map();
+        assignments.forEach(a => {
+            const key = a.empId + '\u0000' + a.week;
+            let arr = m.get(key);
+            if (!arr) { arr = []; m.set(key, arr); }
+            arr.push(a);
+        });
+        return m;
+    }, [assignments]);
+
+    const assignmentsByProject = useMemo(() => {
+        const m = new Map();
+        assignments.forEach(a => {
+            let arr = m.get(a.reference);
+            if (!arr) { arr = []; m.set(a.reference, arr); }
+            arr.push(a);
+        });
+        return m;
+    }, [assignments]);
+
+    const costItemsByProject = useMemo(() => {
+        const m = new Map();
+        costItems.forEach(c => {
+            let arr = m.get(c.projectId);
+            if (!arr) { arr = []; m.set(c.projectId, arr); }
+            arr.push(c);
+        });
+        return m;
+    }, [costItems]);
+
+    const getEmpWeeklyHours = useCallback((empId) => {
+        return employeeById.get(empId)?.weeklyHours ?? HOURS_PER_WEEK;
+    }, [employeeById]);
+
+    // Memoized auto-status per project. Depends on assignments/costItems via
+    // the lookup maps above + projects reference.
+    const projectStatusById = useMemo(() => {
         const now = getWeekString(new Date());
-        const projCosts = costItems.filter(c => c.projectId === p.id);
-        const projAss = assignments.filter(a => a.reference === p.id);
-        if (p.ibnWeek < now && projAss.length > 0 && projCosts.length === 0) return 'missing_costs';
-        if (p.startWeek <= now) return 'active';
-        return 'planned';
-    };
+        const m = new Map();
+        projects.forEach(p => {
+            let status;
+            if (p.costsSubmitted) status = 'costs_submitted';
+            else if (p.projectCompleted) status = 'completed';
+            else {
+                const projCosts = costItemsByProject.get(p.id) || [];
+                const projAss = assignmentsByProject.get(p.id) || [];
+                if (p.ibnWeek < now && projAss.length > 0 && projCosts.length === 0) status = 'missing_costs';
+                else if (p.startWeek <= now) status = 'active';
+                else status = 'planned';
+            }
+            m.set(p.id, status);
+        });
+        return m;
+    }, [projects, assignmentsByProject, costItemsByProject]);
 
-    const getUtilization = (empId, week) => {
+    const computeAutoStatus = useCallback((p) => {
+        return projectStatusById.get(p.id) ?? 'planned';
+    }, [projectStatusById]);
+
+    const getUtilization = useCallback((empId, week) => {
         const weeklyHours = getEmpWeeklyHours(empId);
-        const weekAss = assignments.filter(a => a.empId === empId && a.week === week);
+        const weekAss = assignmentsByEmpWeek.get(empId + '\u0000' + week) || [];
         let total = 0;
         let isOfftime = false;
-        weekAss.forEach(a => {
+        for (let i = 0; i < weekAss.length; i++) {
+            const a = weekAss[i];
             total += ((a.hours ?? (a.percent / 100 * weeklyHours)) / weeklyHours) * 100;
             if (a.type === 'offtime') isOfftime = true;
-        });
+        }
         return { total, isOfftime, assignments: weekAss };
-    };
+    }, [assignmentsByEmpWeek, getEmpWeeklyHours]);
 
     const toggleCategory = (cat) => {
         setCollapsedCategories(prev => ({...prev, [cat]: !prev[cat]}));
@@ -651,7 +713,7 @@ function App() {
         if (data.id) {
             setAssignments(assignments.map(a => a.id === data.id ? data : a));
         } else {
-            setAssignments([...assignments, { ...data, id: `ass-${Date.now()}` }]);
+            setAssignments([...assignments, { ...data, id: makeId('ass') }]);
         }
         setIsAssignModalOpen(false);
     };
@@ -676,7 +738,7 @@ function App() {
         const empId = e.dataTransfer.getData('empId');
         if (!empId) return;
         const newAss = {
-            id: `ass-${Date.now()}`,
+            id: makeId('ass'),
             empId: isResourceView ? targetEmpIdOrProjId : empId,
             week: targetWeek,
             type: 'project',
@@ -716,15 +778,7 @@ function App() {
                 if (parsed.costItems) {
                     setCostItems(parsed.costItems);
                 } else if (parsed.expenses && parsed.expenses.length > 0) {
-                    const migrated = parsed.expenses.map(e => ({
-                        id: e.id, projectId: e.projectId, empId: e.empId,
-                        type: e.type === 'Travelcosts' || e.type === 'Hotel' ? 'Reisekosten' : 'Sonstiges',
-                        description: e.type === 'Hotel' ? 'Hotel' : (e.type === 'Travelcosts' ? 'Reise' : e.type),
-                        week: null, hours: null, hourlyRate: null, amount: e.amount,
-                        travelAmount: e.type === 'Travelcosts' ? e.amount : null,
-                        hotelAmount: e.type === 'Hotel' ? e.amount : null,
-                    }));
-                    setCostItems(migrated);
+                    setCostItems(migrateExpensesToCostItems(parsed.expenses));
                 }
                 if (parsed.empCategories) setEmpCategories(parsed.empCategories);
                 if (parsed.projCategories) setProjCategories(parsed.projCategories);
@@ -737,10 +791,55 @@ function App() {
         reader.readAsText(file);
     };
 
+    // Compute invoice lines for a project given the current selection.
+    // Returns { laborLines: [{empId, emp, hours, rate, cost}], costLines: [{ci, emp}], total }
+    const buildInvoiceData = (proj, selection) => {
+        const projAss = assignmentsByProject.get(proj.id) || [];
+        // Pre-group assignments by empId so we iterate once instead of per-emp.
+        const hoursByEmp = new Map();
+        for (let i = 0; i < projAss.length; i++) {
+            const a = projAss[i];
+            const h = a.hours ?? ((a.percent ?? 100) / 100 * HOURS_PER_WEEK);
+            hoursByEmp.set(a.empId, (hoursByEmp.get(a.empId) || 0) + h);
+        }
+
+        const laborLines = [];
+        let total = 0;
+        const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
+        hoursByEmp.forEach((hours, empId) => {
+            if (hours <= 0 || proj.billable === false) return;
+            const cost = hours * rate;
+            const included = !selection || selection.emps[empId];
+            if (included) total += cost;
+            laborLines.push({
+                empId,
+                emp: employeeById.get(empId),
+                hours, rate, cost,
+                included,
+            });
+        });
+
+        const costLines = [];
+        const projCosts = costItemsByProject.get(proj.id) || [];
+        projCosts.forEach(ci => {
+            const included = !selection || selection.costs[ci.id];
+            if (included) total += ci.amount || 0;
+            costLines.push({
+                ci,
+                emp: employeeById.get(ci.empId),
+                included,
+            });
+        });
+
+        return { laborLines, costLines, total, projCosts };
+    };
+
     const openInvoiceModal = () => {
-        const projAssignments = assignments.filter(a => a.reference === selectedProjectDetails);
-        const empIds = [...new Set(projAssignments.map(a => a.empId))];
-        const projCosts = costItems.filter(c => c.projectId === selectedProjectDetails);
+        const proj = projects.find(p => p.id === selectedProjectDetails);
+        if (!proj) return;
+        const projAss = assignmentsByProject.get(proj.id) || [];
+        const empIds = [...new Set(projAss.map(a => a.empId))];
+        const projCosts = costItemsByProject.get(proj.id) || [];
 
         const initialEmps = {};
         empIds.forEach(id => initialEmps[id] = true);
@@ -754,37 +853,23 @@ function App() {
 
     const handleInvoiceExport = () => {
         const proj = projects.find(p => p.id === selectedProjectDetails);
-        const rows = [];
+        if (!proj) return;
+        const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
 
+        const rows = [];
         rows.push(["Rechnung für Projekt:", proj.name]);
         rows.push(["Projektnummer:", proj.projectNumber || '']);
         rows.push(["Datum:", new Date().toLocaleDateString('de-DE')]);
         rows.push([]);
         rows.push(["Position", "Mitarbeiter", "Details", "Menge", "Einzelpreis", "Gesamt"]);
 
-        let total = 0;
-
-        Object.keys(invoiceSelection.emps).forEach(empId => {
-            if (invoiceSelection.emps[empId]) {
-                const emp = employees.find(e => e.id === empId);
-                const empAss = assignments.filter(a => a.reference === proj.id && a.empId === empId);
-                const hours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
-                if (hours > 0 && proj.billable !== false) {
-                    const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
-                    const cost = hours * rate;
-                    total += cost;
-                    rows.push(["Dienstleistung", emp?.name || 'Unbekannt', "Arbeitszeit", `${hours} Std.`, `${rate} EUR`, `${cost.toFixed(2)} EUR`]);
-                }
-            }
+        laborLines.forEach(l => {
+            if (!l.included) return;
+            rows.push(["Dienstleistung", l.emp?.name || 'Unbekannt', "Arbeitszeit", `${l.hours} Std.`, `${l.rate} EUR`, `${l.cost.toFixed(2)} EUR`]);
         });
-
-        const projCosts = costItems.filter(c => c.projectId === proj.id);
-        projCosts.forEach(ci => {
-            if (invoiceSelection.costs[ci.id]) {
-                const emp = employees.find(e => e.id === ci.empId);
-                total += ci.amount || 0;
-                rows.push([ci.type, emp?.name || 'Unbekannt', ci.description || '', "1", `${(ci.amount || 0).toFixed(2)} EUR`, `${(ci.amount || 0).toFixed(2)} EUR`]);
-            }
+        costLines.forEach(({ ci, emp, included }) => {
+            if (!included) return;
+            rows.push([ci.type, emp?.name || 'Unbekannt', ci.description || '', "1", `${(ci.amount || 0).toFixed(2)} EUR`, `${(ci.amount || 0).toFixed(2)} EUR`]);
         });
 
         rows.push([]);
@@ -805,27 +890,16 @@ function App() {
 
     const handleInvoiceSendEmail = () => {
         const proj = projects.find(p => p.id === selectedProjectDetails);
+        if (!proj) return;
+        const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
         const rows = [];
-        let total = 0;
-
-        Object.keys(invoiceSelection.emps).forEach(empId => {
-            if (invoiceSelection.emps[empId]) {
-                const emp = employees.find(e => e.id === empId);
-                const empAss = assignments.filter(a => a.reference === proj.id && a.empId === empId);
-                const hours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
-                if (hours > 0 && proj.billable !== false) {
-                    const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
-                    const cost = hours * rate;
-                    total += cost;
-                    rows.push(`  - ${emp?.name || 'Unbekannt'}: ${hours} Std. x ${rate} EUR/h = ${cost.toFixed(2)} EUR`);
-                }
-            }
+        laborLines.forEach(l => {
+            if (!l.included) return;
+            rows.push(`  - ${l.emp?.name || 'Unbekannt'}: ${l.hours} Std. x ${l.rate} EUR/h = ${l.cost.toFixed(2)} EUR`);
         });
-        costItems.filter(c => c.projectId === proj.id).forEach(ci => {
-            if (invoiceSelection.costs[ci.id]) {
-                total += ci.amount || 0;
-                rows.push(`  - ${ci.type}${ci.description ? ' (' + ci.description + ')' : ''}: ${(ci.amount || 0).toFixed(2)} EUR`);
-            }
+        costLines.forEach(({ ci, included }) => {
+            if (!included) return;
+            rows.push(`  - ${ci.type}${ci.description ? ' (' + ci.description + ')' : ''}: ${(ci.amount || 0).toFixed(2)} EUR`);
         });
 
         const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
@@ -865,7 +939,7 @@ function App() {
                 setProjects(projects.map(p => p.id === editingProjectId ? { ...p, ...projForm } : p));
                 setEditingProjectId(null);
             } else {
-                setProjects([...projects, { id: `p-${Date.now()}`, ...projForm, billable: true, hourlyRate: DEFAULT_HOURLY_RATE }]);
+                setProjects([...projects, { id: makeId('p'), ...projForm, billable: true, hourlyRate: DEFAULT_HOURLY_RATE }]);
             }
             setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
             setIsProjFormOpen(false);
@@ -1139,7 +1213,7 @@ function App() {
                     // Skip if already exists
                     const exists = assignments.some(a => a.empId === empId && a.week === week && a.reference === assignment.reference && a.type === assignment.type);
                     if (!exists) {
-                        newAssignments.push({ ...assignment, id: `ass-${Date.now()}-${empId}-${week}`, empId, week });
+                        newAssignments.push({ ...assignment, id: makeId('ass'), empId, week });
                     }
                 });
             });
@@ -1236,7 +1310,7 @@ function App() {
         const updateExtra = (i, field, val) =>
             setExtraCosts(prev => prev.map((c, idx) => idx === i ? {...c, [field]: val} : c));
         const addExtra = () =>
-            setExtraCosts(prev => [...prev, { id: `ec-${Date.now()}`, type: '', amount: '' }]);
+            setExtraCosts(prev => [...prev, { id: makeId('ec'), type: '', amount: '' }]);
         const removeExtra = (i) =>
             setExtraCosts(prev => prev.filter((_, idx) => idx !== i));
 
@@ -1249,7 +1323,7 @@ function App() {
             const mainAmount = autoAmount !== null ? autoAmount : parseFloat(form.amount) || 0;
             const extraTotal = extraCosts.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
             const item = {
-                id: existingItem?.id || `ci-${Date.now()}`,
+                id: existingItem?.id || makeId('ci'),
                 projectId,
                 empId: form.empId,
                 type: form.type,
@@ -1423,11 +1497,8 @@ function App() {
         if (!isInvoiceModalOpen || !selectedProjectDetails) return null;
 
         const proj = projects.find(p => p.id === selectedProjectDetails);
-        const projAssignments = assignments.filter(a => a.reference === selectedProjectDetails);
-        const empIds = [...new Set(projAssignments.map(a => a.empId))];
-        const projCosts = costItems.filter(c => c.projectId === selectedProjectDetails);
-
-        let currentTotal = 0;
+        if (!proj) return null;
+        const { laborLines, costLines, total: currentTotal } = buildInvoiceData(proj, invoiceSelection);
 
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1439,26 +1510,17 @@ function App() {
                             <div>
                                 <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">Dienstleistungen (Arbeitszeit)</h4>
                                 <div className="space-y-2">
-                                    {empIds.map(empId => {
-                                        const emp = employees.find(e => e.id === empId);
-                                        const empAss = projAssignments.filter(a => a.empId === empId);
-                                        const hours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
-                                        if (hours === 0) return null;
-                                        const rate = proj.hourlyRate ?? DEFAULT_HOURLY_RATE;
-                                        const cost = hours * rate;
-                                        if (invoiceSelection.emps[empId]) currentTotal += cost;
-                                        return (
-                                            <label key={empId} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
-                                                <input type="checkbox" checked={!!invoiceSelection.emps[empId]}
-                                                    onChange={e => setInvoiceSelection({...invoiceSelection, emps: {...invoiceSelection.emps, [empId]: e.target.checked}})}
-                                                    className="w-5 h-5 text-gea-600 rounded"/>
-                                                <div className="flex-1 text-sm text-slate-800 font-medium">{emp?.name || 'Unbekannt'}</div>
-                                                <div className="text-sm text-slate-500">{hours} Std. × {rate} €/h</div>
-                                                <div className="text-sm text-slate-900 w-24 text-right font-medium">{cost.toFixed(2)} €</div>
-                                            </label>
-                                        );
-                                    })}
-                                    {empIds.length === 0 && <p className="text-sm text-slate-400">Keine Arbeitszeiten verplant.</p>}
+                                    {laborLines.filter(l => l.hours > 0).map(({ empId, emp, hours, rate, cost }) => (
+                                        <label key={empId} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <input type="checkbox" checked={!!invoiceSelection.emps[empId]}
+                                                onChange={e => setInvoiceSelection({...invoiceSelection, emps: {...invoiceSelection.emps, [empId]: e.target.checked}})}
+                                                className="w-5 h-5 text-gea-600 rounded"/>
+                                            <div className="flex-1 text-sm text-slate-800 font-medium">{emp?.name || 'Unbekannt'}</div>
+                                            <div className="text-sm text-slate-500">{hours} Std. × {rate} €/h</div>
+                                            <div className="text-sm text-slate-900 w-24 text-right font-medium">{cost.toFixed(2)} €</div>
+                                        </label>
+                                    ))}
+                                    {laborLines.length === 0 && <p className="text-sm text-slate-400">Keine Arbeitszeiten verplant.</p>}
                                 </div>
                             </div>
                         )}
@@ -1466,9 +1528,7 @@ function App() {
                         <div>
                             <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">Kostenpunkte</h4>
                             <div className="space-y-2">
-                                {projCosts.map(ci => {
-                                    const emp = employees.find(e => e.id === ci.empId);
-                                    if (invoiceSelection.costs[ci.id]) currentTotal += ci.amount || 0;
+                                {costLines.map(({ ci, emp }) => {
                                     return (
                                         <label key={ci.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
                                             <input type="checkbox" checked={!!invoiceSelection.costs[ci.id]}
@@ -1484,7 +1544,7 @@ function App() {
                                         </label>
                                     );
                                 })}
-                                {projCosts.length === 0 && <p className="text-sm text-slate-400">Keine Kostenpunkte erfasst.</p>}
+                                {costLines.length === 0 && <p className="text-sm text-slate-400">Keine Kostenpunkte erfasst.</p>}
                             </div>
                         </div>
                     </div>
@@ -1517,19 +1577,8 @@ function App() {
         try {
             const result = await fsLoad(handle);
             if (result) {
-                const data = result.data;
                 lastFsModifiedRef.current = result.lastModified;
-                isRemoteUpdateRef.current = true;
-                setEmployees(data.employees || []);
-                setProjects(data.projects || []);
-                setAssignments(data.assignments || []);
-                setExpenses(data.expenses || []);
-                if (data.costItems) setCostItems(data.costItems);
-                if (data.empCategories) setEmpCategories(data.empCategories);
-                if (data.projCategories) setProjCategories(data.projCategories);
-                if (data.basicTasks) setBasicTasks(data.basicTasks);
-                if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
-                if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+                applyRemoteSnapshot(result.data);
             }
         } catch(e) {}
     };
@@ -2480,7 +2529,7 @@ function App() {
                 setEmployees(employees.map(e => e.id === editingEmpId ? { ...e, name: empForm.name, category: empForm.category, weeklyHours: wh } : e));
                 setEditingEmpId(null);
             } else {
-                setEmployees([...employees, { id: `emp-${Date.now()}`, name: empForm.name, category: empForm.category, weeklyHours: wh, active: true }]);
+                setEmployees([...employees, { id: makeId('emp'), name: empForm.name, category: empForm.category, weeklyHours: wh, active: true }]);
             }
             setEmpForm({name: '', category: empCategories[0] || '', weeklyHours: HOURS_PER_WEEK});
         };
