@@ -132,6 +132,7 @@ const COST_TYPES = ['Dienstleistung', 'Reisekosten', 'Sonstiges'];
 const DEFAULT_HOURLY_RATE = 80;
 const HOURS_PER_WEEK = 40;
 const WEEKS_IN_YEAR = 52;
+const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 12;
 const PROJECT_STATUSES = [
     { value: 'planned',         label: 'Fängt noch an',       color: 'bg-blue-100 text-blue-700' },
@@ -412,7 +413,7 @@ function buildSplitFiles(state) {
     const files = {
         'employees.json': { employees },
         'projects.json':  { projects },
-        'settings.json':  { empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient }
+        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient }
     };
     for (const team of teams) {
         files[teamAssignmentsFile(team)] = { assignments: assGroups[team] || [] };
@@ -671,6 +672,7 @@ const AssignmentModal = ({
     getUtilization,
     getEmpWeeklyHours,
     setBasicTasks,
+    setBasicTasksMeta,
     onClose,
     onSave,
     onDelete,
@@ -704,6 +706,7 @@ const AssignmentModal = ({
             if (!trimmed) return;
             if (!basicTasks.includes(trimmed)) {
                 setBasicTasks(prev => [...prev, trimmed]);
+                setBasicTasksMeta(prev => ({...prev, [trimmed]: { createdAt: new Date().toISOString() }}));
             }
             data = { ...formData, type: 'basic', reference: trimmed };
         }
@@ -1149,6 +1152,9 @@ function App() {
     const [empCategories, setEmpCategories] = useState(['CMS', 'AS', 'ME', 'HM', 'Other']);
     const [projCategories, setProjCategories] = useState(['AMS', 'AFS', 'CMS', 'Other']);
     const [basicTasks, setBasicTasks] = useState(['Office', '24/7', 'Ticketing', 'Other']);
+    const [basicTasksMeta, setBasicTasksMeta] = useState({});       // { [taskName]: { createdAt: ISO } } — custom tasks only
+    const [inactiveBasicTasks, setInactiveBasicTasks] = useState([]); // [{ name, createdAt }]
+    const [basicTasksSubTab, setBasicTasksSubTab] = useState('aktiv');
     const [offtimeTasks, setOfftimeTasks] = useState(['Vacation', 'Sickness', 'Gleitzeit', 'Other']);
 
     const [weeks, setWeeks] = useState([]);
@@ -1299,7 +1305,23 @@ function App() {
                 }
                 if (parsedData.empCategories) { setEmpCategories(parsedData.empCategories); currentEmpCats = parsedData.empCategories; }
                 if (parsedData.projCategories) setProjCategories(parsedData.projCategories);
-                if (parsedData.basicTasks) setBasicTasks(parsedData.basicTasks);
+                if (parsedData.basicTasks) {
+                    const loadedMeta     = parsedData.basicTasksMeta     || {};
+                    const loadedInactive = parsedData.inactiveBasicTasks || [];
+                    const expiryMs = BASIC_TASK_EXPIRY_WEEKS * 7 * 24 * 60 * 60 * 1000;
+                    const now = Date.now();
+                    const toExpire = parsedData.basicTasks.filter(t =>
+                        loadedMeta[t] && (now - new Date(loadedMeta[t].createdAt).getTime()) > expiryMs
+                    );
+                    if (toExpire.length > 0) {
+                        setBasicTasks(parsedData.basicTasks.filter(t => !toExpire.includes(t)));
+                        setInactiveBasicTasks([...loadedInactive, ...toExpire.map(t => ({ name: t, createdAt: loadedMeta[t].createdAt }))]);
+                    } else {
+                        setBasicTasks(parsedData.basicTasks);
+                        setInactiveBasicTasks(loadedInactive);
+                    }
+                    setBasicTasksMeta(parsedData.basicTasksMeta || {});
+                }
                 if (parsedData.offtimeTasks) setOfftimeTasks(parsedData.offtimeTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
 
@@ -1357,7 +1379,8 @@ function App() {
 
         const stateData = {
             employees, projects, assignments, expenses, costItems,
-            empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient
+            empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, invoiceRecipient
         };
 
         if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
@@ -1707,8 +1730,8 @@ function App() {
     const exportData = () => {
         const data = JSON.stringify({
             employees, projects, assignments, expenses, costItems,
-            empCategories, projCategories, basicTasks, offtimeTasks,
-            invoiceRecipient,
+            empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, invoiceRecipient,
             schemaVersion: SCHEMA_VERSION
         }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -1738,6 +1761,8 @@ function App() {
                 if (parsed.empCategories) setEmpCategories(parsed.empCategories);
                 if (parsed.projCategories) setProjCategories(parsed.projCategories);
                 if (parsed.basicTasks) setBasicTasks(parsed.basicTasks);
+                if (parsed.basicTasksMeta) setBasicTasksMeta(parsed.basicTasksMeta);
+                if (parsed.inactiveBasicTasks) setInactiveBasicTasks(parsed.inactiveBasicTasks);
                 if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
             } catch (err) {
                 alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
@@ -3275,18 +3300,90 @@ function App() {
                         </button>
                         {expandedSetupCats.basic && (
                             <div>
-                                <div className="p-4 flex gap-2 border-b border-slate-300">
-                                    <input type="text" value={newBasicTask} onChange={e=>setNewBasicTask(e.target.value)} placeholder="Neuer Basic Task" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                    <button onClick={() => { if(newBasicTask.trim() && !basicTasks.includes(newBasicTask)) { setBasicTasks([...basicTasks, newBasicTask.trim()]); setNewBasicTask(''); } }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
+                                {/* Sub-tab bar */}
+                                <div className="flex border-b border-slate-200 bg-slate-50">
+                                    <button
+                                        onClick={() => setBasicTasksSubTab('aktiv')}
+                                        className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${basicTasksSubTab === 'aktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                                        Aktiv
+                                    </button>
+                                    <button
+                                        onClick={() => setBasicTasksSubTab('inaktiv')}
+                                        className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${basicTasksSubTab === 'inaktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                                        Inaktiv
+                                        {inactiveBasicTasks.length > 0 && (
+                                            <span className="bg-slate-200 text-slate-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">{inactiveBasicTasks.length}</span>
+                                        )}
+                                    </button>
                                 </div>
-                                <ul className="divide-y divide-slate-300">
-                                    {basicTasks.map(task => (
-                                        <li key={task} className="p-4 flex justify-between items-center text-sm">
-                                            <span className="text-slate-800">{task}</span>
-                                            <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
-                                        </li>
-                                    ))}
-                                </ul>
+
+                                {basicTasksSubTab === 'aktiv' && (
+                                    <div>
+                                        <div className="p-4 flex gap-2 border-b border-slate-300">
+                                            <input type="text" value={newBasicTask} onChange={e=>setNewBasicTask(e.target.value)} placeholder="Neuer Basic Task" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                            <button onClick={() => {
+                                                const trimmed = newBasicTask.trim();
+                                                if (trimmed && !basicTasks.includes(trimmed)) {
+                                                    setBasicTasks([...basicTasks, trimmed]);
+                                                    setBasicTasksMeta(prev => ({...prev, [trimmed]: { createdAt: new Date().toISOString() }}));
+                                                    setNewBasicTask('');
+                                                }
+                                            }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
+                                        </div>
+                                        <ul className="divide-y divide-slate-300">
+                                            {basicTasks.map(task => (
+                                                <li key={task} className="p-4 flex justify-between items-center text-sm">
+                                                    <div>
+                                                        <span className="text-slate-800">{task}</span>
+                                                        {basicTasksMeta[task] && (
+                                                            <span className="ml-2 text-xs text-slate-400">
+                                                                (läuft ab in {Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(basicTasksMeta[task].createdAt).getTime()) / (7*24*60*60*1000)))} Wo.)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {basicTasksSubTab === 'inaktiv' && (
+                                    <div>
+                                        {inactiveBasicTasks.length === 0 ? (
+                                            <p className="p-6 text-sm text-slate-400 text-center">Keine inaktiven Kategorien</p>
+                                        ) : (
+                                            <ul className="divide-y divide-slate-300">
+                                                {inactiveBasicTasks.map(task => (
+                                                    <li key={task.name} className="p-4 flex justify-between items-center text-sm">
+                                                        <div>
+                                                            <span className="text-slate-800">{task.name}</span>
+                                                            <span className="ml-2 text-xs text-slate-400">
+                                                                (hinzugefügt {new Date(task.createdAt).toLocaleDateString('de-DE')})
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setBasicTasks(prev => [...prev, task.name]);
+                                                                    setBasicTasksMeta(prev => ({...prev, [task.name]: { createdAt: new Date().toISOString() }}));
+                                                                    setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name));
+                                                                }}
+                                                                className="px-2.5 py-1 text-xs font-medium bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">
+                                                                Reaktivieren
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name))}
+                                                                className="px-2.5 py-1 text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200 rounded hover:bg-rose-100">
+                                                                Löschen
+                                                            </button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -3468,6 +3565,7 @@ function App() {
                     getUtilization={getUtilization}
                     getEmpWeeklyHours={getEmpWeeklyHours}
                     setBasicTasks={setBasicTasks}
+                    setBasicTasksMeta={setBasicTasksMeta}
                     onClose={() => setIsAssignModalOpen(false)}
                     onSave={handleSaveAssignment}
                     onDelete={handleDeleteAssignment}
