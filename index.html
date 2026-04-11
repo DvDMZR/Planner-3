@@ -61,6 +61,37 @@ let _idCounter = 0;
 const makeId = (prefix = 'id') =>
     `${prefix}-${Date.now().toString(36)}-${(_idCounter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
+// ─── TEAM-SPLIT FILE LAYOUT ───────────────────────────────────────────────────
+// assignments and costItems live per team (= empCategories entry) under
+// planner-data/. Everything else lives in global files under planner-data/.
+// Two planners that work on different teams therefore never touch the same
+// file and cannot produce SharePoint/OneDrive conflict copies.
+const DEFAULT_TEAMS = ['CMS', 'AS', 'ME', 'HM', 'Other'];
+const PLANNER_DATA_DIR = 'planner-data';
+const SCHEMA_VERSION = 3;
+const teamAssignmentsFile = (team) => `assignments-${team}.json`;
+const teamCostItemsFile   = (team) => `cost-items-${team}.json`;
+
+// Which team an employee belongs to. Fallback 'Other' for orphans.
+const getEmpTeam = (empId, employees) => {
+    const emp = (employees || []).find(e => e.id === empId);
+    return (emp && emp.category) ? emp.category : 'Other';
+};
+
+// Group items (assignments or costItems) by their employee's team. Always
+// seeds every team in `teams` so callers get predictable keys.
+const groupByTeam = (items, employees, teams) => {
+    const groups = {};
+    (teams || []).forEach(t => { groups[t] = []; });
+    (items || []).forEach(item => {
+        const t = getEmpTeam(item.empId, employees);
+        if (!groups[t]) groups[t] = [];
+        groups[t].push(item);
+    });
+    return groups;
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Migrate legacy `expenses` entries to the new `costItems` shape.
 const migrateExpensesToCostItems = (expenses) =>
     (expenses || []).map(e => ({
@@ -195,6 +226,70 @@ async function spSave(ctx, data) {
     });
     if (!r.ok) throw new Error('save ' + r.status);
 }
+
+// Ensure a subfolder exists under the planner folder. 400 = already present,
+// which SharePoint returns on the second call – we swallow that.
+async function spEnsureFolder(ctx, subPath) {
+    try {
+        const digest = await spGetDigest(ctx.siteUrl);
+        await fetch(
+            `${ctx.siteUrl}/_api/web/folders/add('${SP_ENC(ctx.folderPath + '/' + subPath)}')`,
+            {
+                method: 'POST', credentials: 'include',
+                headers: {
+                    'Accept': 'application/json;odata=verbose',
+                    'X-RequestDigest': digest,
+                    'Content-Type': 'application/json;odata=verbose'
+                }
+            }
+        );
+    } catch(e) { /* already exists or transient – ignore */ }
+}
+
+async function spLoadFile(ctx, filename) {
+    const path = ctx.folderPath + '/' + PLANNER_DATA_DIR + '/' + filename;
+    const r = await fetch(
+        `${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(path)}')/$value`,
+        { credentials: 'include', headers: { 'Accept': 'text/plain' } }
+    );
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('spLoadFile ' + filename + ' ' + r.status);
+    return JSON.parse(await r.text());
+}
+
+async function spSaveFile(ctx, filename, data) {
+    const digest = await spGetDigest(ctx.siteUrl);
+    const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
+    const r = await fetch(
+        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
+        {
+            method: 'POST', credentials: 'include',
+            headers: {
+                'Accept': 'application/json;odata=verbose',
+                'X-RequestDigest': digest,
+                'Content-Type': 'application/octet-stream'
+            },
+            body: JSON.stringify(data)
+        }
+    );
+    if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);
+}
+
+// Fetch all timestamps of the planner-data folder in a SINGLE request so
+// polling does not scale linearly with the number of split files.
+async function spGetFolderTimestamps(ctx) {
+    const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
+    const r = await fetch(
+        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files?$select=Name,TimeLastModified`,
+        { credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' } }
+    );
+    if (r.status === 404) return {};
+    if (!r.ok) throw new Error('spGetFolderTimestamps ' + r.status);
+    const json = await r.json();
+    const map = {};
+    (json.d?.results || []).forEach(f => { map[f.Name] = f.TimeLastModified; });
+    return map;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── FILE SYSTEM SYNC (lokal via OneDrive) ───────────────────────────────────
@@ -244,6 +339,240 @@ async function fsSave(dirHandle, data) {
     const writable = await fh.createWritable();
     await writable.write(JSON.stringify(data));
     await writable.close();
+}
+
+// Get the planner-data subdirectory handle (create if requested).
+async function fsGetDataDir(dirHandle, create = false) {
+    try {
+        return await dirHandle.getDirectoryHandle(PLANNER_DATA_DIR, { create });
+    } catch(e) {
+        if (e.name === 'NotFoundError') return null;
+        throw e;
+    }
+}
+
+async function fsLoadFile(dirHandle, filename) {
+    const data = await fsGetDataDir(dirHandle, false);
+    if (!data) return null;
+    try {
+        const fh = await data.getFileHandle(filename);
+        const file = await fh.getFile();
+        return { data: JSON.parse(await file.text()), lastModified: file.lastModified };
+    } catch(e) {
+        if (e.name === 'NotFoundError') return null;
+        throw e;
+    }
+}
+
+async function fsSaveFile(dirHandle, filename, payload) {
+    const dataDir = await fsGetDataDir(dirHandle, true);
+    const fh = await dataDir.getFileHandle(filename, { create: true });
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(payload));
+    await w.close();
+}
+
+async function fsGetFolderTimestamps(dirHandle) {
+    const dataDir = await fsGetDataDir(dirHandle, false);
+    if (!dataDir) return {};
+    const map = {};
+    try {
+        for await (const [name, handle] of dataDir.entries()) {
+            if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+            try {
+                const file = await handle.getFile();
+                map[name] = file.lastModified;
+            } catch(e) {}
+        }
+    } catch(e) {}
+    return map;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── TEAM-SPLIT MIGRATION / LOAD / SAVE ───────────────────────────────────────
+// Shared helper: split a monolithic state into the new file layout.
+// Returns an object { filename: content } ready to be persisted.
+function buildSplitFiles(state) {
+    const employees       = state.employees       || [];
+    const projects        = state.projects        || [];
+    const assignments     = state.assignments     || [];
+    const costItems       = state.costItems && state.costItems.length
+        ? state.costItems
+        : migrateExpensesToCostItems(state.expenses);
+    const empCategories   = state.empCategories   || DEFAULT_TEAMS;
+    const projCategories  = state.projCategories  || [];
+    const basicTasks      = state.basicTasks      || [];
+    const offtimeTasks    = state.offtimeTasks    || [];
+    const invoiceRecipient = state.invoiceRecipient || '';
+
+    const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
+    const assGroups = groupByTeam(assignments, employees, teams);
+    const ciGroups  = groupByTeam(costItems,   employees, teams);
+
+    const files = {
+        'employees.json': { employees },
+        'projects.json':  { projects },
+        'settings.json':  { empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient }
+    };
+    for (const team of teams) {
+        files[teamAssignmentsFile(team)] = { assignments: assGroups[team] || [] };
+        files[teamCostItemsFile(team)]   = { costItems:   ciGroups[team]  || [] };
+    }
+    return files;
+}
+
+// Merge split files back into a flat state object (like the old monolithic
+// parsedData).
+function mergeSplitFiles({ employees, projects, settings, assignmentsByTeam, costItemsByTeam }) {
+    const allAssignments = [];
+    const allCostItems = [];
+    Object.values(assignmentsByTeam || {}).forEach(arr => { if (arr) allAssignments.push(...arr); });
+    Object.values(costItemsByTeam   || {}).forEach(arr => { if (arr) allCostItems.push(...arr); });
+    return {
+        employees:        employees || [],
+        projects:         projects  || [],
+        assignments:      allAssignments,
+        costItems:        allCostItems,
+        expenses:         [],
+        empCategories:    settings?.empCategories   || DEFAULT_TEAMS,
+        projCategories:   settings?.projCategories  || [],
+        basicTasks:       settings?.basicTasks      || [],
+        offtimeTasks:     settings?.offtimeTasks    || [],
+        invoiceRecipient: settings?.invoiceRecipient || ''
+    };
+}
+
+// Migrate the old monolithic planner-state.json on SharePoint to split files.
+// Idempotent: skips if meta.json already shows schemaVersion >= 3.
+async function migrateSpToTeamSplit(ctx) {
+    const meta = await spLoadFile(ctx, 'meta.json').catch(() => null);
+    if (meta?.schemaVersion >= SCHEMA_VERSION) return;
+    await spEnsureFolder(ctx, PLANNER_DATA_DIR);
+    const old = await spLoad(ctx).catch(() => null);
+    if (!old) {
+        await spSaveFile(ctx, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+        return;
+    }
+    const files = buildSplitFiles(old);
+    for (const [filename, payload] of Object.entries(files)) {
+        await spSaveFile(ctx, filename, payload);
+    }
+    await spSaveFile(ctx, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+    // planner-state.json is left in place as a backup.
+}
+
+// FS equivalent of the SharePoint migration.
+async function migrateFsToTeamSplit(dirHandle) {
+    const metaResult = await fsLoadFile(dirHandle, 'meta.json').catch(() => null);
+    if (metaResult?.data?.schemaVersion >= SCHEMA_VERSION) return;
+    const oldResult = await fsLoad(dirHandle).catch(() => null);
+    const old = oldResult?.data;
+    if (!old) {
+        await fsSaveFile(dirHandle, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+        return;
+    }
+    const files = buildSplitFiles(old);
+    for (const [filename, payload] of Object.entries(files)) {
+        await fsSaveFile(dirHandle, filename, payload);
+    }
+    await fsSaveFile(dirHandle, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+}
+
+// Load all split files from SharePoint in parallel and merge into a flat
+// parsedData-shaped object. Also returns the folder timestamps for polling.
+async function loadSplitStateSp(ctx) {
+    await migrateSpToTeamSplit(ctx);
+    const settingsData = (await spLoadFile(ctx, 'settings.json').catch(() => null)) || {};
+    const teams = settingsData.empCategories || DEFAULT_TEAMS;
+
+    const [empFile, projFile, ...teamFiles] = await Promise.all([
+        spLoadFile(ctx, 'employees.json').catch(() => null),
+        spLoadFile(ctx, 'projects.json').catch(() => null),
+        ...teams.flatMap(t => [
+            spLoadFile(ctx, teamAssignmentsFile(t)).catch(() => null),
+            spLoadFile(ctx, teamCostItemsFile(t)).catch(() => null)
+        ])
+    ]);
+
+    const assignmentsByTeam = {};
+    const costItemsByTeam = {};
+    teams.forEach((t, i) => {
+        assignmentsByTeam[t] = teamFiles[i * 2]?.assignments || [];
+        costItemsByTeam[t]   = teamFiles[i * 2 + 1]?.costItems || [];
+    });
+    const state = mergeSplitFiles({
+        employees: empFile?.employees,
+        projects:  projFile?.projects,
+        settings:  settingsData,
+        assignmentsByTeam,
+        costItemsByTeam
+    });
+    const timestamps = await spGetFolderTimestamps(ctx).catch(() => ({}));
+    return { state, timestamps };
+}
+
+async function loadSplitStateFs(dirHandle) {
+    await migrateFsToTeamSplit(dirHandle);
+    const settingsResult = await fsLoadFile(dirHandle, 'settings.json').catch(() => null);
+    const settings = settingsResult?.data || {};
+    const teams = settings.empCategories || DEFAULT_TEAMS;
+
+    const [empResult, projResult, ...teamResults] = await Promise.all([
+        fsLoadFile(dirHandle, 'employees.json').catch(() => null),
+        fsLoadFile(dirHandle, 'projects.json').catch(() => null),
+        ...teams.flatMap(t => [
+            fsLoadFile(dirHandle, teamAssignmentsFile(t)).catch(() => null),
+            fsLoadFile(dirHandle, teamCostItemsFile(t)).catch(() => null)
+        ])
+    ]);
+
+    const assignmentsByTeam = {};
+    const costItemsByTeam = {};
+    teams.forEach((t, i) => {
+        assignmentsByTeam[t] = teamResults[i * 2]?.data?.assignments || [];
+        costItemsByTeam[t]   = teamResults[i * 2 + 1]?.data?.costItems || [];
+    });
+    const state = mergeSplitFiles({
+        employees: empResult?.data?.employees,
+        projects:  projResult?.data?.projects,
+        settings,
+        assignmentsByTeam,
+        costItemsByTeam
+    });
+    const timestamps = await fsGetFolderTimestamps(dirHandle).catch(() => ({}));
+    return { state, timestamps };
+}
+
+// Save split files, writing ONLY those whose serialised payload differs from
+// the entry in `lastSaved`. `lastSaved` is mutated to reflect the new state.
+// `writeFile(filename, payload)` is the actual write callback (SP or FS).
+async function saveSplitState(state, lastSaved, writeFile) {
+    const files = buildSplitFiles(state);
+
+    // Include any "historical" team files we may have written previously so
+    // that removing a team from empCategories still produces an (empty)
+    // write – otherwise stale data would linger in its file.
+    Object.keys(lastSaved).forEach(fn => {
+        if (!(fn in files) && (fn.startsWith('assignments-') || fn.startsWith('cost-items-'))) {
+            files[fn] = fn.startsWith('assignments-') ? { assignments: [] } : { costItems: [] };
+        }
+    });
+
+    for (const [filename, payload] of Object.entries(files)) {
+        const serialised = JSON.stringify(payload);
+        if (lastSaved[filename] === serialised) continue;
+        await writeFile(filename, payload);
+        lastSaved[filename] = serialised;
+    }
+}
+
+// Pre-populate `lastSaved` from a state object so the next save round
+// doesn't re-write files that are already in sync.
+function seedLastSaved(state, lastSaved) {
+    const files = buildSplitFiles(state);
+    for (const [filename, payload] of Object.entries(files)) {
+        lastSaved[filename] = JSON.stringify(payload);
+    }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -879,9 +1208,8 @@ function App() {
     const [newOfftimeTask, setNewOfftimeTask] = useState('');
     const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, offtime: false, empCats: false, projCats: false });
 
-    // SharePoint sync
+    // SharePoint / FS sync
     const syncStatusRef = useRef(SP_CONTEXT ? 'connecting' : 'local');
-    const lastKnownTsRef = useRef(null);
     const isRemoteUpdateRef = useRef(false);
     const spSaveTimer = useRef(null);
     const [syncStatus, setSyncStatusState] = useState(SP_CONTEXT ? 'connecting' : 'local');
@@ -889,15 +1217,22 @@ function App() {
 
     // File System sync (OneDrive lokal)
     const dirHandleRef = useRef(null);
-    const lastFsModifiedRef = useRef(0);
     const [fsStatus, setFsStatus] = useState(FS_MODE ? 'checking' : 'off');
     // fsStatus: 'checking' | 'needs-setup' | 'needs-permission' | 'connected' | 'off'
+
+    // Team-split sync state
+    const spFileTimestampsRef = useRef({}); // { 'file.json': 'ISO', ... } for SP polling
+    const fsFileTimestampsRef = useRef({}); // { 'file.json': <ms>, ... } for FS polling
+    const lastSavedSpRef = useRef({});      // { filename: JSON string } for diff-based writes
+    const lastSavedFsRef = useRef({});      // same for FS
+    const employeesRef = useRef([]);
+    const empCategoriesRef = useRef(DEFAULT_TEAMS);
 
     // --- INIT ---
     useEffect(() => {
         const loadData = async () => {
             let parsedData = null;
-            let currentEmpCats = ['CMS', 'AS', 'ME', 'HM', 'Other'];
+            let currentEmpCats = DEFAULT_TEAMS;
 
             // 0. Try File System (local OneDrive folder)
             if (FS_MODE) {
@@ -907,13 +1242,13 @@ function App() {
                     const perm = await handle.queryPermission({ mode: 'readwrite' });
                     if (perm === 'granted') {
                         try {
-                            const result = await fsLoad(handle);
-                            if (result) {
-                                parsedData = result.data;
-                                lastFsModifiedRef.current = result.lastModified;
+                            const { state, timestamps } = await loadSplitStateFs(handle);
+                            if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
+                                parsedData = state;
+                                fsFileTimestampsRef.current = timestamps;
                                 isRemoteUpdateRef.current = true;
                             }
-                        } catch(e) {}
+                        } catch(e) { console.warn('[FS] load failed', e); }
                         setFsStatus('connected');
                     } else {
                         setFsStatus('needs-permission'); // Popup erscheint
@@ -923,17 +1258,23 @@ function App() {
                 }
             }
 
-            // 1. Try SharePoint first
+            // 1. Try SharePoint first (wins over local data if available)
             if (SP_CONTEXT) {
                 try {
-                    parsedData = await spLoad(SP_CONTEXT);
-                    if (parsedData) {
-                        const ts = await spGetTimestamp(SP_CONTEXT);
-                        lastKnownTsRef.current = ts;
+                    const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+                    // Treat "all empty" as fresh install → fall through to
+                    // localStorage / generateInitialData so the app has
+                    // sensible defaults to seed the new files.
+                    if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
+                        parsedData = state;
+                        spFileTimestampsRef.current = timestamps;
                         isRemoteUpdateRef.current = true; // Loaded from SP – don't write back
+                    } else {
+                        spFileTimestampsRef.current = timestamps || {};
                     }
                     setSyncStatus('idle');
                 } catch(e) {
+                    console.warn('[SP] load failed', e);
                     setSyncStatus('offline');
                 }
             }
@@ -961,6 +1302,11 @@ function App() {
                 if (parsedData.basicTasks) setBasicTasks(parsedData.basicTasks);
                 if (parsedData.offtimeTasks) setOfftimeTasks(parsedData.offtimeTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
+
+                // Seed diff snapshots so the first save cycle is a no-op for
+                // files that are already in sync.
+                seedLastSaved(parsedData, lastSavedSpRef.current);
+                seedLastSaved(parsedData, lastSavedFsRef.current);
             } else {
                 const init = generateInitialData(currentEmpCats);
                 setEmployees(init.employees);
@@ -990,9 +1336,15 @@ function App() {
         loadData();
     }, []);
 
-    // Save on change. localStorage + FS writes are debounced (~400ms) so
-    // rapid edits (slider drags, typing) don't trigger a JSON.stringify on
-    // every keystroke. SharePoint stays at 1.5s.
+    // Keep refs aligned with state so polling closures see fresh data.
+    useEffect(() => { employeesRef.current = employees; }, [employees]);
+    useEffect(() => { empCategoriesRef.current = empCategories; }, [empCategories]);
+
+    // Save on change. localStorage runs at ~400 ms, SharePoint at 1.5 s. The
+    // SharePoint write is split per entity / team; saveSplitState() only
+    // writes files whose content actually changed (diff against the last
+    // saved snapshot), so Chef A editing CMS only touches assignments-CMS.json
+    // while Chef B editing AS only touches assignments-AS.json – no conflicts.
     const localSaveTimer = useRef(null);
     useEffect(() => {
         if (employees.length === 0) return;
@@ -1016,7 +1368,11 @@ function App() {
                 console.warn('[LS] save failed', e);
             }
             if (FS_MODE && dirHandleRef.current) {
-                fsSave(dirHandleRef.current, stateData).catch(err => {
+                saveSplitState(stateData, lastSavedFsRef.current,
+                    (filename, payload) => fsSaveFile(dirHandleRef.current, filename, payload)
+                ).then(async () => {
+                    fsFileTimestampsRef.current = await fsGetFolderTimestamps(dirHandleRef.current);
+                }).catch(err => {
                     console.warn('[FS] save failed', err);
                 });
             }
@@ -1027,9 +1383,11 @@ function App() {
             spSaveTimer.current = setTimeout(async () => {
                 setSyncStatus('syncing');
                 try {
-                    await spSave(SP_CONTEXT, stateData);
-                    const ts = await spGetTimestamp(SP_CONTEXT);
-                    lastKnownTsRef.current = ts;
+                    await spEnsureFolder(SP_CONTEXT, PLANNER_DATA_DIR);
+                    await saveSplitState(stateData, lastSavedSpRef.current,
+                        (filename, payload) => spSaveFile(SP_CONTEXT, filename, payload)
+                    );
+                    spFileTimestampsRef.current = await spGetFolderTimestamps(SP_CONTEXT);
                     setSyncStatus('idle');
                 } catch(e) {
                     console.warn('[SP] save failed', e);
@@ -1065,54 +1423,63 @@ function App() {
         setAssignments(data.assignments || []);
         setExpenses(data.expenses || []);
         if (data.costItems) setCostItems(data.costItems);
+        else if (data.expenses && data.expenses.length > 0) setCostItems(migrateExpensesToCostItems(data.expenses));
         if (data.empCategories) setEmpCategories(data.empCategories);
         if (data.projCategories) setProjCategories(data.projCategories);
         if (data.basicTasks) setBasicTasks(data.basicTasks);
         if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+        // Also re-seed the snapshots so the save cascade triggered by these
+        // setStates doesn't rewrite identical data back to the server.
+        seedLastSaved(data, lastSavedSpRef.current);
+        seedLastSaved(data, lastSavedFsRef.current);
         if (notify) {
             setSyncStatus('updated');
             setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
         }
     };
 
-    // SharePoint polling – pick up changes from other users every 3 seconds.
-    // Pauses while the tab is hidden to save bandwidth/battery.
+    // SharePoint polling – pick up changes from other users every 5 seconds.
+    // One folder-list call returns timestamps for all files; if any changed
+    // we reload the complete split state and apply it.
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
             if (document.visibilityState === 'hidden') return;
             if (syncStatusRef.current === 'syncing' || syncStatusRef.current === 'connecting') return;
             try {
-                const ts = await spGetTimestamp(SP_CONTEXT);
-                if (ts && lastKnownTsRef.current && ts !== lastKnownTsRef.current) {
-                    const data = await spLoad(SP_CONTEXT);
-                    if (data) {
-                        lastKnownTsRef.current = ts;
-                        applyRemoteSnapshot(data);
-                    }
+                const newTs = await spGetFolderTimestamps(SP_CONTEXT);
+                const prev = spFileTimestampsRef.current;
+                const changed = Object.keys(newTs).some(f => newTs[f] !== prev[f]);
+                if (changed) {
+                    const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+                    spFileTimestampsRef.current = timestamps;
+                    applyRemoteSnapshot(state);
                 }
             } catch(e) { /* Transient errors ignored */ }
         };
-        const interval = setInterval(poll, 3000);
+        const interval = setInterval(poll, 5000);
         return () => clearInterval(interval);
     }, []);
 
-    // File System polling – Änderungen von Kollegen alle 3 Sek. erkennen.
+    // File System polling – Änderungen von Kollegen alle 5 Sek. erkennen.
     useEffect(() => {
         if (!FS_MODE) return;
         const poll = async () => {
             if (document.visibilityState === 'hidden') return;
             if (!dirHandleRef.current) return;
             try {
-                const result = await fsLoad(dirHandleRef.current);
-                if (result && result.lastModified > lastFsModifiedRef.current) {
-                    lastFsModifiedRef.current = result.lastModified;
-                    applyRemoteSnapshot(result.data);
+                const newTs = await fsGetFolderTimestamps(dirHandleRef.current);
+                const prev = fsFileTimestampsRef.current;
+                const changed = Object.keys(newTs).some(f => newTs[f] !== prev[f]);
+                if (changed) {
+                    const { state, timestamps } = await loadSplitStateFs(dirHandleRef.current);
+                    fsFileTimestampsRef.current = timestamps;
+                    applyRemoteSnapshot(state);
                 }
             } catch(e) { /* Transient errors ignored */ }
         };
-        const interval = setInterval(poll, 3000);
+        const interval = setInterval(poll, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -1338,7 +1705,12 @@ function App() {
     };
 
     const exportData = () => {
-        const data = JSON.stringify({ employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks }, null, 2);
+        const data = JSON.stringify({
+            employees, projects, assignments, expenses, costItems,
+            empCategories, projCategories, basicTasks, offtimeTasks,
+            invoiceRecipient,
+            schemaVersion: SCHEMA_VERSION
+        }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1688,12 +2060,12 @@ function App() {
 
     const applyFsData = async (handle) => {
         try {
-            const result = await fsLoad(handle);
-            if (result) {
-                lastFsModifiedRef.current = result.lastModified;
-                applyRemoteSnapshot(result.data, { notify: false });
+            const { state, timestamps } = await loadSplitStateFs(handle);
+            if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
+                fsFileTimestampsRef.current = timestamps;
+                applyRemoteSnapshot(state, { notify: false });
             }
-        } catch(e) {}
+        } catch(e) { console.warn('[FS] applyFsData failed', e); }
     };
 
     const handleSetupFolder = async () => {
@@ -3060,10 +3432,17 @@ function App() {
                             if (SP_CONTEXT) {
                                 try {
                                     const digest = await spGetDigest(SP_CONTEXT.siteUrl);
+                                    // Legacy monolithic file
                                     await fetch(`${SP_CONTEXT.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(SP_CONTEXT.stateFilePath)}')/recycle()`, {
                                         method: 'POST', credentials: 'include',
                                         headers: { 'X-RequestDigest': digest, 'Accept': 'application/json;odata=verbose' }
-                                    });
+                                    }).catch(() => {});
+                                    // New team-split folder
+                                    const dataFolder = SP_CONTEXT.folderPath + '/' + PLANNER_DATA_DIR;
+                                    await fetch(`${SP_CONTEXT.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(dataFolder)}')/recycle()`, {
+                                        method: 'POST', credentials: 'include',
+                                        headers: { 'X-RequestDigest': digest, 'Accept': 'application/json;odata=verbose' }
+                                    }).catch(() => {});
                                 } catch(e) {}
                             }
                             window.location.reload();
