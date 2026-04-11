@@ -3341,7 +3341,19 @@ function App() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const createdAt = basicTasksMeta[task]?.createdAt || new Date().toISOString();
+                                                                setBasicTasks(prev => prev.filter(t => t !== task));
+                                                                setInactiveBasicTasks(prev => [...prev, { name: task, createdAt }]);
+                                                            }}
+                                                            className="px-2.5 py-1 text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
+                                                            title="Inaktiv setzen">
+                                                            Inaktiv
+                                                        </button>
+                                                        <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                                                    </div>
                                                 </li>
                                             ))}
                                         </ul>
