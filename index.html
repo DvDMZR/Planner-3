@@ -400,11 +400,13 @@ function buildSplitFiles(state) {
     const costItems       = state.costItems && state.costItems.length
         ? state.costItems
         : migrateExpensesToCostItems(state.expenses);
-    const empCategories   = state.empCategories   || DEFAULT_TEAMS;
-    const projCategories  = state.projCategories  || [];
-    const basicTasks      = state.basicTasks      || [];
-    const offtimeTasks    = state.offtimeTasks    || [];
-    const invoiceRecipient = state.invoiceRecipient || '';
+    const empCategories      = state.empCategories      || DEFAULT_TEAMS;
+    const projCategories     = state.projCategories     || [];
+    const basicTasks         = state.basicTasks         || [];
+    const basicTasksMeta     = state.basicTasksMeta     || {};
+    const inactiveBasicTasks = state.inactiveBasicTasks || [];
+    const offtimeTasks       = state.offtimeTasks       || [];
+    const invoiceRecipient   = state.invoiceRecipient   || '';
 
     const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
     const assGroups = groupByTeam(assignments, employees, teams);
@@ -435,11 +437,13 @@ function mergeSplitFiles({ employees, projects, settings, assignmentsByTeam, cos
         assignments:      allAssignments,
         costItems:        allCostItems,
         expenses:         [],
-        empCategories:    settings?.empCategories   || DEFAULT_TEAMS,
-        projCategories:   settings?.projCategories  || [],
-        basicTasks:       settings?.basicTasks      || [],
-        offtimeTasks:     settings?.offtimeTasks    || [],
-        invoiceRecipient: settings?.invoiceRecipient || ''
+        empCategories:      settings?.empCategories      || DEFAULT_TEAMS,
+        projCategories:     settings?.projCategories     || [],
+        basicTasks:         settings?.basicTasks         || [],
+        basicTasksMeta:     settings?.basicTasksMeta     || {},
+        inactiveBasicTasks: settings?.inactiveBasicTasks || [],
+        offtimeTasks:       settings?.offtimeTasks       || [],
+        invoiceRecipient:   settings?.invoiceRecipient   || ''
     };
 }
 
@@ -1327,8 +1331,10 @@ function App() {
 
                 // Seed diff snapshots so the first save cycle is a no-op for
                 // files that are already in sync.
-                seedLastSaved(parsedData, lastSavedSpRef.current);
-                seedLastSaved(parsedData, lastSavedFsRef.current);
+                try {
+                    seedLastSaved(parsedData, lastSavedSpRef.current);
+                    seedLastSaved(parsedData, lastSavedFsRef.current);
+                } catch(e) { console.warn('[SEED] snapshot seeding failed', e); }
             } else {
                 const init = generateInitialData(currentEmpCats);
                 setEmployees(init.employees);
@@ -1339,13 +1345,21 @@ function App() {
 
             const w = [];
             const today = new Date();
-            for(let i=0; i<WEEKS_IN_YEAR; i++) {
-                const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (i*7));
-                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-                const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-                const kw = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            // Anchor to Monday of the current ISO week so the resource view
+            // is consistent with the timeline tab (which also starts on Monday).
+            const todayDow = today.getDay() || 7; // 1=Mon … 7=Sun
+            const thisMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - todayDow + 1);
+            // Use 54 iterations to cover 53-week ISO years; deduplicate by ID.
+            const seenIds = new Set();
+            for(let i=0; i<54; i++) {
+                const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() + (i*7));
+                const weekId = getWeekString(d);
+                if (seenIds.has(weekId)) continue;
+                seenIds.add(weekId);
+                if (w.length >= 54) break;
+                const kw = parseInt(weekId.split('-W')[1], 10);
                 w.push({
-                    id: `${d.getFullYear()}-W${kw.toString().padStart(2, '0')}`,
+                    id: weekId,
                     label: `KW ${kw}`,
                     sub: `${d.getDate()}.${d.getMonth()+1}.`,
                     month: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
@@ -1418,7 +1432,7 @@ function App() {
                 }
             }, 1500);
         }
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient]);
 
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
@@ -1430,14 +1444,15 @@ function App() {
             try {
                 const stateData = {
                     employees, projects, assignments, expenses, costItems,
-                    empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient
+                    empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
+                    offtimeTasks, invoiceRecipient
                 };
                 localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
             } catch(e) {}
         };
         window.addEventListener('beforeunload', flush);
         return () => window.removeEventListener('beforeunload', flush);
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, offtimeTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient]);
 
     const applyRemoteSnapshot = (data, { notify = true } = {}) => {
         isRemoteUpdateRef.current = true;
@@ -1450,12 +1465,16 @@ function App() {
         if (data.empCategories) setEmpCategories(data.empCategories);
         if (data.projCategories) setProjCategories(data.projCategories);
         if (data.basicTasks) setBasicTasks(data.basicTasks);
+        if (data.basicTasksMeta !== undefined) setBasicTasksMeta(data.basicTasksMeta);
+        if (data.inactiveBasicTasks) setInactiveBasicTasks(data.inactiveBasicTasks);
         if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
         // Also re-seed the snapshots so the save cascade triggered by these
         // setStates doesn't rewrite identical data back to the server.
-        seedLastSaved(data, lastSavedSpRef.current);
-        seedLastSaved(data, lastSavedFsRef.current);
+        try {
+            seedLastSaved(data, lastSavedSpRef.current);
+            seedLastSaved(data, lastSavedFsRef.current);
+        } catch(e) { console.warn('[SEED] snapshot seeding failed in applyRemoteSnapshot', e); }
         if (notify) {
             setSyncStatus('updated');
             setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
