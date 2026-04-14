@@ -1004,7 +1004,11 @@ const CopyModal = ({
 
     const [selWeeks, setSelWeeks] = useState({});
     const [selEmps, setSelEmps] = useState({});
-    const [collapsedTeams, setCollapsedTeams] = useState({});
+    const [collapsedTeams, setCollapsedTeams] = useState(() => {
+        const init = {};
+        (empCategories || []).forEach(cat => { init[cat] = true; });
+        return init;
+    });
 
     const toggleWeek = (wId) => setSelWeeks(prev => ({...prev, [wId]: !prev[wId]}));
     const toggleEmp = (eId) => setSelEmps(prev => ({...prev, [eId]: !prev[eId]}));
@@ -1058,7 +1062,7 @@ const CopyModal = ({
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
                 <ModalHeader title="Task kopieren" subtitle={`"${label}" · ${pct}%`} onClose={onClose}/>
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
