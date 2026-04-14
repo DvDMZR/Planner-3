@@ -6,11 +6,11 @@
     <title>Einsatzplanung 3.0 – v0.6</title>
     
     <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+
     <!-- Babel für JSX Kompilierung im Browser -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.27.1/babel.min.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1371,10 +1371,14 @@ const CostItemModal = ({
 
 // --- DEPENDENCIES / SECURITY INFO ---
 const DEPS_LIST = [
-    { name: 'React',           pkg: 'react',             pin: '18.x', cdnUrl: 'https://unpkg.com/react@18/umd/react.development.js',     getLoaded: () => window.React?.version },
-    { name: 'ReactDOM',        pkg: 'react-dom',         pin: '18.x', cdnUrl: 'https://unpkg.com/react-dom@18/umd/react-dom.development.js', getLoaded: () => window.ReactDOM?.version },
-    { name: 'Babel Standalone',pkg: '@babel/standalone',  pin: 'latest', cdnUrl: 'https://unpkg.com/@babel/standalone/babel.min.js',      getLoaded: () => window.Babel?.version },
-    { name: 'Tailwind CSS',    pkg: 'tailwindcss',       pin: 'Play CDN', cdnUrl: 'https://cdn.tailwindcss.com',                         getLoaded: () => window.tailwind?.version || '(Play CDN)' },
+    { name: 'React',            pkg: 'react',            cdnUrl: 'https://unpkg.com/react@18.3.1/umd/react.development.js',         getLoaded: () => window.React?.version,
+      desc: 'Kern-Bibliothek für die UI-Komponenten. Verwaltet den Anwendungsstatus und sorgt für effizientes Neurendering bei Datenänderungen.' },
+    { name: 'ReactDOM',         pkg: 'react-dom',        cdnUrl: 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js',  getLoaded: () => window.ReactDOM?.version,
+      desc: 'Verbindet React mit dem Browser-DOM. Rendert die React-Komponentenstruktur in die HTML-Seite.' },
+    { name: 'Babel Standalone', pkg: '@babel/standalone', cdnUrl: 'https://unpkg.com/@babel/standalone@7.27.1/babel.min.js',         getLoaded: () => window.Babel?.version,
+      desc: 'Kompiliert JSX-Syntax (HTML-in-JavaScript) direkt im Browser zu normalem JavaScript, da kein Build-Server vorhanden ist.' },
+    { name: 'Tailwind CSS',     pkg: 'tailwindcss',      cdnUrl: 'https://cdn.tailwindcss.com',                                      getLoaded: () => window.tailwind?.version || '(Play CDN)',
+      desc: 'CSS-Utility-Framework für das gesamte Styling der App. Die Play-CDN-Version wird direkt im Browser generiert – keine separate CSS-Datei nötig.' },
 ];
 
 const DepsSection = () => {
@@ -1429,7 +1433,17 @@ const DepsSection = () => {
                         const isOutdated = latestVer && loaded && latestVer !== loaded && loaded !== '(Play CDN)';
                         return (
                             <tr key={dep.pkg} className="hover:bg-slate-50">
-                                <td className="px-4 py-2.5 font-medium text-slate-700">{dep.name}</td>
+                                <td className="px-4 py-2.5 font-medium text-slate-700">
+                                    <span className="flex items-center gap-1.5">
+                                        {dep.name}
+                                        <span className="relative group/tip cursor-help">
+                                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-xs font-bold leading-none select-none">?</span>
+                                            <span className="pointer-events-none absolute left-5 top-0 z-50 w-64 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg" style={{whiteSpace:'normal'}}>
+                                                {dep.desc}
+                                            </span>
+                                        </span>
+                                    </span>
+                                </td>
                                 <td className="px-4 py-2.5">
                                     {loaded
                                         ? <span className="font-mono text-slate-600">{loaded}</span>
@@ -2516,7 +2530,7 @@ function App() {
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
                             <span className="text-xs font-medium">Einsatzplanung v0.6</span>
-                            <span className="bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={10}/>Changelog</span>
+                            <span className="bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
                         </button>
                     </div>
                 </div>
@@ -3963,11 +3977,15 @@ function App() {
     };
 
     const renderData = () => (
-        <div className="flex-1 p-8 bg-slate-50 flex items-center justify-center">
-            <div className="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-                <IconSettings size={48} className="mx-auto text-slate-300 mb-6"/>
-                <h2 className="text-xl text-slate-900 mb-2 font-medium">Datenverwaltung</h2>
-                <p className="text-sm text-slate-500 mb-6">Exportiere deine Planung als JSON-Backup oder stelle Daten aus einem Backup wieder her.</p>
+        <div className="flex-1 p-8 bg-slate-50 overflow-y-auto">
+            <div className="max-w-3xl mx-auto w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div className="flex items-center gap-4 mb-6">
+                    <IconSettings size={40} className="text-slate-300 shrink-0"/>
+                    <div>
+                        <h2 className="text-xl text-slate-900 font-medium">Datenverwaltung</h2>
+                        <p className="text-sm text-slate-500">Exportiere deine Planung als JSON-Backup oder stelle Daten aus einem Backup wieder her.</p>
+                    </div>
+                </div>
 
                 <div className="mb-6 text-left border border-slate-200 rounded-lg p-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Rechnungsempfänger (E-Mail)</label>
@@ -3979,15 +3997,16 @@ function App() {
                 </div>
 
                 <div className="space-y-4">
-                    <button onClick={exportData} className="w-full bg-gea-600 hover:bg-gea-700 text-white py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
-                        <IconDownload size={20}/> Vollständiges Backup (JSON)
-                    </button>
-                    
-                    <div className="relative">
-                        <input type="file" accept=".json" onChange={importData} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        <button className="w-full bg-white border-2 border-dashed border-slate-300 hover:border-gea-400 text-slate-600 py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
-                            <IconUpload size={20}/> Daten Importieren (JSON)
+                    <div className="grid grid-cols-2 gap-4">
+                        <button onClick={exportData} className="bg-gea-600 hover:bg-gea-700 text-white py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
+                            <IconDownload size={18}/> Backup exportieren (JSON)
                         </button>
+                        <div className="relative">
+                            <input type="file" accept=".json" onChange={importData} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                            <button className="w-full bg-white border-2 border-dashed border-slate-300 hover:border-gea-400 text-slate-600 py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
+                                <IconUpload size={18}/> Daten importieren (JSON)
+                            </button>
+                        </div>
                     </div>
                     
                     <DepsSection/>
