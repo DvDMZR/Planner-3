@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Einsatzplanung 3.0 – v0.5.1</title>
+    <title>Einsatzplanung 3.0 – v0.6</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -66,7 +66,7 @@ const makeId = (prefix = 'id') =>
 // planner-data/. Everything else lives in global files under planner-data/.
 // Two planners that work on different teams therefore never touch the same
 // file and cannot produce SharePoint/OneDrive conflict copies.
-const DEFAULT_TEAMS = ['CMS', 'AS', 'ME', 'HM', 'Other'];
+const DEFAULT_TEAMS = ['AS', 'CMS', 'CSS', 'HM', 'I&C', 'Other'];
 const PLANNER_DATA_DIR = 'planner-data';
 const SCHEMA_VERSION = 3;
 const teamAssignmentsFile = (team) => `assignments-${team}.json`;
@@ -91,6 +91,60 @@ const groupByTeam = (items, employees, teams) => {
     return groups;
 };
 // ─────────────────────────────────────────────────────────────────────────────
+
+// --- CHANGELOG (copy to CHANGELOG.md in sync folder when updated) ---
+const CHANGELOG_CONTENT = `# Changelog
+
+## v0.6 (2026-04-14)
+
+### Bug Fixes
+- Fixed sticky employee name column being covered by task chips when scrolling right in resource planning (z-index fix)
+
+### Teams
+- Renamed team "ME" to "CSS"
+- Added new team "I&C"
+- Teams are now displayed in alphabetical order (with "Other" always last)
+- Employees within each team are now displayed in alphabetical order
+
+### Planning Types (new in assignment modal)
+- Added type "Trainings" with 8 sub-options: R95 Training: I&C, R95 Training: S&T, F45 Training: I&C, F45 Training: S&T, HM Training, T89 Training, T86 Training, DNB Training
+- Added type "Support": 24/7 Support, CRM Support, 24/7 Replacement, CRM Replacement
+- Added type "Other" for user-created tasks (previously stored under "Basic")
+- Tasks created via "+ Neu" now appear under "Other" instead of "Basic"
+- Removed "24/7" and "Ticketing" from Basic — they are now Support tasks
+
+### Categories (Kategorien)
+- "Set Inactive" is now available for all category types: Basic, Other, Support, Training, Offtime
+- Added "Permanent" tag per task: tasks with this tag are never auto-inactivated after 12 weeks
+  - Hardcoded tasks (Basic, Support, Training) are permanently active by default
+  - User-created Other tasks can be toggled between Permanent and Temporary
+  - New user-created tasks default to Temporary (auto-expire after 12 weeks)
+- Support and Training tasks now shown in their own sections in Kategorien
+
+### Task Comments
+- Click any planned task chip to open the edit modal and add a comment
+- Tasks with a comment display a small message icon (indicator)
+- Hovering over a task with a comment shows the comment text as a native tooltip
+- Copying a task via the copy button also copies the comment
+- Drag-dropping a task to a different employee clears the comment (reassignment = new context)
+
+### Colors
+- Projects now display their color as the full chip background in resource planning
+- 9-color palette available for projects (blue, violet, emerald, teal, rose, lime, cyan, pink, gea)
+- New projects are auto-assigned the next available color from the palette
+- Project color picker now shows swatches in the project edit dialog
+- 24/7 Support: unique amber color not shared with any project
+- CRM Support: unique indigo color not shared with any project
+- 24/7 Replacement: unique orange color
+- CRM Replacement: unique purple color
+- Training tasks use a unique sky-blue color
+- User-created Other/Basic tasks can optionally have a custom color assigned in Kategorien settings
+  (Default is no color — neutral gray chip)
+
+### Version & UI
+- Version bumped to v0.6
+- New changelog button (history icon) in sidebar showing full version history
+`;
 
 // Migrate legacy `expenses` entries to the new `costItems` shape.
 const migrateExpensesToCostItems = (expenses) =>
@@ -126,6 +180,9 @@ const IconCopy = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/
 const IconClock = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 const IconTable = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>;
 const IconEdit = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const IconMessageSquare = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+const IconHistory = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-4.5"></path><circle cx="12" cy="12" r="1" fill="currentColor"/><polyline points="12 7 12 12 15 15"></polyline></svg>;
+const IconPin = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
 
 // --- KONFIGURATION ---
 const COST_TYPES = ['Dienstleistung', 'Reisekosten', 'Sonstiges'];
@@ -134,6 +191,46 @@ const HOURS_PER_WEEK = 40;
 const WEEKS_IN_YEAR = 52;
 const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 12;
+
+// --- PLANNING TYPE CONSTANTS ---
+const TRAINING_TASKS = [
+    'R95 Training: I&C', 'R95 Training: S&T',
+    'F45 Training: I&C', 'F45 Training: S&T',
+    'HM Training', 'T89 Training', 'T86 Training', 'DNB Training'
+];
+const SUPPORT_TASKS = ['24/7 Support', 'CRM Support', '24/7 Replacement', 'CRM Replacement'];
+
+const SUPPORT_CHIP_COLORS = {
+    '24/7 Support':     { chip: 'bg-amber-100 border-amber-400 text-amber-900',    dot: 'bg-amber-500' },
+    'CRM Support':      { chip: 'bg-indigo-100 border-indigo-300 text-indigo-900', dot: 'bg-indigo-500' },
+    '24/7 Replacement': { chip: 'bg-orange-100 border-orange-300 text-orange-900', dot: 'bg-orange-500' },
+    'CRM Replacement':  { chip: 'bg-purple-100 border-purple-300 text-purple-900', dot: 'bg-purple-500' },
+};
+const TRAINING_CHIP_COLOR = { chip: 'bg-sky-50 border-sky-200 text-sky-800', dot: 'bg-sky-500' };
+
+const PROJECT_COLORS = [
+    { id: 'blue',    dot: 'bg-blue-500',    chip: 'bg-blue-50 border-blue-200 text-blue-800' },
+    { id: 'violet',  dot: 'bg-violet-500',  chip: 'bg-violet-50 border-violet-200 text-violet-800' },
+    { id: 'emerald', dot: 'bg-emerald-500', chip: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+    { id: 'teal',    dot: 'bg-teal-500',    chip: 'bg-teal-50 border-teal-200 text-teal-800' },
+    { id: 'rose',    dot: 'bg-rose-500',    chip: 'bg-rose-50 border-rose-200 text-rose-800' },
+    { id: 'lime',    dot: 'bg-lime-500',    chip: 'bg-lime-50 border-lime-200 text-lime-800' },
+    { id: 'cyan',    dot: 'bg-cyan-500',    chip: 'bg-cyan-50 border-cyan-200 text-cyan-800' },
+    { id: 'pink',    dot: 'bg-pink-500',    chip: 'bg-pink-50 border-pink-200 text-pink-800' },
+    { id: 'gea',     dot: 'bg-gea-500',     chip: 'bg-gea-50 border-gea-200 text-gea-800' },
+];
+// Map old Tailwind class colors to new id system
+const OLD_COLOR_MAP = {
+    'bg-gea-500': 'gea', 'bg-blue-500': 'blue', 'bg-violet-500': 'violet',
+    'bg-emerald-500': 'emerald', 'bg-teal-500': 'teal', 'bg-rose-500': 'rose',
+    'bg-lime-500': 'lime', 'bg-cyan-500': 'cyan', 'bg-pink-500': 'pink',
+};
+const resolveProjectColor = (colorVal) => {
+    const raw = colorVal || 'gea';
+    const id = OLD_COLOR_MAP[raw] || raw;
+    return PROJECT_COLORS.find(c => c.id === id) || PROJECT_COLORS[0];
+};
+
 const PROJECT_STATUSES = [
     { value: 'planned',         label: 'Fängt noch an',       color: 'bg-blue-100 text-blue-700' },
     { value: 'active',          label: 'Hat angefangen',      color: 'bg-emerald-100 text-emerald-700' },
@@ -415,7 +512,7 @@ function buildSplitFiles(state) {
     const files = {
         'employees.json': { employees },
         'projects.json':  { projects },
-        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient }
+        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient }
     };
     for (const team of teams) {
         files[teamAssignmentsFile(team)] = { assignments: assGroups[team] || [] };
@@ -441,9 +538,12 @@ function mergeSplitFiles({ employees, projects, settings, assignmentsByTeam, cos
         projCategories:     settings?.projCategories     || [],
         basicTasks:         settings?.basicTasks         || [],
         basicTasksMeta:     settings?.basicTasksMeta     || {},
-        inactiveBasicTasks: settings?.inactiveBasicTasks || [],
-        offtimeTasks:       settings?.offtimeTasks       || [],
-        invoiceRecipient:   settings?.invoiceRecipient   || ''
+        inactiveBasicTasks:   settings?.inactiveBasicTasks   || [],
+        offtimeTasks:         settings?.offtimeTasks         || [],
+        inactiveOfftimeTasks: settings?.inactiveOfftimeTasks || [],
+        inactiveSupportTasks: settings?.inactiveSupportTasks || [],
+        inactiveTrainingTasks:settings?.inactiveTrainingTasks|| [],
+        invoiceRecipient:     settings?.invoiceRecipient     || ''
     };
 }
 
@@ -670,7 +770,11 @@ const AssignmentModal = ({
     assignContext,
     employeeById,
     basicTasks,
+    basicTasksMeta,
     offtimeTasks,
+    inactiveOfftimeTasks,
+    inactiveSupportTasks,
+    inactiveTrainingTasks,
     projects,
     computeAutoStatus,
     getUtilization,
@@ -682,11 +786,34 @@ const AssignmentModal = ({
     onDelete,
 }) => {
     const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
+    const activeSupportTasks = SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t));
+    const activeTrainingTasks = TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t));
+    const activeOfftimeTasks = offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t));
+    const otherTasks = basicTasks.filter(t => basicTasksMeta && basicTasksMeta[t]);
+
+    const getInitialType = () => {
+        const ex = assignContext.existing;
+        if (!ex) return 'basic';
+        return ex.type || 'basic';
+    };
+    const getInitialRef = (type) => {
+        const ex = assignContext.existing;
+        if (ex) return ex.reference || '';
+        if (type === 'project') return projects.find(p => ['active','planned'].includes(computeAutoStatus(p)))?.id || '';
+        if (type === 'basic') return basicTasks.filter(t => !basicTasksMeta?.[t])[0] || basicTasks[0] || '';
+        if (type === 'support') return activeSupportTasks[0] || '';
+        if (type === 'training') return activeTrainingTasks[0] || '';
+        if (type === 'other') return otherTasks[0] || '';
+        if (type === 'offtime') return activeOfftimeTasks[0] || '';
+        return '';
+    };
+
+    const initType = getInitialType();
     const [formData, setFormData] = useState(assignContext.existing || {
         empId: assignContext.empId,
         week: assignContext.week,
-        type: 'basic',
-        reference: basicTasks[0] || '',
+        type: initType,
+        reference: getInitialRef(initType),
         hours: empWeeklyHours
     });
     const [newTaskName, setNewTaskName] = useState('');
@@ -697,8 +824,11 @@ const AssignmentModal = ({
     const handleTypeChange = (type) => {
         let ref = '';
         if (type === 'project') ref = projects.find(p => ['active','planned'].includes(computeAutoStatus(p)))?.id || '';
-        else if (type === 'basic') ref = basicTasks[0] || '';
-        else if (type === 'offtime') ref = offtimeTasks[0] || '';
+        else if (type === 'basic') ref = basicTasks.filter(t => !basicTasksMeta?.[t])[0] || basicTasks[0] || '';
+        else if (type === 'support') ref = activeSupportTasks[0] || '';
+        else if (type === 'training') ref = activeTrainingTasks[0] || '';
+        else if (type === 'other') ref = otherTasks[0] || '';
+        else if (type === 'offtime') ref = activeOfftimeTasks[0] || '';
         setFormData({...formData, type, reference: ref});
         setNewTaskName('');
     };
@@ -710,9 +840,9 @@ const AssignmentModal = ({
             if (!trimmed) return;
             if (!basicTasks.includes(trimmed)) {
                 setBasicTasks(prev => [...prev, trimmed]);
-                setBasicTasksMeta(prev => ({...prev, [trimmed]: { createdAt: new Date().toISOString() }}));
+                setBasicTasksMeta(prev => ({...prev, [trimmed]: { createdAt: new Date().toISOString(), permanent: false }}));
             }
-            data = { ...formData, type: 'basic', reference: trimmed };
+            data = { ...formData, type: 'other', reference: trimmed };
         }
         const weeklyH = getEmpWeeklyHours(formData.empId);
         const { total: currentTotal } = getUtilization(formData.empId, formData.week);
@@ -728,6 +858,18 @@ const AssignmentModal = ({
         onSave(data);
     };
 
+    const TYPE_BUTTONS = [
+        { value: 'training', label: 'Training' },
+        { value: 'support',  label: 'Support' },
+        { value: 'basic',    label: 'Basic' },
+        { value: 'other',    label: 'Other' },
+        { value: 'project',  label: 'Projekt' },
+        { value: 'offtime',  label: 'Offtime' },
+        { value: 'new',      label: '+ Neu' },
+    ];
+
+    const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
+
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -742,12 +884,7 @@ const AssignmentModal = ({
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Typ</label>
                         <div className="grid grid-cols-4 gap-1">
-                            {[
-                                { value: 'basic', label: 'Basic Task' },
-                                { value: 'project', label: 'Projekt' },
-                                { value: 'offtime', label: 'Offtime' },
-                                { value: 'new', label: '+ Neu' },
-                            ].map(opt => (
+                            {TYPE_BUTTONS.map(opt => (
                                 <button key={opt.value} onClick={() => handleTypeChange(opt.value)}
                                     className={`py-2 px-1 text-xs rounded-md border font-medium transition-colors ${formData.type === opt.value ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`}>
                                     {opt.label}
@@ -758,12 +895,12 @@ const AssignmentModal = ({
 
                     {formData.type === 'new' && (
                         <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">Neuer Task-Name</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">Neuer Task-Name (Other)</label>
                             <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)}
                                 autoFocus
                                 placeholder="z.B. Meeting, Workshop, …"
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
-                            <p className="text-xs text-slate-400 mt-1">Wird als Basic Task gespeichert und zur Liste hinzugefügt.</p>
+                            <p className="text-xs text-slate-400 mt-1">Wird als Other-Task gespeichert und zur Liste hinzugefügt.</p>
                         </div>
                     )}
 
@@ -777,12 +914,29 @@ const AssignmentModal = ({
                             )}
                             {formData.type === 'basic' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {basicTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {hardcodedBasicTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            )}
+                            {formData.type === 'other' && (
+                                <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                    {otherTasks.length > 0
+                                        ? otherTasks.map(t => <option key={t} value={t}>{t}</option>)
+                                        : <option value="">— Noch keine Other-Tasks (+ Neu verwenden) —</option>}
+                                </select>
+                            )}
+                            {formData.type === 'support' && (
+                                <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                    {activeSupportTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            )}
+                            {formData.type === 'training' && (
+                                <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                    {activeTrainingTasks.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             )}
                             {formData.type === 'offtime' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {offtimeTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {activeOfftimeTasks.map(t => <option key={t} value={t}>{t}</option>)}
                                 </select>
                             )}
                         </div>
@@ -800,6 +954,17 @@ const AssignmentModal = ({
                         <div className="flex justify-between text-xs text-slate-400 mt-1">
                             <span>0%</span><span>50%</span><span>100%</span><span>150%</span><span>200%</span>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Kommentar (optional)</label>
+                        <textarea
+                            value={formData.comment || ''}
+                            onChange={e => setFormData({...formData, comment: e.target.value})}
+                            placeholder="Notiz zu dieser Planung…"
+                            rows={2}
+                            className="w-full p-2 border border-slate-300 rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-gea-400"
+                        />
                     </div>
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
@@ -1153,13 +1318,17 @@ function App() {
     const [costItems, setCostItems] = useState([]);
     
     // Dynamic Categories
-    const [empCategories, setEmpCategories] = useState(['CMS', 'AS', 'ME', 'HM', 'Other']);
+    const [empCategories, setEmpCategories] = useState(['AS', 'CMS', 'CSS', 'HM', 'I&C', 'Other']);
     const [projCategories, setProjCategories] = useState(['AMS', 'AFS', 'CMS', 'Other']);
-    const [basicTasks, setBasicTasks] = useState(['Office', '24/7', 'Ticketing', 'Other']);
-    const [basicTasksMeta, setBasicTasksMeta] = useState({});       // { [taskName]: { createdAt: ISO } } — custom tasks only
+    const [basicTasks, setBasicTasks] = useState(['Office']);
+    const [basicTasksMeta, setBasicTasksMeta] = useState({});       // { [taskName]: { createdAt: ISO, permanent: bool, color?: string } }
     const [inactiveBasicTasks, setInactiveBasicTasks] = useState([]); // [{ name, createdAt }]
     const [basicTasksSubTab, setBasicTasksSubTab] = useState('aktiv');
     const [offtimeTasks, setOfftimeTasks] = useState(['Vacation', 'Sickness', 'Gleitzeit', 'Other']);
+    const [inactiveOfftimeTasks, setInactiveOfftimeTasks] = useState([]); // [{ name }]
+    const [inactiveSupportTasks, setInactiveSupportTasks] = useState([]); // string[]
+    const [inactiveTrainingTasks, setInactiveTrainingTasks] = useState([]); // string[]
+    const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
     const [weeks, setWeeks] = useState([]);
     const [selectedProject, setSelectedProject] = useState(null);
@@ -1208,7 +1377,7 @@ function App() {
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
     const [editingEmpId, setEditingEmpId] = useState(null);
-    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', startWeek: '', ibnWeek: '', color: 'bg-gea-500', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
+    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
     // Category Forms
@@ -1216,7 +1385,7 @@ function App() {
     const [newProjCat, setNewProjCat] = useState('');
     const [newBasicTask, setNewBasicTask] = useState('');
     const [newOfftimeTask, setNewOfftimeTask] = useState('');
-    const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, offtime: false, empCats: false, projCats: false });
+    const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, other: false, support: false, training: false, offtime: false, empCats: false, projCats: false });
 
     // SharePoint / FS sync
     const syncStatusRef = useRef(SP_CONTEXT ? 'connecting' : 'local');
@@ -1307,15 +1476,27 @@ function App() {
                 } else if (parsedData.expenses && parsedData.expenses.length > 0) {
                     setCostItems(migrateExpensesToCostItems(parsedData.expenses));
                 }
-                if (parsedData.empCategories) { setEmpCategories(parsedData.empCategories); currentEmpCats = parsedData.empCategories; }
+                if (parsedData.empCategories) {
+                    // Migrate old team name 'ME' → 'CSS'
+                    const migratedCats = parsedData.empCategories.map(c => c === 'ME' ? 'CSS' : c);
+                    if (!migratedCats.includes('I&C')) migratedCats.splice(migratedCats.indexOf('Other'), 0, 'I&C');
+                    setEmpCategories(migratedCats);
+                    currentEmpCats = migratedCats;
+                    // Also migrate employees
+                    if (parsedData.employees) {
+                        parsedData.employees = parsedData.employees.map(e => e.category === 'ME' ? {...e, category: 'CSS'} : e);
+                    }
+                }
                 if (parsedData.projCategories) setProjCategories(parsedData.projCategories);
                 if (parsedData.basicTasks) {
                     const loadedMeta     = parsedData.basicTasksMeta     || {};
                     const loadedInactive = parsedData.inactiveBasicTasks || [];
                     const expiryMs = BASIC_TASK_EXPIRY_WEEKS * 7 * 24 * 60 * 60 * 1000;
                     const now = Date.now();
+                    // Skip tasks that are marked permanent or have no createdAt
                     const toExpire = parsedData.basicTasks.filter(t =>
-                        loadedMeta[t] && (now - new Date(loadedMeta[t].createdAt).getTime()) > expiryMs
+                        loadedMeta[t] && !loadedMeta[t].permanent && loadedMeta[t].createdAt &&
+                        (now - new Date(loadedMeta[t].createdAt).getTime()) > expiryMs
                     );
                     if (toExpire.length > 0) {
                         setBasicTasks(parsedData.basicTasks.filter(t => !toExpire.includes(t)));
@@ -1327,6 +1508,9 @@ function App() {
                     setBasicTasksMeta(parsedData.basicTasksMeta || {});
                 }
                 if (parsedData.offtimeTasks) setOfftimeTasks(parsedData.offtimeTasks);
+                if (parsedData.inactiveOfftimeTasks) setInactiveOfftimeTasks(parsedData.inactiveOfftimeTasks);
+                if (parsedData.inactiveSupportTasks) setInactiveSupportTasks(parsedData.inactiveSupportTasks);
+                if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -1394,7 +1578,8 @@ function App() {
         const stateData = {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-            offtimeTasks, invoiceRecipient
+            offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
+            invoiceRecipient
         };
 
         if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
@@ -1432,7 +1617,7 @@ function App() {
                 }
             }, 1500);
         }
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
 
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
@@ -1445,14 +1630,15 @@ function App() {
                 const stateData = {
                     employees, projects, assignments, expenses, costItems,
                     empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-                    offtimeTasks, invoiceRecipient
+                    offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
+                    invoiceRecipient
                 };
                 localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
             } catch(e) {}
         };
         window.addEventListener('beforeunload', flush);
         return () => window.removeEventListener('beforeunload', flush);
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
 
     const applyRemoteSnapshot = (data, { notify = true } = {}) => {
         isRemoteUpdateRef.current = true;
@@ -1643,11 +1829,15 @@ function App() {
             if (!arr) { arr = []; m.set(e.category, arr); }
             arr.push(e);
         });
+        // Sort employees alphabetically within each category
+        m.forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name, 'de')));
         return m;
     }, [activeEmployees]);
 
     const activeEmpCategories = useMemo(
-        () => Array.from(activeEmpsByCategory.keys()),
+        () => Array.from(activeEmpsByCategory.keys()).sort((a, b) =>
+            a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')
+        ),
         [activeEmpsByCategory]
     );
 
@@ -1719,12 +1909,15 @@ function App() {
         e.preventDefault();
         const assignmentId = e.dataTransfer.getData('assignmentId');
         if (assignmentId) {
-            // Move existing assignment chip
-            setAssignments(assignments.map(a =>
-                a.id === assignmentId
-                    ? { ...a, week: targetWeek, empId: isResourceView ? targetEmpIdOrProjId : a.empId }
-                    : a
-            ));
+            // Move existing assignment chip; clear comment when reassigning to different employee
+            setAssignments(assignments.map(a => {
+                if (a.id !== assignmentId) return a;
+                const newEmpId = isResourceView ? targetEmpIdOrProjId : a.empId;
+                const isReassigned = newEmpId !== a.empId;
+                const updated = { ...a, week: targetWeek, empId: newEmpId };
+                if (isReassigned) delete updated.comment;
+                return updated;
+            }));
             return;
         }
         const empId = e.dataTransfer.getData('empId');
@@ -1916,6 +2109,10 @@ function App() {
     const ProjFormModal = () => {
         if (!isProjFormOpen) return null;
         const isEditing = !!editingProjectId;
+        const emptyForm = () => {
+            const nextColorId = PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id;
+            return { name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: nextColorId };
+        };
         const save = () => {
             if (!projForm.name.trim()) return;
             if (projForm.startWeek && projForm.ibnWeek && projForm.ibnWeek < projForm.startWeek) {
@@ -1928,12 +2125,12 @@ function App() {
             } else {
                 setProjects([...projects, { id: makeId('p'), ...projForm, billable: true, hourlyRate: DEFAULT_HOURLY_RATE }]);
             }
-            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
+            setProjForm(emptyForm());
             setIsProjFormOpen(false);
         };
         const cancel = () => {
             setEditingProjectId(null);
-            setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
+            setProjForm(emptyForm());
             setIsProjFormOpen(false);
         };
         return (
@@ -1963,6 +2160,17 @@ function App() {
                             <div>
                                 <label className="block text-xs text-slate-700 mb-1 font-semibold">IBN (KW)</label>
                                 <input type="week" value={projForm.ibnWeek} onChange={e => setProjForm({...projForm, ibnWeek: e.target.value})} className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"/>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-700 mb-2 font-semibold">Farbe</label>
+                            <div className="flex flex-wrap gap-2">
+                                {PROJECT_COLORS.map(c => (
+                                    <button key={c.id} onClick={() => setProjForm({...projForm, color: c.id})}
+                                        title={c.id}
+                                        className={`w-7 h-7 rounded-full border-2 transition-all ${c.dot} ${projForm.color === c.id ? 'border-slate-800 scale-110 shadow' : 'border-transparent hover:border-slate-400'}`}>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                         <div className="flex gap-2 pt-2">
@@ -2142,9 +2350,12 @@ function App() {
         <aside className="w-60 bg-gea-900 text-gea-100 flex flex-col h-full shrink-0 shadow-xl">
             <div className="px-6 py-5 flex items-center gap-3 border-b border-gea-700">
                 <div className="bg-gea-500 text-white p-2 rounded-lg shadow-sm"><IconBriefcase size={20} /></div>
-                <div>
+                <div className="flex-1 min-w-0">
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
-                    <span className="text-gea-300 text-xs font-medium">Einsatzplanung v0.5.1</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-gea-300 text-xs font-medium">Einsatzplanung v0.6</span>
+                        <button onClick={() => setIsChangelogOpen(true)} title="Changelog" className="text-gea-500 hover:text-gea-300 transition-colors"><IconHistory size={13}/></button>
+                    </div>
                 </div>
             </div>
             <nav className="flex-1 py-4 space-y-0.5 px-3">
@@ -2242,7 +2453,7 @@ function App() {
                                 return (
                                     <React.Fragment key={category}>
                                         <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
-                                            <td className="p-3 text-slate-700 sticky left-0 z-10 bg-inherit border-r border-l-4 border-l-gea-500 border-slate-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+                                            <td className="p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-r border-l-4 border-l-gea-500 border-slate-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                                                 <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-medium">
                                                     <span className="text-slate-400 group-hover:text-gea-500 transition-colors">
                                                         {isCollapsed ? <IconChevronRight size={16}/> : <IconChevronDown size={16}/>}
@@ -2255,10 +2466,10 @@ function App() {
                                             </td>
                                             {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
                                         </tr>
-                                        
+
                                         {!isCollapsed && catEmps.map(emp => (
                                             <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                                <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
                                                 {resourceWeeks.map(w => {
@@ -2287,10 +2498,36 @@ function App() {
                                                                     if (a.type === 'project') {
                                                                         const p = projectById.get(a.reference);
                                                                         label = p ? p.name : 'Unbekannt';
-                                                                        if (p) { color = 'bg-white border-slate-200 text-slate-800'; dotColor = p.color; }
+                                                                        if (p) {
+                                                                            const pc = resolveProjectColor(p.color);
+                                                                            color = pc.chip;
+                                                                            dotColor = pc.dot;
+                                                                        }
+                                                                    } else if (a.type === 'support') {
+                                                                        const sc = SUPPORT_CHIP_COLORS[a.reference];
+                                                                        if (sc) { color = sc.chip; dotColor = sc.dot; }
+                                                                        else { color = 'bg-amber-50 border-amber-200 text-amber-800'; dotColor = 'bg-amber-500'; }
+                                                                    } else if (a.type === 'training') {
+                                                                        color = TRAINING_CHIP_COLOR.chip;
+                                                                        dotColor = TRAINING_CHIP_COLOR.dot;
+                                                                    } else if (a.type === 'other') {
+                                                                        const taskMeta = basicTasksMeta[a.reference];
+                                                                        if (taskMeta?.color) {
+                                                                            const tc = resolveProjectColor(taskMeta.color);
+                                                                            color = tc.chip; dotColor = tc.dot;
+                                                                        } else {
+                                                                            color = 'bg-slate-50 border-slate-200 text-slate-700';
+                                                                            dotColor = 'bg-slate-400';
+                                                                        }
                                                                     } else if (a.type === 'offtime') {
                                                                         color = 'bg-slate-100 border-slate-300 text-slate-600';
                                                                         dotColor = 'bg-slate-500';
+                                                                    } else if (a.type === 'basic') {
+                                                                        const taskMeta = basicTasksMeta?.[a.reference];
+                                                                        if (taskMeta?.color) {
+                                                                            const tc = resolveProjectColor(taskMeta.color);
+                                                                            color = tc.chip; dotColor = tc.dot;
+                                                                        }
                                                                     }
                                                                     const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
@@ -2299,12 +2536,14 @@ function App() {
                                                                     return (
                                                                         <div key={a.id}
                                                                             draggable={!isDeleteMode}
+                                                                            title={a.comment || undefined}
                                                                             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                             onClick={e => { e.stopPropagation(); if (isDeleteMode) { handleDeleteAssignment(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
                                                                             className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
                                                                             <div className="flex items-center gap-1.5 min-w-0">
-                                                                                <div className={`w-1 flex-shrink-0 ${dotColor}`}></div>
+                                                                                <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
                                                                                 <span className="truncate font-medium px-1 py-1.5">{label}</span>
+                                                                                {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
                                                                             </div>
                                                                             <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                                                                 <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
@@ -2462,16 +2701,16 @@ function App() {
                                                 <tr key={proj.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10">
                                                         <div className="flex items-center gap-2">
-                                                            <div className={`w-3 h-3 rounded-full ${proj.color}`}></div>
+                                                            <div className={`w-3 h-3 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>
                                                             <div className="text-slate-900 font-medium">{proj.name}</div>
                                                         </div>
                                                     </td>
                                                     {timelineWeeks.map(w => {
                                                         const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
                                                         const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
-                                                        
+                                                        const pColor = resolveProjectColor(proj.color);
                                                         return (
-                                                            <td key={w.id} 
+                                                            <td key={w.id}
                                                                 onDragOver={(e) => e.preventDefault()}
                                                                 onDrop={(e) => handleDrop(e, w.id, proj.id)}
                                                                 className={`p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`}
@@ -2480,9 +2719,9 @@ function App() {
                                                                     {projAss.map(a => {
                                                                         const emp = employeeById.get(a.empId);
                                                                         return (
-                                                                            <div key={a.id} 
+                                                                            <div key={a.id}
                                                                                 onClick={(e) => { e.stopPropagation(); setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); }}
-                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center text-white shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${proj.color}`}>
+                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${pColor.chip}`}>
                                                                                 <span className="truncate font-medium">{emp?.name || 'Unbekannt'}</span>
                                                                                 <span className="opacity-90 ml-1 font-medium">{a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h</span>
                                                                             </div>
@@ -2668,7 +2907,7 @@ function App() {
                             {proj.projectNumber && <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">{proj.projectNumber}</span>}
                         </div>
                         <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="flex items-center gap-1"><div className={`w-2 h-2 rounded-full ${proj.color}`}></div>{proj.category}</span>
+                            <span className="flex items-center gap-1"><div className={`w-2 h-2 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>{proj.category}</span>
                             <span>·</span><span>{proj.startWeek} – {proj.ibnWeek}</span>
                         </div>
                     </div>
@@ -2691,7 +2930,7 @@ function App() {
                             <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
                         </label>
                         <button onClick={() => {
-                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: proj.color || 'bg-gea-500' });
+                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
                             setEditingProjectId(proj.id);
                             setIsProjFormOpen(true);
                         }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
@@ -2917,7 +3156,7 @@ function App() {
         }
 
         const handleEditProject = (p) => {
-            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: p.color || 'bg-gea-500' });
+            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: resolveProjectColor(p.color).id });
             setEditingProjectId(p.id);
             setIsProjFormOpen(true);
         };
@@ -2934,7 +3173,7 @@ function App() {
                     <td className="p-4">
                         <button onClick={() => setSelectedProjectDetails(p.id)}
                             className="flex items-center gap-2 text-left group">
-                            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${p.color}`}></div>
+                            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
                             <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors">{p.name}</span>
                         </button>
                     </td>
@@ -2968,7 +3207,7 @@ function App() {
                         <button
                             onClick={() => {
                                 setEditingProjectId(null);
-                                setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: 'bg-gea-500' });
+                                setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id });
                                 setIsProjFormOpen(true);
                             }}
                             className="flex items-center gap-2 bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors shadow-sm">
@@ -3258,7 +3497,7 @@ function App() {
                                         onClick={() => { setSelectedProjectDetails(p.id); setActiveTab('setup_proj'); }}>
                                         <td className="p-4">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${p.color}`}></div>
+                                                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
                                                 <div>
                                                     <div className="font-medium text-slate-900">{p.name}</div>
                                                     <div className="text-xs text-slate-400 font-mono">{p.projectNumber || '–'} · {p.category}</div>
@@ -3302,147 +3541,213 @@ function App() {
     };
 
     const renderSetupCats = () => {
+        const COLOR_SWATCHES = [null, ...PROJECT_COLORS.map(c => c.id)];
+        const renderSwatch = (colorId) => {
+            if (!colorId) return <span className="w-4 h-4 rounded-full border-2 border-slate-300 bg-white inline-block"></span>;
+            const c = resolveProjectColor(colorId);
+            return <span className={`w-4 h-4 rounded-full ${c.dot} inline-block`}></span>;
+        };
+        const renderColorPicker = (taskName, metaKey = 'basicTasksMeta') => (
+            <div className="flex gap-1 items-center">
+                {COLOR_SWATCHES.map((cid, i) => (
+                    <button key={i} title={cid || 'Keine Farbe'}
+                        onClick={() => setBasicTasksMeta(prev => ({...prev, [taskName]: {...(prev[taskName]||{}), color: cid || undefined}}))}
+                        className={`w-5 h-5 rounded-full border-2 transition-all ${(basicTasksMeta[taskName]?.color || null) === cid ? 'border-gea-600 scale-110' : 'border-transparent hover:border-slate-400'} ${cid ? resolveProjectColor(cid).dot : 'bg-white border-slate-300'}`}>
+                    </button>
+                ))}
+            </div>
+        );
+
         return (
             <div className="flex-1 overflow-auto p-8 bg-slate-50">
                 <div className="max-w-4xl mx-auto space-y-6">
-                    
+
                     {/* Basic Tasks */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <button 
-                            onClick={() => setExpandedSetupCats(prev => ({...prev, basic: !prev.basic}))}
-                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors"
-                        >
-                            <h2 className="text-lg text-slate-900 font-medium">Standard-Aufgaben (Basic Tasks)</h2>
-                            <div className="text-slate-500">
-                                {expandedSetupCats.basic ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}
-                            </div>
+                        <button onClick={() => setExpandedSetupCats(prev => ({...prev, basic: !prev.basic}))}
+                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
+                            <h2 className="text-lg text-slate-900 font-medium">Basic Tasks</h2>
+                            <span className="text-slate-500">{expandedSetupCats.basic ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
                         </button>
                         {expandedSetupCats.basic && (
                             <div>
-                                {/* Sub-tab bar */}
                                 <div className="flex border-b border-slate-200 bg-slate-50">
-                                    <button
-                                        onClick={() => setBasicTasksSubTab('aktiv')}
-                                        className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${basicTasksSubTab === 'aktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                                        Aktiv
-                                    </button>
-                                    <button
-                                        onClick={() => setBasicTasksSubTab('inaktiv')}
-                                        className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${basicTasksSubTab === 'inaktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
-                                        Inaktiv
-                                        {inactiveBasicTasks.length > 0 && (
-                                            <span className="bg-slate-200 text-slate-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">{inactiveBasicTasks.length}</span>
-                                        )}
+                                    <button onClick={() => setBasicTasksSubTab('aktiv')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${basicTasksSubTab === 'aktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Aktiv</button>
+                                    <button onClick={() => setBasicTasksSubTab('inaktiv')} className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${basicTasksSubTab === 'inaktiv' ? 'border-gea-600 text-gea-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                                        Inaktiv {inactiveBasicTasks.length > 0 && <span className="bg-slate-200 text-slate-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">{inactiveBasicTasks.length}</span>}
                                     </button>
                                 </div>
-
                                 {basicTasksSubTab === 'aktiv' && (
-                                    <div>
-                                        <div className="p-4 flex gap-2 border-b border-slate-300">
-                                            <input type="text" value={newBasicTask} onChange={e=>setNewBasicTask(e.target.value)} placeholder="Neuer Basic Task" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                            <button onClick={() => {
-                                                const trimmed = newBasicTask.trim();
-                                                if (trimmed && !basicTasks.includes(trimmed)) {
-                                                    setBasicTasks([...basicTasks, trimmed]);
-                                                    setBasicTasksMeta(prev => ({...prev, [trimmed]: { createdAt: new Date().toISOString() }}));
-                                                    setNewBasicTask('');
-                                                }
-                                            }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
-                                        </div>
-                                        <ul className="divide-y divide-slate-300">
-                                            {basicTasks.map(task => (
-                                                <li key={task} className="p-4 flex justify-between items-center text-sm">
-                                                    <div>
-                                                        <span className="text-slate-800">{task}</span>
-                                                        {basicTasksMeta[task] && (
-                                                            <span className="ml-2 text-xs text-slate-400">
-                                                                (läuft ab in {Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(basicTasksMeta[task].createdAt).getTime()) / (7*24*60*60*1000)))} Wo.)
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                const createdAt = basicTasksMeta[task]?.createdAt || new Date().toISOString();
-                                                                setBasicTasks(prev => prev.filter(t => t !== task));
-                                                                setInactiveBasicTasks(prev => [...prev, { name: task, createdAt }]);
-                                                            }}
-                                                            className="px-2.5 py-1 text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-                                                            title="Set Inactive">
-                                                            Set Inactive
-                                                        </button>
-                                                        <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                                    <ul className="divide-y divide-slate-200">
+                                        {basicTasks.filter(t => !basicTasksMeta?.[t]).map(task => (
+                                            <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="text-slate-800 font-medium">{task}</span>
+                                                    <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    {renderColorPicker(task)}
+                                                    <button onClick={() => { setBasicTasks(prev => prev.filter(t => t !== task)); setInactiveBasicTasks(prev => [...prev, { name: task, createdAt: new Date().toISOString() }]); }} className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 )}
-
                                 {basicTasksSubTab === 'inaktiv' && (
-                                    <div>
-                                        {inactiveBasicTasks.length === 0 ? (
-                                            <p className="p-6 text-sm text-slate-400 text-center">Keine inaktiven Kategorien</p>
-                                        ) : (
-                                            <ul className="divide-y divide-slate-300">
-                                                {inactiveBasicTasks.map(task => (
-                                                    <li key={task.name} className="p-4 flex justify-between items-center text-sm">
-                                                        <div>
-                                                            <span className="text-slate-800">{task.name}</span>
-                                                            <span className="ml-2 text-xs text-slate-400">
-                                                                (hinzugefügt {new Date(task.createdAt).toLocaleDateString('de-DE')})
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setBasicTasks(prev => [...prev, task.name]);
-                                                                    setBasicTasksMeta(prev => ({...prev, [task.name]: { createdAt: new Date().toISOString() }}));
-                                                                    setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name));
-                                                                }}
-                                                                className="px-2.5 py-1 text-xs font-medium bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">
-                                                                Reaktivieren
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name))}
-                                                                className="px-2.5 py-1 text-xs font-medium bg-rose-50 text-rose-600 border border-rose-200 rounded hover:bg-rose-100">
-                                                                Löschen
-                                                            </button>
-                                                        </div>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
+                                    <div>{inactiveBasicTasks.length === 0 ? <p className="p-6 text-sm text-slate-400 text-center">Keine inaktiven Kategorien</p> :
+                                        <ul className="divide-y divide-slate-200">{inactiveBasicTasks.map(task => (
+                                            <li key={task.name} className="p-4 flex justify-between items-center text-sm">
+                                                <div><span className="text-slate-800">{task.name}</span><span className="ml-2 text-xs text-slate-400">(inaktiv seit {new Date(task.createdAt).toLocaleDateString('de-DE')})</span></div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => { setBasicTasks(prev => [...prev, task.name]); setBasicTasksMeta(prev => ({...prev, [task.name]: {...(prev[task.name]||{}), createdAt: new Date().toISOString(), permanent: false}})); setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name)); }} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                    <button onClick={() => setInactiveBasicTasks(prev => prev.filter(t => t.name !== task.name))} className="px-2.5 py-1 text-xs bg-rose-50 text-rose-600 border border-rose-200 rounded hover:bg-rose-100">Löschen</button>
+                                                </div>
+                                            </li>
+                                        ))}</ul>
+                                    }</div>
                                 )}
                             </div>
                         )}
                     </div>
 
+                    {/* Other Tasks (user-created) */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <button onClick={() => setExpandedSetupCats(prev => ({...prev, other: !prev.other}))}
+                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
+                            <h2 className="text-lg text-slate-900 font-medium">Other Tasks <span className="text-sm text-slate-500 font-normal ml-2">(benutzerdefiniert)</span></h2>
+                            <span className="text-slate-500">{expandedSetupCats.other ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
+                        </button>
+                        {expandedSetupCats.other && (
+                            <div>
+                                <div className="p-4 flex gap-2 border-b border-slate-200">
+                                    <input type="text" value={newBasicTask} onChange={e=>setNewBasicTask(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { const t = newBasicTask.trim(); if (t && !basicTasks.includes(t)) { setBasicTasks(prev=>[...prev,t]); setBasicTasksMeta(prev=>({...prev,[t]:{createdAt:new Date().toISOString(),permanent:false}})); setNewBasicTask(''); }}}} placeholder="Neuer Other Task" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                    <button onClick={() => { const t=newBasicTask.trim(); if(t&&!basicTasks.includes(t)){setBasicTasks(prev=>[...prev,t]);setBasicTasksMeta(prev=>({...prev,[t]:{createdAt:new Date().toISOString(),permanent:false}}));setNewBasicTask('');} }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
+                                </div>
+                                <ul className="divide-y divide-slate-200">
+                                    {basicTasks.filter(t => basicTasksMeta?.[t]).map(task => {
+                                        const meta = basicTasksMeta[task] || {};
+                                        const isPerm = !!meta.permanent;
+                                        const weeksLeft = meta.createdAt && !isPerm ? Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(meta.createdAt).getTime()) / (7*24*60*60*1000))) : null;
+                                        return (
+                                            <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
+                                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                                    <span className="text-slate-800 font-medium">{task}</span>
+                                                    {isPerm ? (
+                                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                                    ) : weeksLeft !== null && (
+                                                        <span className="text-xs text-slate-400">(läuft ab in {weeksLeft} Wo.)</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    {renderColorPicker(task)}
+                                                    <button onClick={() => setBasicTasksMeta(prev => ({...prev, [task]: {...(prev[task]||{}), permanent: !isPerm}}))} className={`px-2 py-1 text-xs border rounded flex items-center gap-1 ${isPerm ? 'bg-gea-50 text-gea-700 border-gea-200 hover:bg-gea-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}><IconPin size={10}/>{isPerm ? 'Permanent' : 'Temporär'}</button>
+                                                    <button onClick={() => { setBasicTasks(prev => prev.filter(t => t !== task)); setInactiveBasicTasks(prev => [...prev, { name: task, createdAt: meta.createdAt || new Date().toISOString() }]); }} className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                    <button onClick={() => setBasicTasks(basicTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={14}/></button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                    {basicTasks.filter(t => basicTasksMeta?.[t]).length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Noch keine benutzerdefinierten Tasks.</li>}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Support Tasks */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <button onClick={() => setExpandedSetupCats(prev => ({...prev, support: !prev.support}))}
+                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
+                            <h2 className="text-lg text-slate-900 font-medium">Support</h2>
+                            <span className="text-slate-500">{expandedSetupCats.support ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
+                        </button>
+                        {expandedSetupCats.support && (
+                            <ul className="divide-y divide-slate-200">
+                                {SUPPORT_TASKS.map(task => {
+                                    const isInactive = inactiveSupportTasks.includes(task);
+                                    const sc = SUPPORT_CHIP_COLORS[task] || {};
+                                    return (
+                                        <li key={task} className="p-4 flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`w-3 h-3 rounded-full ${sc.dot || 'bg-slate-400'}`}></span>
+                                                <span className={`font-medium ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
+                                                <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {isInactive ? (
+                                                    <button onClick={() => setInactiveSupportTasks(prev => prev.filter(t => t !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                ) : (
+                                                    <button onClick={() => setInactiveSupportTasks(prev => [...prev, task])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* Training Tasks */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <button onClick={() => setExpandedSetupCats(prev => ({...prev, training: !prev.training}))}
+                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
+                            <h2 className="text-lg text-slate-900 font-medium">Trainings</h2>
+                            <span className="text-slate-500">{expandedSetupCats.training ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
+                        </button>
+                        {expandedSetupCats.training && (
+                            <ul className="divide-y divide-slate-200">
+                                {TRAINING_TASKS.map(task => {
+                                    const isInactive = inactiveTrainingTasks.includes(task);
+                                    return (
+                                        <li key={task} className="p-4 flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full bg-sky-500"></span>
+                                                <span className={`font-medium ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
+                                                <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {isInactive ? (
+                                                    <button onClick={() => setInactiveTrainingTasks(prev => prev.filter(t => t !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                ) : (
+                                                    <button onClick={() => setInactiveTrainingTasks(prev => [...prev, task])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </div>
+
                     {/* Offtime */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <button 
-                            onClick={() => setExpandedSetupCats(prev => ({...prev, offtime: !prev.offtime}))}
-                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors"
-                        >
+                        <button onClick={() => setExpandedSetupCats(prev => ({...prev, offtime: !prev.offtime}))}
+                            className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
                             <h2 className="text-lg text-slate-900 font-medium">Abwesenheiten (Offtime)</h2>
-                            <div className="text-slate-500">
-                                {expandedSetupCats.offtime ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}
-                            </div>
+                            <span className="text-slate-500">{expandedSetupCats.offtime ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
                         </button>
                         {expandedSetupCats.offtime && (
                             <div>
-                                <div className="p-4 flex gap-2 border-b border-slate-300">
+                                <div className="p-4 flex gap-2 border-b border-slate-200">
                                     <input type="text" value={newOfftimeTask} onChange={e=>setNewOfftimeTask(e.target.value)} placeholder="Neue Abwesenheitsart" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                    <button onClick={() => { if(newOfftimeTask.trim() && !offtimeTasks.includes(newOfftimeTask)) { setOfftimeTasks([...offtimeTasks, newOfftimeTask.trim()]); setNewOfftimeTask(''); } }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
+                                    <button onClick={() => { if(newOfftimeTask.trim()&&!offtimeTasks.includes(newOfftimeTask.trim())){setOfftimeTasks([...offtimeTasks,newOfftimeTask.trim()]);setNewOfftimeTask('');} }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
                                 </div>
-                                <ul className="divide-y divide-slate-300">
-                                    {offtimeTasks.map(task => (
-                                        <li key={task} className="p-4 flex justify-between items-center text-sm">
-                                            <span className="text-slate-800">{task}</span>
-                                            <button onClick={() => setOfftimeTasks(offtimeTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
-                                        </li>
-                                    ))}
+                                <ul className="divide-y divide-slate-200">
+                                    {offtimeTasks.map(task => {
+                                        const isInactive = (inactiveOfftimeTasks||[]).some(t => t.name === task);
+                                        return (
+                                            <li key={task} className="p-4 flex justify-between items-center text-sm">
+                                                <span className={`${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
+                                                <div className="flex gap-2">
+                                                    {isInactive ? (
+                                                        <button onClick={() => setInactiveOfftimeTasks(prev => prev.filter(t => t.name !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                    ) : (
+                                                        <button onClick={() => setInactiveOfftimeTasks(prev => [...prev, { name: task }])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                    )}
+                                                    <button onClick={() => setOfftimeTasks(offtimeTasks.filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </div>
                         )}
@@ -3458,19 +3763,11 @@ function App() {
                         {expandedSetupCats.empCats && (
                             <div>
                                 <div className="p-4 flex gap-2 border-b border-slate-200">
-                                    <input type="text" value={newEmpCat} onChange={e => setNewEmpCat(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter' && newEmpCat.trim() && !empCategories.includes(newEmpCat.trim())) { setEmpCategories([...empCategories, newEmpCat.trim()]); setNewEmpCat(''); }}}
-                                        placeholder="Neue Mitarbeiter-Kategorie" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                    <button onClick={() => { if(newEmpCat.trim() && !empCategories.includes(newEmpCat.trim())) { setEmpCategories([...empCategories, newEmpCat.trim()]); setNewEmpCat(''); }}}
-                                        className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700 transition-colors">Hinzufügen</button>
+                                    <input type="text" value={newEmpCat} onChange={e => setNewEmpCat(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newEmpCat.trim() && !empCategories.includes(newEmpCat.trim())) { setEmpCategories([...empCategories, newEmpCat.trim()]); setNewEmpCat(''); }}} placeholder="Neue Mitarbeiter-Kategorie" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                    <button onClick={() => { if(newEmpCat.trim()&&!empCategories.includes(newEmpCat.trim())){setEmpCategories([...empCategories,newEmpCat.trim()]);setNewEmpCat('');} }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
                                 </div>
                                 <ul className="divide-y divide-slate-100">
-                                    {empCategories.map(cat => (
-                                        <li key={cat} className="px-4 py-3 flex justify-between items-center text-sm">
-                                            <span className="text-slate-800">{cat}</span>
-                                            <button onClick={() => setEmpCategories(empCategories.filter(c => c !== cat))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
-                                        </li>
-                                    ))}
+                                    {empCategories.map(cat => (<li key={cat} className="px-4 py-3 flex justify-between items-center text-sm"><span className="text-slate-800">{cat}</span><button onClick={() => setEmpCategories(empCategories.filter(c => c !== cat))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button></li>))}
                                 </ul>
                             </div>
                         )}
@@ -3486,19 +3783,11 @@ function App() {
                         {expandedSetupCats.projCats && (
                             <div>
                                 <div className="p-4 flex gap-2 border-b border-slate-200">
-                                    <input type="text" value={newProjCat} onChange={e => setNewProjCat(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter' && newProjCat.trim() && !projCategories.includes(newProjCat.trim())) { setProjCategories([...projCategories, newProjCat.trim()]); setNewProjCat(''); }}}
-                                        placeholder="Neue Projekt-Kategorie" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                    <button onClick={() => { if(newProjCat.trim() && !projCategories.includes(newProjCat.trim())) { setProjCategories([...projCategories, newProjCat.trim()]); setNewProjCat(''); }}}
-                                        className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700 transition-colors">Hinzufügen</button>
+                                    <input type="text" value={newProjCat} onChange={e => setNewProjCat(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newProjCat.trim() && !projCategories.includes(newProjCat.trim())) { setProjCategories([...projCategories, newProjCat.trim()]); setNewProjCat(''); }}} placeholder="Neue Projekt-Kategorie" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                    <button onClick={() => { if(newProjCat.trim()&&!projCategories.includes(newProjCat.trim())){setProjCategories([...projCategories,newProjCat.trim()]);setNewProjCat('');} }} className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
                                 </div>
                                 <ul className="divide-y divide-slate-100">
-                                    {projCategories.map(cat => (
-                                        <li key={cat} className="px-4 py-3 flex justify-between items-center text-sm">
-                                            <span className="text-slate-800">{cat}</span>
-                                            <button onClick={() => setProjCategories(projCategories.filter(c => c !== cat))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
-                                        </li>
-                                    ))}
+                                    {projCategories.map(cat => (<li key={cat} className="px-4 py-3 flex justify-between items-center text-sm"><span className="text-slate-800">{cat}</span><button onClick={() => setProjCategories(projCategories.filter(c => c !== cat))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button></li>))}
                                 </ul>
                             </div>
                         )}
@@ -3590,7 +3879,11 @@ function App() {
                     assignContext={assignContext}
                     employeeById={employeeById}
                     basicTasks={basicTasks}
+                    basicTasksMeta={basicTasksMeta}
                     offtimeTasks={offtimeTasks}
+                    inactiveOfftimeTasks={inactiveOfftimeTasks}
+                    inactiveSupportTasks={inactiveSupportTasks}
+                    inactiveTrainingTasks={inactiveTrainingTasks}
                     projects={projects}
                     computeAutoStatus={computeAutoStatus}
                     getUtilization={getUtilization}
@@ -3615,6 +3908,18 @@ function App() {
             )}
             {isInvoiceModalOpen && <InvoiceModal />}
             {isProjFormOpen && ProjFormModal()}
+
+            {/* Changelog Modal */}
+            {isChangelogOpen && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" style={{maxHeight:'85vh'}}>
+                        <ModalHeader title="Changelog – Einsatzplanung" onClose={() => setIsChangelogOpen(false)}/>
+                        <div className="overflow-auto p-6" style={{maxHeight:'calc(85vh - 64px)'}}>
+                            <pre className="text-xs text-slate-700 font-mono whitespace-pre-wrap leading-relaxed">{CHANGELOG_CONTENT}</pre>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* OneDrive-Sync Popup */}
             {FS_MODE && (fsStatus === 'needs-setup' || fsStatus === 'needs-permission') && (
