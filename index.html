@@ -141,9 +141,17 @@ const CHANGELOG_CONTENT = `# Changelog
 - User-created Other/Basic tasks can optionally have a custom color assigned in Kategorien settings
   (Default is no color — neutral gray chip)
 
+### Projects
+- Added address field to projects (shown in project details and included in CSV export)
+
+### Copy Function
+- Fixed: source week was not selectable when copying a task (highlighted in amber, now selectable for other employees)
+- Employees in copy dialog are now grouped by team in collapsible sections; each team can be expanded/collapsed and all members selected at once
+
 ### Version & UI
 - Version bumped to v0.6
-- New changelog button (history icon) in sidebar showing full version history
+- Changelog button in sidebar is now a visible badge (more prominent)
+- System & Export tab now lists all external libraries with loaded versions and an "Check for updates" button that queries the npm registry
 `;
 
 // Migrate legacy `expenses` entries to the new `costItems` shape.
@@ -984,6 +992,8 @@ const AssignmentModal = ({
 const CopyModal = ({
     copyContext,
     activeEmps,
+    empsByCategory,
+    empCategories,
     weeks,
     projectById,
     assignments,
@@ -994,14 +1004,25 @@ const CopyModal = ({
 
     const [selWeeks, setSelWeeks] = useState({});
     const [selEmps, setSelEmps] = useState({});
+    const [collapsedTeams, setCollapsedTeams] = useState({});
 
     const toggleWeek = (wId) => setSelWeeks(prev => ({...prev, [wId]: !prev[wId]}));
     const toggleEmp = (eId) => setSelEmps(prev => ({...prev, [eId]: !prev[eId]}));
+    const toggleTeam = (cat) => setCollapsedTeams(prev => ({...prev, [cat]: !prev[cat]}));
     const toggleAllWeeks = () => {
         const allSelected = weeks.every(w => selWeeks[w.id]);
         const next = {};
         weeks.forEach(w => { next[w.id] = !allSelected; });
         setSelWeeks(next);
+    };
+    const toggleAllInTeam = (cat) => {
+        const catEmps = empsByCategory?.get(cat) || [];
+        const allSel = catEmps.every(e => selEmps[e.id]);
+        setSelEmps(prev => {
+            const next = {...prev};
+            catEmps.forEach(e => { next[e.id] = !allSel; });
+            return next;
+        });
     };
 
     let label = assignment.reference;
@@ -1029,6 +1050,11 @@ const CopyModal = ({
     };
 
     const pct = Math.round((assignment.hours ?? HOURS_PER_WEEK) / HOURS_PER_WEEK * 100);
+    const selEmpCount = Object.values(selEmps).filter(Boolean).length;
+    const selWeekCount = Object.values(selWeeks).filter(Boolean).length;
+
+    // Use team grouping if available, otherwise fall back to flat list
+    const useTeams = empsByCategory && empCategories && empCategories.length > 0;
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1036,17 +1062,53 @@ const CopyModal = ({
                 <ModalHeader title="Task kopieren" subtitle={`"${label}" · ${pct}%`} onClose={onClose}/>
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-                    {/* Employee selection */}
+                    {/* Employee selection – grouped by team */}
                     <div>
                         <h4 className="text-sm font-medium text-slate-700 mb-3">Mitarbeiter auswählen</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {activeEmps.map(e => (
-                                <button key={e.id} onClick={() => toggleEmp(e.id)}
-                                    className={`px-3 py-1.5 rounded-full text-sm border font-medium transition-colors ${selEmps[e.id] ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`}>
-                                    {e.name}
-                                </button>
-                            ))}
-                        </div>
+                        {useTeams ? (
+                            <div className="space-y-2 border border-slate-200 rounded-lg overflow-hidden">
+                                {empCategories.map(cat => {
+                                    const catEmps = empsByCategory.get(cat) || [];
+                                    if (catEmps.length === 0) return null;
+                                    const isCollapsed = collapsedTeams[cat];
+                                    const selInTeam = catEmps.filter(e => selEmps[e.id]).length;
+                                    const allInTeam = catEmps.every(e => selEmps[e.id]);
+                                    return (
+                                        <div key={cat} className="border-b border-slate-100 last:border-0">
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 transition-colors">
+                                                <button onClick={() => toggleTeam(cat)} className="flex items-center gap-2 flex-1 text-left">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`text-slate-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                                                    <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{cat}</span>
+                                                    {selInTeam > 0 && <span className="ml-1 text-xs bg-gea-100 text-gea-700 px-1.5 py-0.5 rounded-full font-medium">{selInTeam}/{catEmps.length}</span>}
+                                                </button>
+                                                <button onClick={() => toggleAllInTeam(cat)} className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${allInTeam ? 'text-gea-600 hover:text-gea-800' : 'text-slate-500 hover:text-gea-600'}`}>
+                                                    {allInTeam ? 'Alle ab' : 'Alle'}
+                                                </button>
+                                            </div>
+                                            {!isCollapsed && (
+                                                <div className="flex flex-wrap gap-2 px-3 py-2.5 bg-white">
+                                                    {catEmps.map(e => (
+                                                        <button key={e.id} onClick={() => toggleEmp(e.id)}
+                                                            className={`px-3 py-1.5 rounded-full text-sm border font-medium transition-colors ${selEmps[e.id] ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`}>
+                                                            {e.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {activeEmps.map(e => (
+                                    <button key={e.id} onClick={() => toggleEmp(e.id)}
+                                        className={`px-3 py-1.5 rounded-full text-sm border font-medium transition-colors ${selEmps[e.id] ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`}>
+                                        {e.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Week selection */}
@@ -1061,9 +1123,10 @@ const CopyModal = ({
                             {weeks.map(w => {
                                 const isSource = w.id === assignment.week;
                                 return (
-                                    <button key={w.id} onClick={() => !isSource && toggleWeek(w.id)} disabled={isSource}
-                                        className={`px-2.5 py-1 rounded text-xs border font-medium transition-colors ${isSource ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-default' : selWeeks[w.id] ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-200 hover:border-gea-300'}`}>
-                                        {w.label}
+                                    <button key={w.id} onClick={() => toggleWeek(w.id)}
+                                        title={isSource ? 'Ursprungswoche (für andere MA kopierbar)' : ''}
+                                        className={`px-2.5 py-1 rounded text-xs border font-medium transition-colors ${selWeeks[w.id] ? 'bg-gea-600 text-white border-gea-600' : isSource ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-gea-400' : 'bg-white text-slate-600 border-slate-200 hover:border-gea-300'}`}>
+                                        {w.label}{isSource ? ' ★' : ''}
                                     </button>
                                 );
                             })}
@@ -1072,7 +1135,7 @@ const CopyModal = ({
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                     <span className="text-xs text-slate-400">
-                        {Object.values(selEmps).filter(Boolean).length} MA × {Object.values(selWeeks).filter(Boolean).length} KW = {Object.values(selEmps).filter(Boolean).length * Object.values(selWeeks).filter(Boolean).length} Einträge
+                        {selEmpCount} MA × {selWeekCount} KW = {selEmpCount * selWeekCount} Einträge
                     </span>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
@@ -1306,6 +1369,99 @@ const CostItemModal = ({
     );
 };
 
+// --- DEPENDENCIES / SECURITY INFO ---
+const DEPS_LIST = [
+    { name: 'React',           pkg: 'react',             pin: '18.x', cdnUrl: 'https://unpkg.com/react@18/umd/react.development.js',     getLoaded: () => window.React?.version },
+    { name: 'ReactDOM',        pkg: 'react-dom',         pin: '18.x', cdnUrl: 'https://unpkg.com/react-dom@18/umd/react-dom.development.js', getLoaded: () => window.ReactDOM?.version },
+    { name: 'Babel Standalone',pkg: '@babel/standalone',  pin: 'latest', cdnUrl: 'https://unpkg.com/@babel/standalone/babel.min.js',      getLoaded: () => window.Babel?.version },
+    { name: 'Tailwind CSS',    pkg: 'tailwindcss',       pin: 'Play CDN', cdnUrl: 'https://cdn.tailwindcss.com',                         getLoaded: () => window.tailwind?.version || '(Play CDN)' },
+];
+
+const DepsSection = () => {
+    const [latest, setLatest] = React.useState({});
+    const [checking, setChecking] = React.useState(false);
+    const [checked, setChecked] = React.useState(false);
+
+    const checkUpdates = async () => {
+        setChecking(true);
+        const results = {};
+        await Promise.all(DEPS_LIST.map(async dep => {
+            try {
+                const r = await fetch(`https://registry.npmjs.org/${encodeURIComponent(dep.pkg)}/latest`, { cache: 'no-store' });
+                if (!r.ok) throw new Error('http ' + r.status);
+                const d = await r.json();
+                results[dep.pkg] = d.version || '–';
+            } catch(e) {
+                results[dep.pkg] = '–';
+            }
+        }));
+        setLatest(results);
+        setChecking(false);
+        setChecked(true);
+    };
+
+    return (
+        <div className="mt-8 text-left border border-slate-200 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+                <div>
+                    <span className="text-sm font-semibold text-slate-700">Verwendete Bibliotheken</span>
+                    <p className="text-xs text-slate-400 mt-0.5">Externe Skripte, die beim Laden der Seite eingebunden werden (CDN).</p>
+                </div>
+                <button onClick={checkUpdates} disabled={checking}
+                    className="text-xs px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-600 hover:border-gea-400 hover:text-gea-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                    {checking ? <><svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Prüfe…</> : 'Auf Updates prüfen'}
+                </button>
+            </div>
+            <table className="w-full text-xs">
+                <thead>
+                    <tr className="text-left text-slate-500 border-b border-slate-100">
+                        <th className="px-4 py-2 font-medium">Bibliothek</th>
+                        <th className="px-4 py-2 font-medium">Geladen</th>
+                        {checked && <th className="px-4 py-2 font-medium">Aktuell</th>}
+                        <th className="px-4 py-2 font-medium">Quelle</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                    {DEPS_LIST.map(dep => {
+                        const loaded = dep.getLoaded();
+                        const latestVer = latest[dep.pkg];
+                        const isUpToDate = latestVer && loaded && latestVer === loaded;
+                        const isOutdated = latestVer && loaded && latestVer !== loaded && loaded !== '(Play CDN)';
+                        return (
+                            <tr key={dep.pkg} className="hover:bg-slate-50">
+                                <td className="px-4 py-2.5 font-medium text-slate-700">{dep.name}</td>
+                                <td className="px-4 py-2.5">
+                                    {loaded
+                                        ? <span className="font-mono text-slate-600">{loaded}</span>
+                                        : <span className="text-slate-400">–</span>}
+                                </td>
+                                {checked && (
+                                    <td className="px-4 py-2.5">
+                                        {latestVer && latestVer !== '–'
+                                            ? <span className={`font-mono px-1.5 py-0.5 rounded text-xs ${isUpToDate ? 'bg-emerald-50 text-emerald-700' : isOutdated ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                {latestVer} {isUpToDate ? '✓' : isOutdated ? '↑' : ''}
+                                              </span>
+                                            : <span className="text-slate-400">–</span>}
+                                    </td>
+                                )}
+                                <td className="px-4 py-2.5 max-w-xs">
+                                    <a href={dep.cdnUrl} target="_blank" rel="noopener noreferrer"
+                                        className="text-gea-600 hover:text-gea-800 underline truncate block font-mono" style={{maxWidth:'220px'}}>
+                                        {dep.cdnUrl.replace('https://', '')}
+                                    </a>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
+                <p className="text-xs text-slate-400">Alle Verbindungen erfolgen über <strong className="text-slate-500">HTTPS</strong>. Quellen: <strong className="text-slate-500">unpkg.com</strong>, <strong className="text-slate-500">cdn.tailwindcss.com</strong>. Die App läuft vollständig im Browser – kein Backend, keine Telemetrie.</p>
+            </div>
+        </div>
+    );
+};
+
 // --- MAIN APP ---
 function App() {
     // --- STATE ---
@@ -1377,7 +1533,7 @@ function App() {
     // Forms
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
     const [editingEmpId, setEditingEmpId] = useState(null);
-    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
+    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', address: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
     // Category Forms
@@ -2048,6 +2204,7 @@ function App() {
         const rows = [];
         rows.push(["Rechnung für Projekt:", proj.name]);
         rows.push(["Projektnummer:", proj.projectNumber || '']);
+        if (proj.address) rows.push(["Adresse:", proj.address]);
         rows.push(["Datum:", new Date().toLocaleDateString('de-DE')]);
         rows.push([]);
         rows.push(["Position", "Mitarbeiter", "Details", "Menge", "Einzelpreis", "Gesamt"]);
@@ -2111,7 +2268,7 @@ function App() {
         const isEditing = !!editingProjectId;
         const emptyForm = () => {
             const nextColorId = PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id;
-            return { name: '', category: projCategories[0] || '', projectNumber: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: nextColorId };
+            return { name: '', category: projCategories[0] || '', projectNumber: '', address: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: nextColorId };
         };
         const save = () => {
             if (!projForm.name.trim()) return;
@@ -2142,6 +2299,10 @@ function App() {
                             <div className="col-span-2">
                                 <label className="block text-xs text-slate-700 mb-1 font-semibold">Name</label>
                                 <input type="text" value={projForm.name} onChange={e => setProjForm({...projForm, name: e.target.value})} className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500" autoFocus/>
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">Adresse</label>
+                                <input type="text" value={projForm.address || ''} onChange={e => setProjForm({...projForm, address: e.target.value})} placeholder="Straße, PLZ Ort, Land" className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"/>
                             </div>
                             <div>
                                 <label className="block text-xs text-slate-700 mb-1 font-semibold">Projektnr.</label>
@@ -2353,8 +2514,10 @@ function App() {
                 <div className="flex-1 min-w-0">
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
                     <div className="flex items-center gap-1.5">
-                        <span className="text-gea-300 text-xs font-medium">Einsatzplanung v0.6</span>
-                        <button onClick={() => setIsChangelogOpen(true)} title="Changelog" className="text-gea-500 hover:text-gea-300 transition-colors"><IconHistory size={13}/></button>
+                        <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
+                            <span className="text-xs font-medium">Einsatzplanung v0.6</span>
+                            <span className="bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={10}/>Changelog</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2909,6 +3072,7 @@ function App() {
                         <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 flex-wrap">
                             <span className="flex items-center gap-1"><div className={`w-2 h-2 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>{proj.category}</span>
                             <span>·</span><span>{proj.startWeek} – {proj.ibnWeek}</span>
+                            {proj.address && <><span>·</span><span>{proj.address}</span></>}
                         </div>
                     </div>
 
@@ -2930,7 +3094,7 @@ function App() {
                             <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
                         </label>
                         <button onClick={() => {
-                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
+                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
                             setEditingProjectId(proj.id);
                             setIsProjFormOpen(true);
                         }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
@@ -3156,7 +3320,7 @@ function App() {
         }
 
         const handleEditProject = (p) => {
-            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: resolveProjectColor(p.color).id });
+            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', address: p.address || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: resolveProjectColor(p.color).id });
             setEditingProjectId(p.id);
             setIsProjFormOpen(true);
         };
@@ -3826,6 +3990,8 @@ function App() {
                         </button>
                     </div>
                     
+                    <DepsSection/>
+
                     <button onClick={async () => {
                         if(confirm('Alle Daten unwiderruflich löschen?')) {
                             localStorage.removeItem('teamMasterProData');
@@ -3899,6 +4065,8 @@ function App() {
                 <CopyModal
                     copyContext={copyContext}
                     activeEmps={activeEmployees}
+                    empsByCategory={activeEmpsByCategory}
+                    empCategories={activeEmpCategories}
                     weeks={weeks}
                     projectById={projectById}
                     assignments={assignments}
