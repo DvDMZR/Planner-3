@@ -46,9 +46,17 @@
 - User-created Other/Basic tasks can optionally have a custom color assigned in Kategorien settings
   (Default is no color — neutral gray chip)
 
+### Projects
+- Added address field to projects (shown in project details and included in CSV export)
+
+### Copy Function
+- Fixed: source week was not selectable when copying a task (highlighted in amber, now selectable for other employees)
+- Employees in copy dialog are now grouped by team in collapsible sections; each team can be expanded/collapsed and all members selected at once
+
 ### Version & UI
 - Version bumped to v0.6
-- New changelog button (history icon) in sidebar showing full version history
+- Changelog button in sidebar is now a visible badge (more prominent)
+- System & Export tab now lists all external libraries with loaded versions and an "Check for updates" button that queries the npm registry
 
 ---
 
