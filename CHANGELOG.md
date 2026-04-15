@@ -1,16 +1,25 @@
 # Changelog
 
-## Unreleased
+## v0.6.1 (2026-04-15)
 
 ### Bug Fixes
 - SharePoint-Sync blieb nach einer kurzen Idlezeit im Browser hängen (Status
   blieb auf „Verbindet ..." bzw. „Speichert ...") und erforderte einen
   kompletten Browser-Reload. Die App erkennt jetzt abgelaufene SharePoint-
-  Sitzungen (401/403 und Login-Redirects), cached den Form-Digest bis zu seinem
-  Ablauf, versucht beim Tab-Fokus und bei Fehlern eine stille Re-Auth über
-  einen unsichtbaren iframe und bietet als Rückfall einen Klick-Button
-  „Sitzung abgelaufen – neu verbinden" im Status-Indikator, der ohne Reload
-  zum SharePoint-Login führt.
+  Sitzungen (401/403) und cached den Form-Digest bis zu seinem Ablauf,
+  versucht bei Fehlern eine stille Re-Auth über einen unsichtbaren iframe und
+  bietet als Rückfall einen Klick-Button „Sitzung abgelaufen – neu verbinden"
+  im Status-Indikator, der ohne Reload zum SharePoint-Login führt.
+- Behoben: Beim Speichern wurden durch einen `ReferenceError` in
+  `buildSplitFiles` nur `meta.json` geschrieben; `inactiveOfftimeTasks`,
+  `inactiveSupportTasks` und `inactiveTrainingTasks` werden jetzt sauber aus
+  dem State gelesen, sodass alle Split-Dateien wieder geschrieben werden.
+- Behoben: Status-Pille blieb nach einem Seiten-Reload dauerhaft auf
+  „Verbindet ..." stehen, obwohl Sync tatsächlich lief. Nach 10 s wird ein
+  hängender `connecting`-Status jetzt automatisch auf `idle` gesetzt.
+
+### Version
+- Version auf v0.6.1 angehoben.
 
 ## v0.6 (2026-04-14)
 
