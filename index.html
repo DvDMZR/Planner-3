@@ -296,18 +296,151 @@ const SP_CONTEXT = (() => {
 // Escape single quotes and spaces for SharePoint REST API paths
 const SP_ENC = (path) => path.replace(/'/g, "''").replace(/ /g, '%20');
 
+// Signals that SharePoint refused the request because the browser session /
+// form digest has expired. Recovery layer catches this specifically.
+class SpAuthError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.name = 'SpAuthError';
+        this.status = status || 0;
+    }
+}
+
+// Cached form digest. SharePoint digests are usually valid for 1800 s; we
+// refresh one minute before they expire to absorb clock skew.
+const spDigestCache = { value: null, expiresAt: 0 };
+
+// Detect auth failures that don't surface as a plain 401. SharePoint often
+// responds with a 302 redirect to the login page, which a fetch() follows and
+// turns into a 200 HTML response – so we also sniff HTML bodies and known
+// login URLs.
+function spIsAuthResponse(r) {
+    if (r.status === 401 || r.status === 403) return true;
+    if (r.type === 'opaqueredirect') return true;
+    const url = r.url || '';
+    if (/login\.microsoftonline\.com|_layouts\/15\/(authenticate|signin|idpredirect|login)/i.test(url)) return true;
+    if (r.redirected) {
+        const ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
+        if (/text\/html/i.test(ct)) return true;
+    }
+    return false;
+}
+
+// Uniform fetch wrapper for all SharePoint REST calls: always includes
+// credentials, converts auth failures into SpAuthError, and lets callers
+// handle remaining HTTP errors as before.
+async function spFetch(url, init) {
+    const opts = Object.assign({}, init, { credentials: 'include' });
+    const r = await fetch(url, opts);
+    if (spIsAuthResponse(r)) {
+        spDigestCache.expiresAt = 0;
+        throw new SpAuthError('SharePoint auth required', r.status);
+    }
+    return r;
+}
+
 async function spGetDigest(siteUrl) {
-    const r = await fetch(`${siteUrl}/_api/contextinfo`, {
-        method: 'POST', credentials: 'include',
+    const now = Date.now();
+    if (spDigestCache.value && now < spDigestCache.expiresAt - 60_000) {
+        return spDigestCache.value;
+    }
+    const r = await spFetch(`${siteUrl}/_api/contextinfo`, {
+        method: 'POST',
         headers: { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose' }
     });
     if (!r.ok) throw new Error('digest ' + r.status);
-    return (await r.json()).d.GetContextWebInformation.FormDigestValue;
+    const info = (await r.json()).d.GetContextWebInformation;
+    spDigestCache.value = info.FormDigestValue;
+    const timeoutSec = Number(info.FormDigestTimeoutSeconds) || 1800;
+    spDigestCache.expiresAt = Date.now() + timeoutSec * 1000;
+    return spDigestCache.value;
+}
+
+// Silent re-auth via a hidden iframe. If the user's Entra ID / AD session is
+// still valid, navigating to a SharePoint endpoint refreshes the FedAuth /
+// rtFa cookies without any visible UI. We can't read the iframe content
+// cross-origin – we just wait for load or a timeout and then retry.
+let spSilentAuthInFlight = null;
+function spSilentReauth(ctx, timeoutMs = 8000) {
+    if (spSilentAuthInFlight) return spSilentAuthInFlight;
+    spSilentAuthInFlight = new Promise((resolve) => {
+        let done = false;
+        const finish = (ok) => {
+            if (done) return;
+            done = true;
+            try { iframe.remove(); } catch(e) {}
+            resolve(ok);
+        };
+        let iframe;
+        try {
+            iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.addEventListener('load', () => finish(true));
+            iframe.addEventListener('error', () => finish(false));
+            setTimeout(() => finish(false), timeoutMs);
+            // Hit a cheap authenticated endpoint; if cookies are stale, the
+            // SP front-door runs the cookie refresh dance through Entra.
+            iframe.src = `${ctx.siteUrl}/_api/contextinfo`;
+            document.body.appendChild(iframe);
+        } catch(e) {
+            finish(false);
+        }
+    }).finally(() => { spSilentAuthInFlight = null; });
+    return spSilentAuthInFlight;
+}
+
+// Interactive re-auth via popup. MUST be called from within a user gesture
+// or the browser will block the popup.
+let spInteractiveAuthInFlight = null;
+function spInteractiveReauth(ctx) {
+    if (spInteractiveAuthInFlight) return spInteractiveAuthInFlight;
+    spInteractiveAuthInFlight = new Promise((resolve) => {
+        let win;
+        try {
+            win = window.open(`${ctx.siteUrl}/_layouts/15/start.aspx`, 'sp-reauth',
+                'width=520,height=640,menubar=no,toolbar=no,location=yes');
+        } catch(e) { win = null; }
+        if (!win) { resolve(false); return; }
+        const pollTimer = setInterval(() => {
+            if (win.closed) {
+                clearInterval(pollTimer);
+                clearTimeout(safety);
+                resolve(true);
+            }
+        }, 400);
+        const safety = setTimeout(() => {
+            try { if (!win.closed) win.close(); } catch(e) {}
+            clearInterval(pollTimer);
+            resolve(true);
+        }, 5 * 60 * 1000);
+    }).finally(() => { spInteractiveAuthInFlight = null; });
+    return spInteractiveAuthInFlight;
+}
+
+// Ensure there is a usable SharePoint session. Returns true once a fresh
+// digest has been obtained, false when even interactive re-auth failed.
+async function spEnsureSession(ctx, { interactive = false } = {}) {
+    spDigestCache.expiresAt = 0;
+    try { await spGetDigest(ctx.siteUrl); return true; }
+    catch (e) { if (!(e instanceof SpAuthError)) throw e; }
+
+    await spSilentReauth(ctx);
+    spDigestCache.expiresAt = 0;
+    try { await spGetDigest(ctx.siteUrl); return true; }
+    catch (e) { if (!(e instanceof SpAuthError)) throw e; }
+
+    if (!interactive) return false;
+
+    await spInteractiveReauth(ctx);
+    spDigestCache.expiresAt = 0;
+    try { await spGetDigest(ctx.siteUrl); return true; }
+    catch (e) { return false; }
 }
 
 async function spLoad(ctx) {
-    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')/$value`, {
-        credentials: 'include', headers: { 'Accept': 'text/plain' }
+    const r = await spFetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')/$value`, {
+        headers: { 'Accept': 'text/plain' }
     });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error('load ' + r.status);
@@ -315,8 +448,8 @@ async function spLoad(ctx) {
 }
 
 async function spGetTimestamp(ctx) {
-    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')?$select=TimeLastModified`, {
-        credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' }
+    const r = await spFetch(`${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(ctx.stateFilePath)}')?$select=TimeLastModified`, {
+        headers: { 'Accept': 'application/json;odata=verbose' }
     });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error('ts ' + r.status);
@@ -325,8 +458,8 @@ async function spGetTimestamp(ctx) {
 
 async function spSave(ctx, data) {
     const digest = await spGetDigest(ctx.siteUrl);
-    const r = await fetch(`${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(ctx.folderPath)}')/Files/Add(url='planner-state.json',overwrite=true)`, {
-        method: 'POST', credentials: 'include',
+    const r = await spFetch(`${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(ctx.folderPath)}')/Files/Add(url='planner-state.json',overwrite=true)`, {
+        method: 'POST',
         headers: { 'Accept': 'application/json;odata=verbose', 'X-RequestDigest': digest, 'Content-Type': 'application/octet-stream' },
         body: JSON.stringify(data)
     });
@@ -334,14 +467,15 @@ async function spSave(ctx, data) {
 }
 
 // Ensure a subfolder exists under the planner folder. 400 = already present,
-// which SharePoint returns on the second call – we swallow that.
+// which SharePoint returns on the second call – we swallow that. Auth errors
+// still need to bubble up so the recovery layer can react.
 async function spEnsureFolder(ctx, subPath) {
     try {
         const digest = await spGetDigest(ctx.siteUrl);
-        await fetch(
+        await spFetch(
             `${ctx.siteUrl}/_api/web/folders/add('${SP_ENC(ctx.folderPath + '/' + subPath)}')`,
             {
-                method: 'POST', credentials: 'include',
+                method: 'POST',
                 headers: {
                     'Accept': 'application/json;odata=verbose',
                     'X-RequestDigest': digest,
@@ -349,14 +483,17 @@ async function spEnsureFolder(ctx, subPath) {
                 }
             }
         );
-    } catch(e) { /* already exists or transient – ignore */ }
+    } catch(e) {
+        if (e instanceof SpAuthError) throw e;
+        /* already exists or transient – ignore */
+    }
 }
 
 async function spLoadFile(ctx, filename) {
     const path = ctx.folderPath + '/' + PLANNER_DATA_DIR + '/' + filename;
-    const r = await fetch(
+    const r = await spFetch(
         `${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(path)}')/$value`,
-        { credentials: 'include', headers: { 'Accept': 'text/plain' } }
+        { headers: { 'Accept': 'text/plain' } }
     );
     if (r.status === 404) return null;
     if (!r.ok) throw new Error('spLoadFile ' + filename + ' ' + r.status);
@@ -366,10 +503,10 @@ async function spLoadFile(ctx, filename) {
 async function spSaveFile(ctx, filename, data) {
     const digest = await spGetDigest(ctx.siteUrl);
     const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
-    const r = await fetch(
+    const r = await spFetch(
         `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
         {
-            method: 'POST', credentials: 'include',
+            method: 'POST',
             headers: {
                 'Accept': 'application/json;odata=verbose',
                 'X-RequestDigest': digest,
@@ -385,9 +522,9 @@ async function spSaveFile(ctx, filename, data) {
 // polling does not scale linearly with the number of split files.
 async function spGetFolderTimestamps(ctx) {
     const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
-    const r = await fetch(
+    const r = await spFetch(
         `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files?$select=Name,TimeLastModified`,
-        { credentials: 'include', headers: { 'Accept': 'application/json;odata=verbose' } }
+        { headers: { 'Accept': 'application/json;odata=verbose' } }
     );
     if (r.status === 404) return {};
     if (!r.ok) throw new Error('spGetFolderTimestamps ' + r.status);
@@ -1613,7 +1750,7 @@ function App() {
 
             // 1. Try SharePoint first (wins over local data if available)
             if (SP_CONTEXT) {
-                try {
+                const runLoad = async () => {
                     const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
                     // Treat "all empty" as fresh install → fall through to
                     // localStorage / generateInitialData so the app has
@@ -1625,10 +1762,26 @@ function App() {
                     } else {
                         spFileTimestampsRef.current = timestamps || {};
                     }
+                };
+                try {
+                    await runLoad();
                     setSyncStatus('idle');
                 } catch(e) {
-                    console.warn('[SP] load failed', e);
-                    setSyncStatus('offline');
+                    if (e instanceof SpAuthError) {
+                        // Session expired between page load and our first
+                        // REST call – try a silent refresh before giving up.
+                        setSyncStatus('reconnecting');
+                        const ok = await spEnsureSession(SP_CONTEXT, { interactive: false });
+                        if (ok) {
+                            try { await runLoad(); setSyncStatus('idle'); }
+                            catch(e2) { console.warn('[SP] load retry failed', e2); setSyncStatus('needs-auth'); }
+                        } else {
+                            setSyncStatus('needs-auth');
+                        }
+                    } else {
+                        console.warn('[SP] load failed', e);
+                        setSyncStatus('offline');
+                    }
                 }
             }
 
@@ -1777,17 +1930,38 @@ function App() {
         if (SP_CONTEXT) {
             if (spSaveTimer.current) clearTimeout(spSaveTimer.current);
             spSaveTimer.current = setTimeout(async () => {
-                setSyncStatus('syncing');
-                try {
+                // Don't clobber a known-broken auth state – the user will
+                // retry the save by clicking "neu verbinden".
+                if (syncStatusRef.current === 'needs-auth') return;
+                const runSave = async () => {
                     await spEnsureFolder(SP_CONTEXT, PLANNER_DATA_DIR);
                     await saveSplitState(stateData, lastSavedSpRef.current,
                         (filename, payload) => spSaveFile(SP_CONTEXT, filename, payload)
                     );
                     spFileTimestampsRef.current = await spGetFolderTimestamps(SP_CONTEXT);
+                };
+                setSyncStatus('syncing');
+                try {
+                    await runSave();
                     setSyncStatus('idle');
                 } catch(e) {
-                    console.warn('[SP] save failed', e);
-                    setSyncStatus('offline');
+                    if (e instanceof SpAuthError) {
+                        // Session expired while idle – try silent re-auth and
+                        // replay the save exactly once. lastSavedSpRef is only
+                        // updated per successful file write, so interrupted
+                        // writes are naturally retried on the next save.
+                        setSyncStatus('reconnecting');
+                        const ok = await spEnsureSession(SP_CONTEXT, { interactive: false });
+                        if (ok) {
+                            try { await runSave(); setSyncStatus('idle'); }
+                            catch(e2) { console.warn('[SP] save retry failed', e2); setSyncStatus('needs-auth'); }
+                        } else {
+                            setSyncStatus('needs-auth');
+                        }
+                    } else {
+                        console.warn('[SP] save failed', e);
+                        setSyncStatus('offline');
+                    }
                 }
             }, 1500);
         }
@@ -1844,11 +2018,13 @@ function App() {
     // SharePoint polling – pick up changes from other users every 5 seconds.
     // One folder-list call returns timestamps for all files; if any changed
     // we reload the complete split state and apply it.
+    const pollFailuresRef = useRef(0);
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
             if (document.visibilityState === 'hidden') return;
-            if (syncStatusRef.current === 'syncing' || syncStatusRef.current === 'connecting') return;
+            const st = syncStatusRef.current;
+            if (st === 'syncing' || st === 'connecting' || st === 'reconnecting' || st === 'needs-auth') return;
             try {
                 const newTs = await spGetFolderTimestamps(SP_CONTEXT);
                 const prev = spFileTimestampsRef.current;
@@ -1858,7 +2034,26 @@ function App() {
                     spFileTimestampsRef.current = timestamps;
                     applyRemoteSnapshot(state);
                 }
-            } catch(e) { /* Transient errors ignored */ }
+                pollFailuresRef.current = 0;
+                // Recover from a prior 'offline' as soon as the next poll
+                // succeeds – no need to wait for a user edit.
+                if (syncStatusRef.current === 'offline') setSyncStatus('idle');
+            } catch(e) {
+                if (e instanceof SpAuthError) {
+                    // Session expired – drive the recovery pipeline. Silent
+                    // refresh succeeds while the user's Entra session is
+                    // alive, otherwise we surface the manual reconnect CTA.
+                    setSyncStatus('reconnecting');
+                    const ok = await spEnsureSession(SP_CONTEXT, { interactive: false });
+                    setSyncStatus(ok ? 'idle' : 'needs-auth');
+                    pollFailuresRef.current = 0;
+                } else {
+                    pollFailuresRef.current += 1;
+                    if (pollFailuresRef.current >= 3 && syncStatusRef.current === 'idle') {
+                        setSyncStatus('offline');
+                    }
+                }
+            }
         };
         const interval = setInterval(poll, 5000);
         return () => clearInterval(interval);
@@ -1883,6 +2078,78 @@ function App() {
         };
         const interval = setInterval(poll, 5000);
         return () => clearInterval(interval);
+    }, []);
+
+    // Shared helper: after any kind of successful re-auth we want to pull the
+    // latest remote snapshot so the UI can't show stale data.
+    const refreshSpSnapshot = async () => {
+        try {
+            const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+            spFileTimestampsRef.current = timestamps;
+            if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
+                applyRemoteSnapshot(state, { notify: false });
+            }
+            return true;
+        } catch(e) {
+            console.warn('[SP] snapshot refresh failed', e);
+            return false;
+        }
+    };
+
+    // Manual reconnect button on the status pill. Must run inside a click
+    // handler so the browser allows the popup used for interactive re-auth.
+    const reconnectSharePoint = async () => {
+        if (!SP_CONTEXT) return;
+        setSyncStatus('reconnecting');
+        const ok = await spEnsureSession(SP_CONTEXT, { interactive: true });
+        if (!ok) { setSyncStatus('needs-auth'); return; }
+        const loaded = await refreshSpSnapshot();
+        setSyncStatus(loaded ? 'idle' : 'needs-auth');
+    };
+
+    // Re-validate the SharePoint session whenever the tab regains focus.
+    // Without this, after browser idle the first failure only surfaces on
+    // the next user edit, which is exactly the bug we're fixing.
+    useEffect(() => {
+        if (!SP_CONTEXT) return;
+        const revalidate = async () => {
+            if (document.visibilityState === 'hidden') return;
+            const st = syncStatusRef.current;
+            if (st === 'syncing' || st === 'connecting' || st === 'reconnecting') return;
+            try {
+                const newTs = await spGetFolderTimestamps(SP_CONTEXT);
+                const prev = spFileTimestampsRef.current;
+                const changed = Object.keys(newTs).some(f => newTs[f] !== prev[f]);
+                if (changed) {
+                    const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+                    spFileTimestampsRef.current = timestamps;
+                    applyRemoteSnapshot(state);
+                } else if (st === 'offline' || st === 'needs-auth') {
+                    setSyncStatus('idle');
+                }
+            } catch(e) {
+                if (e instanceof SpAuthError) {
+                    setSyncStatus('reconnecting');
+                    const ok = await spEnsureSession(SP_CONTEXT, { interactive: false });
+                    if (ok) {
+                        const loaded = await refreshSpSnapshot();
+                        setSyncStatus(loaded ? 'idle' : 'needs-auth');
+                    } else {
+                        setSyncStatus('needs-auth');
+                    }
+                }
+                // Non-auth errors: leave status untouched, the poll loop
+                // handles its own offline escalation.
+            }
+        };
+        const onVisibility = () => { if (document.visibilityState === 'visible') revalidate(); };
+        const onFocus = () => revalidate();
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('focus', onFocus);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('focus', onFocus);
+        };
     }, []);
 
     // Ensure form defaults align with categories
@@ -2555,19 +2822,33 @@ function App() {
             {(SP_CONTEXT || fsStatus === 'connected') && (
                 <div className="px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
-                        syncStatus === 'idle'       ? 'bg-emerald-400' :
-                        syncStatus === 'syncing'    ? 'bg-amber-400 animate-pulse' :
-                        syncStatus === 'updated'    ? 'bg-blue-400' :
-                        syncStatus === 'offline'    ? 'bg-rose-500' :
-                                                     'bg-amber-400 animate-pulse'
+                        syncStatus === 'idle'         ? 'bg-emerald-400' :
+                        syncStatus === 'syncing'      ? 'bg-amber-400 animate-pulse' :
+                        syncStatus === 'updated'      ? 'bg-blue-400' :
+                        syncStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' :
+                        syncStatus === 'needs-auth'   ? 'bg-rose-500' :
+                        syncStatus === 'offline'      ? 'bg-rose-500' :
+                                                       'bg-amber-400 animate-pulse'
                     }`}/>
-                    <span className="text-gea-400 text-xs truncate">
-                        {syncStatus === 'idle'       ? 'Synchronisiert' :
-                         syncStatus === 'syncing'    ? 'Speichert ...' :
-                         syncStatus === 'updated'    ? 'Aktualisiert ✓' :
-                         syncStatus === 'offline'    ? 'Offline – lokal' :
-                                                      'Verbindet ...'}
-                    </span>
+                    {syncStatus === 'needs-auth' ? (
+                        <button
+                            type="button"
+                            onClick={reconnectSharePoint}
+                            className="text-rose-300 hover:text-rose-200 text-xs truncate underline decoration-dotted"
+                            title="Sitzung bei SharePoint ist abgelaufen – hier klicken um sich neu anzumelden"
+                        >
+                            Sitzung abgelaufen – neu verbinden
+                        </button>
+                    ) : (
+                        <span className="text-gea-400 text-xs truncate">
+                            {syncStatus === 'idle'         ? 'Synchronisiert' :
+                             syncStatus === 'syncing'      ? 'Speichert ...' :
+                             syncStatus === 'updated'      ? 'Aktualisiert ✓' :
+                             syncStatus === 'reconnecting' ? 'Sitzung erneuern ...' :
+                             syncStatus === 'offline'      ? 'Offline – lokal' :
+                                                            'Verbindet ...'}
+                        </span>
+                    )}
                 </div>
             )}
         </aside>
