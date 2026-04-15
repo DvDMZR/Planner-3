@@ -638,13 +638,16 @@ function buildSplitFiles(state) {
     const costItems       = state.costItems && state.costItems.length
         ? state.costItems
         : migrateExpensesToCostItems(state.expenses);
-    const empCategories      = state.empCategories      || DEFAULT_TEAMS;
-    const projCategories     = state.projCategories     || [];
-    const basicTasks         = state.basicTasks         || [];
-    const basicTasksMeta     = state.basicTasksMeta     || {};
-    const inactiveBasicTasks = state.inactiveBasicTasks || [];
-    const offtimeTasks       = state.offtimeTasks       || [];
-    const invoiceRecipient   = state.invoiceRecipient   || '';
+    const empCategories         = state.empCategories         || DEFAULT_TEAMS;
+    const projCategories        = state.projCategories        || [];
+    const basicTasks            = state.basicTasks            || [];
+    const basicTasksMeta        = state.basicTasksMeta        || {};
+    const inactiveBasicTasks    = state.inactiveBasicTasks    || [];
+    const offtimeTasks          = state.offtimeTasks          || [];
+    const inactiveOfftimeTasks  = state.inactiveOfftimeTasks  || [];
+    const inactiveSupportTasks  = state.inactiveSupportTasks  || [];
+    const inactiveTrainingTasks = state.inactiveTrainingTasks || [];
+    const invoiceRecipient      = state.invoiceRecipient      || '';
 
     const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
     const assGroups = groupByTeam(assignments, employees, teams);
