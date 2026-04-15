@@ -310,19 +310,15 @@ class SpAuthError extends Error {
 // refresh one minute before they expire to absorb clock skew.
 const spDigestCache = { value: null, expiresAt: 0 };
 
-// Detect auth failures that don't surface as a plain 401. SharePoint often
-// responds with a 302 redirect to the login page, which a fetch() follows and
-// turns into a 200 HTML response – so we also sniff HTML bodies and known
-// login URLs.
+// Detect auth failures. We intentionally stay conservative here: SharePoint
+// occasionally redirects valid REST responses (e.g. URL normalisation on
+// personal sites), so reacting to `r.redirected` alone caused the recovery
+// layer to kick in on successful loads and leave the app stuck in
+// "reconnecting". Trust only explicit 401/403 and the opaqueredirect type
+// (used when we manually opt out of following redirects).
 function spIsAuthResponse(r) {
     if (r.status === 401 || r.status === 403) return true;
     if (r.type === 'opaqueredirect') return true;
-    const url = r.url || '';
-    if (/login\.microsoftonline\.com|_layouts\/15\/(authenticate|signin|idpredirect|login)/i.test(url)) return true;
-    if (r.redirected) {
-        const ct = (r.headers && r.headers.get && r.headers.get('content-type')) || '';
-        if (/text\/html/i.test(ct)) return true;
-    }
     return false;
 }
 
@@ -2106,51 +2102,6 @@ function App() {
         const loaded = await refreshSpSnapshot();
         setSyncStatus(loaded ? 'idle' : 'needs-auth');
     };
-
-    // Re-validate the SharePoint session whenever the tab regains focus.
-    // Without this, after browser idle the first failure only surfaces on
-    // the next user edit, which is exactly the bug we're fixing.
-    useEffect(() => {
-        if (!SP_CONTEXT) return;
-        const revalidate = async () => {
-            if (document.visibilityState === 'hidden') return;
-            const st = syncStatusRef.current;
-            if (st === 'syncing' || st === 'connecting' || st === 'reconnecting') return;
-            try {
-                const newTs = await spGetFolderTimestamps(SP_CONTEXT);
-                const prev = spFileTimestampsRef.current;
-                const changed = Object.keys(newTs).some(f => newTs[f] !== prev[f]);
-                if (changed) {
-                    const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
-                    spFileTimestampsRef.current = timestamps;
-                    applyRemoteSnapshot(state);
-                } else if (st === 'offline' || st === 'needs-auth') {
-                    setSyncStatus('idle');
-                }
-            } catch(e) {
-                if (e instanceof SpAuthError) {
-                    setSyncStatus('reconnecting');
-                    const ok = await spEnsureSession(SP_CONTEXT, { interactive: false });
-                    if (ok) {
-                        const loaded = await refreshSpSnapshot();
-                        setSyncStatus(loaded ? 'idle' : 'needs-auth');
-                    } else {
-                        setSyncStatus('needs-auth');
-                    }
-                }
-                // Non-auth errors: leave status untouched, the poll loop
-                // handles its own offline escalation.
-            }
-        };
-        const onVisibility = () => { if (document.visibilityState === 'visible') revalidate(); };
-        const onFocus = () => revalidate();
-        document.addEventListener('visibilitychange', onVisibility);
-        window.addEventListener('focus', onFocus);
-        return () => {
-            document.removeEventListener('visibilitychange', onVisibility);
-            window.removeEventListener('focus', onFocus);
-        };
-    }, []);
 
     // Ensure form defaults align with categories
     useEffect(() => {
