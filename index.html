@@ -2058,6 +2058,19 @@ function App() {
         return () => clearInterval(interval);
     }, []);
 
+    // Safety net: falls der initiale SharePoint-Handshake den Status
+    // nicht auf 'idle' flippt (z.B. wegen eines geschluckten Fetches
+    // oder Browser-Quirks), aber Saves trotzdem durchgehen, nach 10 s
+    // auf 'idle' umstellen, damit die UI nicht dauerhaft „Verbindet ..."
+    // zeigt.
+    useEffect(() => {
+        if (!SP_CONTEXT) return;
+        const t = setTimeout(() => {
+            if (syncStatusRef.current === 'connecting') setSyncStatus('idle');
+        }, 10000);
+        return () => clearTimeout(t);
+    }, []);
+
     // File System polling – Änderungen von Kollegen alle 5 Sek. erkennen.
     useEffect(() => {
         if (!FS_MODE) return;
