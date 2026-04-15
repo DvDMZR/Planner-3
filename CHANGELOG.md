@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+- SharePoint-Sync blieb nach einer kurzen Idlezeit im Browser hängen (Status
+  blieb auf „Verbindet ..." bzw. „Speichert ...") und erforderte einen
+  kompletten Browser-Reload. Die App erkennt jetzt abgelaufene SharePoint-
+  Sitzungen (401/403 und Login-Redirects), cached den Form-Digest bis zu seinem
+  Ablauf, versucht beim Tab-Fokus und bei Fehlern eine stille Re-Auth über
+  einen unsichtbaren iframe und bietet als Rückfall einen Klick-Button
+  „Sitzung abgelaufen – neu verbinden" im Status-Indikator, der ohne Reload
+  zum SharePoint-Login führt.
+
 ## v0.6 (2026-04-14)
 
 ### Bug Fixes
