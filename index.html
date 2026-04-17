@@ -1241,17 +1241,14 @@ const AssignmentModal = ({
                                             onChange={e => setRecurRule(r => ({ ...r, everyXWeeks: Math.max(1, parseInt(e.target.value)||1) }))}
                                             className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
                                     </div>
-                                    <div className="text-xs text-slate-500 mt-4">
-                                        Bis: <span className="font-medium text-slate-700">{recurRule.endWeek}</span>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-slate-400 mb-1">Bis Woche</label>
+                                        <input type="week"
+                                            value={recurRule.endWeek}
+                                            min={addWeeks(formData.week, 1)}
+                                            onChange={e => setRecurRule(r => ({ ...r, endWeek: e.target.value }))}
+                                            className="w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">Endwoche wählen</label>
-                                    <WeekCalendarPicker
-                                        value={recurRule.endWeek}
-                                        onChange={w => setRecurRule(r => ({ ...r, endWeek: w }))}
-                                        minWeek={formData.week}
-                                    />
                                 </div>
                             </div>
                         )}
@@ -1263,7 +1260,7 @@ const AssignmentModal = ({
                             <button onClick={() => onDelete(formData.id)} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">Löschen</button>
                             {formData.ruleId && onDeleteSeries && (
                                 <button onClick={() => onDeleteSeries(formData.id)} className="text-rose-500 text-xs hover:bg-rose-50 px-2 py-1 rounded font-medium border border-rose-200 flex items-center gap-1" title="Diese und alle späteren Instanzen der Serie löschen">
-                                    <IconRepeat size={11}/> Serie ab hier
+                                    <IconRepeat size={11}/> Serie ab hier löschen
                                 </button>
                             )}
                         </div>
