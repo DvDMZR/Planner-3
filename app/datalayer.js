@@ -195,7 +195,7 @@ async function saveSplitState(state, lastSaved, writeFile) {
     for (const [filename, payload] of Object.entries(files)) {
         const serialised = JSON.stringify(payload);
         if (lastSaved[filename] === serialised) continue;
-        await writeFile(filename, payload);
+        await writeFile(filename, serialised);
         lastSaved[filename] = serialised;
     }
 }

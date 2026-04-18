@@ -74,7 +74,7 @@ async function fsSaveFile(dirHandle, filename, payload) {
     const dataDir = await fsGetDataDir(dirHandle, true);
     const fh = await dataDir.getFileHandle(filename, { create: true });
     const w = await fh.createWritable();
-    await w.write(JSON.stringify(payload));
+    await w.write(typeof payload === 'string' ? payload : JSON.stringify(payload));
     await w.close();
 }
 
