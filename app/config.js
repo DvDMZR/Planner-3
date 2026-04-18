@@ -31,6 +31,25 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.6.6 (2026-04-18)
+
+### Performance & UX
+- React auf Production-Build umgestellt (~40 % kleiner, keine Dev-Warnungen)
+- Tailwind CSS vorkompiliert (kein CDN-JIT mehr, stabilerer Seitenaufbau)
+- Lade-Spinner während Babel JSX kompiliert (GEA-Farben, CSS-only)
+- SidebarView mit React.memo – kein Re-Render bei Hintergrund-Sync
+- Scroll-Navigation in Ressourcen- und Projektplanung:
+  - ← / → Buttons (4 Wochen pro Klick) mit sichtbarem KW-Bereich
+  - Dünner Fortschrittsbalken unter dem Header
+  - Pfeiltasten (1 Woche) und Bild-auf/-ab (4 Wochen) per Tastatur
+
+### Code-Struktur
+- App-Code weiter aufgeteilt: JSX-Komponenten, Modals, 10 View-Dateien
+- \`app/components.jsx\` – Icons, ModalHeader, StatusBadge, WeekCalendarPicker
+- \`app/modals.jsx\` – AssignmentModal, CopyModal, CostItemModal, DepsSection
+- \`app/views/\` – je eine Datei pro Tab-Ansicht
+- \`index.html\` schrumpfte von 4.549 auf ~1.350 Zeilen
+
 ## v0.6.5 (2026-04-18)
 
 ### Code-Struktur

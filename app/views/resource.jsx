@@ -55,6 +55,7 @@ const ResourceView = ({ s, h }) => {
 
         const scrollWeeks = (n) =>
             resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
+        const activeCategories = activeEmpCategories;
         const currentWeek = getWeekString(new Date());
         const currentYear = new Date().getFullYear();
         const resourceWeeks = timelineWeeks;
