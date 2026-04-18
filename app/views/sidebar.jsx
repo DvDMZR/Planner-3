@@ -1,4 +1,4 @@
-const SidebarView = ({ s, h }) => {
+const _SidebarBase = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
         inactiveBasicTasks, basicTasksSubTab, offtimeTasks, inactiveOfftimeTasks,
@@ -97,3 +97,12 @@ const SidebarView = ({ s, h }) => {
         </aside>
     );
 };
+
+// Only re-render when sidebar-visible state actually changes (not on every
+// background poll that touches employees/projects/assignments).
+const SidebarView = React.memo(_SidebarBase, (prev, next) =>
+    prev.s.activeTab    === next.s.activeTab    &&
+    prev.s.syncStatus   === next.s.syncStatus   &&
+    prev.s.fsStatus     === next.s.fsStatus     &&
+    prev.s.projects     === next.s.projects       // needed for onClick: setSelectedProject(projects[0])
+);

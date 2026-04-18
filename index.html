@@ -6,37 +6,14 @@
     <title>Einsatzplanung 3.0 – v0.6.5</title>
     
     <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 
     <!-- Babel für JSX Kompilierung im Browser -->
     <script src="https://unpkg.com/@babel/standalone@7.27.1/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        gea: {
-                            50:  '#e0f2f2',
-                            100: '#b3e0df',
-                            200: '#80cccc',
-                            300: '#4db8b7',
-                            400: '#26a8a7',
-                            500: '#007A7A',
-                            600: '#006363',
-                            700: '#004c4c',
-                            800: '#003535',
-                            900: '#001e1e',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
+    <!-- Tailwind CSS (pre-built, no CDN JIT) -->
+    <link rel="stylesheet" href="app/tailwind.css">
     <link rel="stylesheet" href="app/style.css">
 
     <!-- App modules (plain JS, no JSX) -->
@@ -62,6 +39,26 @@
 </head>
 <body>
 
+<style>
+  #root:empty::before {
+    content: '';
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #001e1e;
+  }
+  #root:empty::after {
+    content: '';
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 44px; height: 44px;
+    margin: -22px 0 0 -22px;
+    border: 4px solid #004c4c;
+    border-top-color: #007A7A;
+    border-radius: 50%;
+    animation: _spin 0.8s linear infinite;
+  }
+  @keyframes _spin { to { transform: rotate(360deg); } }
+</style>
 <div id="root"></div>
 
 <script type="text/babel">
