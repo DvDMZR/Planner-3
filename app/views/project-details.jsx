@@ -1,0 +1,317 @@
+const ProjectDetailsView = ({ s, h }) => {
+    const { activeTab, employees, projects, assignments, expenses, costItems,
+        empCategories, projCategories, basicTasks, basicTasksMeta,
+        inactiveBasicTasks, basicTasksSubTab, offtimeTasks, inactiveOfftimeTasks,
+        inactiveSupportTasks, inactiveTrainingTasks, isChangelogOpen,
+        weeks, selectedProject, collapsedCategories, collapsedProjCategories,
+        collapsedEmpSetup, selectedProjectDetails, weeksAhead,
+        isAssignModalOpen, assignContext, isCostItemModalOpen, editingCostItem,
+        isCopyModalOpen, copyContext, isDeleteMode, pastProjectsExpanded,
+        isInvoiceModalOpen, invoiceSelection, invoiceRecipient, isProjFormOpen,
+        isHelpModalOpen, timelineYear, empForm, editingEmpId, projForm,
+        editingProjectId, newEmpCat, newProjCat, newBasicTask, newOfftimeTask,
+        expandedSetupCats, syncStatus, fsStatus,
+        employeeById, projectById, assignmentsByEmpWeek, assignmentsByProject,
+        assignmentsByProjectWeek, costItemsByProject, projectStatusById,
+        activeEmployees, activeEmpsByCategory, activeEmpCategories,
+        projectsByCategory, projCategoriesFromProjects, timelineWeeks,
+        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+    const { setActiveTab, setEmployees, setProjects, setAssignments,
+        setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
+        setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
+        setOfftimeTasks, setInactiveOfftimeTasks, setInactiveSupportTasks,
+        setInactiveTrainingTasks, setIsChangelogOpen, setSelectedProject,
+        setCollapsedCategories, setCollapsedProjCategories, setCollapsedEmpSetup,
+        setSelectedProjectDetails, setWeeksAhead, setIsAssignModalOpen,
+        setAssignContext, setIsCostItemModalOpen, setEditingCostItem,
+        setIsCopyModalOpen, setCopyContext, setIsDeleteMode, setPastProjectsExpanded,
+        setIsInvoiceModalOpen, setInvoiceSelection, setInvoiceRecipient,
+        setIsProjFormOpen, setIsHelpModalOpen, setTimelineYear, setEmpForm,
+        setEditingEmpId, setProjForm, setEditingProjectId, setNewEmpCat,
+        setNewProjCat, setNewBasicTask, setNewOfftimeTask, setExpandedSetupCats,
+        setSyncStatus, setFsStatus,
+        getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
+        toggleCategory, toggleProjCategory, toggleEmpSetup,
+        handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
+        handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
+        scrollToCurrentWeek } = h;
+        const proj = projectById.get(selectedProjectDetails);
+        if (!proj) return null;
+
+        const projAssignments = (assignmentsByProject.get(proj.id) || []).filter(a => a.type === 'project');
+        const assignedEmpIds = [...new Set(projAssignments.map(a => a.empId))];
+        const projCostItems = costItemsByProject.get(proj.id) || [];
+
+        // Presence grid: sorted weeks that have at least one assignment
+        const presenceWeeks = [...new Set(projAssignments.map(a => a.week))].sort();
+
+        // Totals
+        let totalHours = 0;
+        let totalLaborCost = 0;
+        let totalOtherCost = 0;
+        assignedEmpIds.forEach(empId => {
+            const empAss = projAssignments.filter(a => a.empId === empId);
+            const h = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
+            totalHours += h;
+            if (proj.billable !== false) totalLaborCost += h * (proj.hourlyRate ?? DEFAULT_HOURLY_RATE);
+        });
+        projCostItems.forEach(ci => { totalOtherCost += ci.amount || 0; });
+        const grandTotal = totalLaborCost + totalOtherCost;
+
+        return (
+            <div className="flex-1 overflow-auto bg-slate-50 flex flex-col">
+                {/* Header */}
+                <div className="p-5 border-b border-slate-300 bg-white flex items-center gap-4 flex-wrap shadow-sm">
+                    <button onClick={() => setSelectedProjectDetails(null)} className="p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0">
+                        <IconArrowLeft size={20}/>
+                    </button>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h2 className="text-2xl text-slate-900 font-medium truncate">{proj.name}</h2>
+                            {proj.projectNumber && <span className="text-xs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">{proj.projectNumber}</span>}
+                        </div>
+                        <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="flex items-center gap-1"><div className={`w-2 h-2 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>{proj.category}</span>
+                            <span>·</span><span>{proj.startWeek} – {proj.ibnWeek}</span>
+                            {proj.address && <><span>·</span><span>{proj.address}</span></>}
+                        </div>
+                    </div>
+
+                    {/* Status + checkboxes */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <StatusBadge status={computeAutoStatus(proj)}/>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox"
+                                checked={!!proj.projectCompleted}
+                                onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, projectCompleted: e.target.checked} : p))}
+                                className="w-4 h-4 text-gea-600 rounded"/>
+                            <span className="text-sm font-medium text-slate-700">Projekt abgeschlossen</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox"
+                                checked={!!proj.costsSubmitted}
+                                onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, costsSubmitted: e.target.checked} : p))}
+                                className="w-4 h-4 text-gea-600 rounded"/>
+                            <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
+                        </label>
+                        <button onClick={() => {
+                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
+                            setEditingProjectId(proj.id);
+                            setIsProjFormOpen(true);
+                        }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
+                            <IconEdit size={15}/> Bearbeiten
+                        </button>
+                        <button onClick={openInvoiceModal} className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
+                            <IconFileText size={15}/> Rechnung
+                        </button>
+                        <button onClick={() => { setEditingCostItem(null); setIsCostItemModalOpen(true); }}
+                            className="bg-gea-600 hover:bg-gea-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
+                            <IconPlus size={15}/> Kostenpunkt
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
+
+                    {/* Employee Presence Overview */}
+                    {assignedEmpIds.length > 0 && presenceWeeks.length > 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                <h3 className="text-slate-900 text-base font-medium">Mitarbeiter-Anwesenheit</h3>
+                                <span className="text-xs text-slate-400">{presenceWeeks.length} Wochen</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="text-xs border-collapse w-full">
+                                    <thead>
+                                        <tr>
+                                            <th className="p-3 text-left text-slate-500 font-medium border-r border-slate-200 bg-slate-50 w-40 sticky left-0">Mitarbeiter</th>
+                                            {presenceWeeks.map(w => (
+                                                <th key={w} className="p-2 text-center text-slate-500 font-medium border-r border-slate-200 bg-slate-50 min-w-[52px]">
+                                                    KW{w.split('-W')[1]}
+                                                </th>
+                                            ))}
+                                            <th className="p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]">Stunden</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {assignedEmpIds.map(empId => {
+                                            const emp = employeeById.get(empId);
+                                            const empAss = projAssignments.filter(a => a.empId === empId);
+                                            const empHours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
+                                            return (
+                                                <tr key={empId} className="hover:bg-slate-50">
+                                                    <td className="p-3 text-slate-800 font-medium border-r border-slate-200 sticky left-0 bg-white">{emp?.name || 'Unbekannt'}</td>
+                                                    {presenceWeeks.map(w => {
+                                                        const a = empAss.find(x => x.week === w);
+                                                        return (
+                                                            <td key={w} className="p-1 text-center border-r border-slate-100">
+                                                                {a ? (
+                                                                    <button
+                                                                        onClick={() => { setAssignContext({ empId, week: w, existing: a }); setIsAssignModalOpen(true); }}
+                                                                        className="mx-auto w-9 h-7 rounded flex items-center justify-center bg-gea-100 text-gea-700 font-medium leading-none hover:bg-gea-200 transition-colors cursor-pointer">
+                                                                        {a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h
+                                                                    </button>
+                                                                ) : (
+                                                                    <div className="mx-auto w-9 h-7 rounded bg-slate-50"></div>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="p-2 text-center text-slate-900 font-medium">{empHours}h</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cost Items Table */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                            <h3 className="text-slate-900 text-base font-medium">Kostenpunkte</h3>
+                            <button onClick={() => { setEditingCostItem(null); setIsCostItemModalOpen(true); }}
+                                className="text-gea-600 text-sm font-medium hover:text-gea-700 flex items-center gap-1">
+                                <IconPlus size={15}/> Hinzufügen
+                            </button>
+                        </div>
+                        {projCostItems.length === 0 ? (
+                            <div className="p-10 text-center text-slate-400 text-sm">
+                                Noch keine Kostenpunkte erfasst.
+                            </div>
+                        ) : (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="p-3 text-slate-500 font-medium">Mitarbeiter</th>
+                                        <th className="p-3 text-slate-500 font-medium">Art</th>
+                                        <th className="p-3 text-slate-500 font-medium">Beschreibung</th>
+                                        <th className="p-3 text-slate-500 font-medium text-center">KW</th>
+                                        <th className="p-3 text-slate-500 font-medium text-right">Std.</th>
+                                        <th className="p-3 text-slate-500 font-medium text-right">€/Std.</th>
+                                        <th className="p-3 text-slate-500 font-medium text-right">Betrag</th>
+                                        <th className="p-3 text-slate-500 font-medium text-right">Details</th>
+                                        <th className="p-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {projCostItems.map(ci => {
+                                        const emp = employeeById.get(ci.empId);
+                                        return (
+                                            <tr key={ci.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="p-3 text-slate-800 font-medium">{emp?.name || '–'}</td>
+                                                <td className="p-3">
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                        ci.type === 'Dienstleistung' ? 'bg-blue-100 text-blue-700' :
+                                                        ci.type === 'Reisekosten' ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-slate-100 text-slate-600'
+                                                    }`}>{ci.type}</span>
+                                                </td>
+                                                <td className="p-3 text-slate-600">{ci.description || '–'}</td>
+                                                <td className="p-3 text-slate-500 text-xs">
+                                                    {(() => {
+                                                        if (ci.dateFrom) {
+                                                            const kwF = parseInt(getWeekString(new Date(ci.dateFrom)).split('-W')[1]);
+                                                            const kwT = ci.dateTo ? parseInt(getWeekString(new Date(ci.dateTo)).split('-W')[1]) : kwF;
+                                                            return kwF === kwT ? `KW${kwF}` : `KW${kwF}–${kwT}`;
+                                                        }
+                                                        return ci.week ? `KW${ci.week.split('-W')[1]}` : '–';
+                                                    })()}
+                                                </td>
+                                                <td className="p-3 text-right text-slate-600">{ci.hours != null ? `${ci.hours}h` : '–'}</td>
+                                                <td className="p-3 text-right text-slate-600">{ci.hourlyRate != null ? `${ci.hourlyRate} €` : '–'}</td>
+                                                <td className="p-3 text-right text-slate-900 font-medium">{(ci.amount || 0).toFixed(2)} €</td>
+                                                <td className="p-3 text-xs text-slate-400">
+                                                    {ci.extraCosts?.length > 0 && (
+                                                        <div className="space-y-0.5">
+                                                            {ci.extraCosts.map((ec, i) => (
+                                                                <div key={i}>{ec.type}: {(ec.amount||0).toFixed(0)}€</div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <button onClick={() => { setEditingCostItem(ci); setIsCostItemModalOpen(true); }}
+                                                        className="text-gea-600 text-xs font-medium hover:text-gea-700">Bearbeiten</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 bg-slate-50 border-b border-slate-200">
+                            <h3 className="text-slate-900 text-base font-medium">Zusammenfassung</h3>
+                        </div>
+                        <div className="p-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-7 h-7 rounded-md bg-slate-200 flex items-center justify-center"><IconClock size={14} className="text-slate-500"/></div>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Stunden</p>
+                                </div>
+                                <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalHours}h</p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center"><IconUsers size={14} className="text-blue-600"/></div>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Lohnkosten</p>
+                                </div>
+                                <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalLaborCost.toFixed(2)} €</p>
+                                {proj.billable === false && <p className="text-xs text-slate-400 mt-1">nicht berechnet</p>}
+                            </div>
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-7 h-7 rounded-md bg-amber-100 flex items-center justify-center"><IconFileText size={14} className="text-amber-600"/></div>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Kostenpunkte</p>
+                                </div>
+                                <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalOtherCost.toFixed(2)} €</p>
+                            </div>
+                            <div className="rounded-xl border-2 border-gea-300 bg-gradient-to-br from-gea-50 to-gea-100 p-4 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-7 h-7 rounded-md bg-gea-500 flex items-center justify-center"><IconBarChart size={14} className="text-white"/></div>
+                                    <p className="text-[10px] text-gea-700 font-medium uppercase tracking-wide">Gesamt</p>
+                                </div>
+                                <p className="text-2xl text-gea-800 font-bold tabular-nums">{grandTotal.toFixed(2)} €</p>
+                            </div>
+                        </div>
+                        <div className="px-6 pb-5 pt-1 flex items-center gap-4 border-t border-slate-100">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" checked={proj.billable !== false}
+                                    onChange={() => setProjects(projects.map(p => p.id === proj.id ? {...p, billable: !p.billable} : p))}
+                                    className="w-4 h-4 text-gea-600 rounded"/>
+                                <span className="text-sm text-slate-700">Arbeitszeit berechnen</span>
+                            </label>
+                            {proj.billable !== false && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-slate-500">Std.-Satz:</span>
+                                    <input type="number" min="0" step="1"
+                                        value={proj.hourlyRate ?? DEFAULT_HOURLY_RATE}
+                                        onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, hourlyRate: parseFloat(e.target.value) || 0} : p))}
+                                        className="w-20 p-1.5 border border-slate-300 rounded text-sm text-center font-medium"/>
+                                    <span className="text-sm text-slate-400">€/h</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {isCostItemModalOpen && (
+                    <CostItemModal
+                        projectId={proj.id}
+                        existingItem={editingCostItem}
+                        assignments={assignments}
+                        employees={employees}
+                        costItems={costItems}
+                        setCostItems={setCostItems}
+                        onClose={() => { setIsCostItemModalOpen(false); setEditingCostItem(null); }}
+                    />
+                )}
+            </div>
+        );
+    };
+
