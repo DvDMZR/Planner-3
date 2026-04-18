@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:css": "tailwindcss -i app/tailwind.css.in -o app/tailwind.css --minify"
   },
   "repository": {
     "type": "git",
