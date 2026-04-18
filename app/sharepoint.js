@@ -230,7 +230,7 @@ async function spSaveFile(ctx, filename, data) {
                 'X-RequestDigest': digest,
                 'Content-Type': 'application/octet-stream'
             },
-            body: JSON.stringify(data)
+            body: typeof data === 'string' ? data : JSON.stringify(data)
         }
     );
     if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);

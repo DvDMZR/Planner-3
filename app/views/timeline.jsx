@@ -39,19 +39,27 @@ const TimelineView = ({ s, h }) => {
         const STICKY_W = 256; // matches w-64
 
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
+        const scrollRafRef = React.useRef(null);
+        React.useEffect(() => () => {
+            if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+        }, []);
 
-        const handleScroll = (e) => {
-            const el = e.currentTarget;
-            const maxScroll = el.scrollWidth - el.clientWidth;
-            const progress = maxScroll > 0 ? el.scrollLeft / maxScroll : 0;
-            const firstIdx = Math.max(0, Math.floor(el.scrollLeft / WEEK_W));
-            const lastIdx  = Math.min(timelineWeeks.length - 1,
-                             firstIdx + Math.floor((el.clientWidth - STICKY_W) / WEEK_W) - 1);
-            const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx]
-                ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
-                : '';
-            setScrollInfo({ progress, label });
-        };
+        const handleScroll = React.useCallback((e) => {
+            if (scrollRafRef.current) return;
+            const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
+            scrollRafRef.current = requestAnimationFrame(() => {
+                scrollRafRef.current = null;
+                const maxScroll = scrollWidth - clientWidth;
+                const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
+                const firstIdx = Math.max(0, Math.floor(scrollLeft / WEEK_W));
+                const lastIdx  = Math.min(timelineWeeks.length - 1,
+                                 firstIdx + Math.floor((clientWidth - STICKY_W) / WEEK_W) - 1);
+                const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx]
+                    ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
+                    : '';
+                setScrollInfo({ progress, label });
+            });
+        }, [timelineWeeks]);
 
         const scrollWeeks = (n) =>
             timelineScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });

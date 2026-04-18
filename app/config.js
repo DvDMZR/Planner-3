@@ -13,8 +13,9 @@ const getEmpTeam = (empId, employees) => {
 const groupByTeam = (items, employees, teams) => {
     const groups = {};
     (teams || []).forEach(t => { groups[t] = []; });
+    const empTeamMap = new Map((employees || []).map(e => [e.id, e.category || 'Other']));
     (items || []).forEach(item => {
-        const t = getEmpTeam(item.empId, employees);
+        const t = empTeamMap.get(item.empId) || 'Other';
         if (!groups[t]) groups[t] = [];
         groups[t].push(item);
     });

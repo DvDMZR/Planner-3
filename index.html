@@ -722,18 +722,26 @@ function App() {
     }, []);
     const timelineWeeks = useMemo(() => getWeeksForYear(timelineYear), [timelineYear, getWeeksForYear]);
 
-    const getUtilization = useCallback((empId, week) => {
-        const weeklyHours = getEmpWeeklyHours(empId);
-        const weekAss = assignmentsByEmpWeek.get(empId + '\u0000' + week) || [];
-        let total = 0;
-        let isOfftime = false;
-        for (let i = 0; i < weekAss.length; i++) {
-            const a = weekAss[i];
-            total += ((a.hours ?? (a.percent / 100 * weeklyHours)) / weeklyHours) * 100;
-            if (a.type === 'offtime') isOfftime = true;
+    const utilizationMap = useMemo(() => {
+        const m = new Map();
+        for (const [key, weekAss] of assignmentsByEmpWeek) {
+            const empId = key.slice(0, key.indexOf('\u0000'));
+            const weeklyHours = getEmpWeeklyHours(empId);
+            let total = 0;
+            let isOfftime = false;
+            for (let i = 0; i < weekAss.length; i++) {
+                const a = weekAss[i];
+                total += ((a.hours ?? (a.percent / 100 * weeklyHours)) / weeklyHours) * 100;
+                if (a.type === 'offtime') isOfftime = true;
+            }
+            m.set(key, { total, isOfftime, assignments: weekAss });
         }
-        return { total, isOfftime, assignments: weekAss };
+        return m;
     }, [assignmentsByEmpWeek, getEmpWeeklyHours]);
+
+    const getUtilization = useCallback((empId, week) =>
+        utilizationMap.get(empId + '\u0000' + week) ?? { total: 0, isOfftime: false, assignments: [] }
+    , [utilizationMap]);
 
     const toggleCategory = (cat) => {
         setCollapsedCategories(prev => ({...prev, [cat]: !prev[cat]}));
