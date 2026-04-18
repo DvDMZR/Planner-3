@@ -1,0 +1,8 @@
+.diagonal-stripes {
+    background-image: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 5px, #f1f5f9 5px, #f1f5f9 10px);
+}
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+}
