@@ -31,6 +31,18 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.6.5 (2026-04-18)
+
+### Code-Struktur
+- App-Code in separate Dateien aufgeteilt (kein funktionaler Unterschied)
+- \`app/config.js\` – Konstanten, Teams, Farben, Changelog
+- \`app/utils.js\` – Datums- und Wochen-Hilfsfunktionen
+- \`app/sharepoint.js\` – SharePoint-Kontext, Auth, REST-API-Wrapper
+- \`app/filesync.js\` – File System Access API, IndexedDB
+- \`app/datalayer.js\` – Split-Dateien aufbauen/mergen, Migration
+- \`app/style.css\` – CSS-Basisstile
+- \`index.html\` enthält jetzt nur noch JSX (Icons, Komponenten, App)
+
 ## v0.6.2 (2026-04-17)
 
 ### Wiederkehrende Planungen (Regeln)
