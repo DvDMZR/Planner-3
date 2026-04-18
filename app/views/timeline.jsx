@@ -55,6 +55,7 @@ const TimelineView = ({ s, h }) => {
 
         const scrollWeeks = (n) =>
             timelineScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
+        const activeProjCategories = projCategoriesFromProjects;
         const currentYear = new Date().getFullYear();
         const currentWeekStr = getWeekString(new Date());
 
