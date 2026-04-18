@@ -1,0 +1,225 @@
+const ResourceView = ({ s, h }) => {
+    const { activeTab, employees, projects, assignments, expenses, costItems,
+        empCategories, projCategories, basicTasks, basicTasksMeta,
+        inactiveBasicTasks, basicTasksSubTab, offtimeTasks, inactiveOfftimeTasks,
+        inactiveSupportTasks, inactiveTrainingTasks, isChangelogOpen,
+        weeks, selectedProject, collapsedCategories, collapsedProjCategories,
+        collapsedEmpSetup, selectedProjectDetails, weeksAhead,
+        isAssignModalOpen, assignContext, isCostItemModalOpen, editingCostItem,
+        isCopyModalOpen, copyContext, isDeleteMode, pastProjectsExpanded,
+        isInvoiceModalOpen, invoiceSelection, invoiceRecipient, isProjFormOpen,
+        isHelpModalOpen, timelineYear, empForm, editingEmpId, projForm,
+        editingProjectId, newEmpCat, newProjCat, newBasicTask, newOfftimeTask,
+        expandedSetupCats, syncStatus, fsStatus,
+        employeeById, projectById, assignmentsByEmpWeek, assignmentsByProject,
+        assignmentsByProjectWeek, costItemsByProject, projectStatusById,
+        activeEmployees, activeEmpsByCategory, activeEmpCategories,
+        projectsByCategory, projCategoriesFromProjects, timelineWeeks,
+        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+    const { setActiveTab, setEmployees, setProjects, setAssignments,
+        setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
+        setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
+        setOfftimeTasks, setInactiveOfftimeTasks, setInactiveSupportTasks,
+        setInactiveTrainingTasks, setIsChangelogOpen, setSelectedProject,
+        setCollapsedCategories, setCollapsedProjCategories, setCollapsedEmpSetup,
+        setSelectedProjectDetails, setWeeksAhead, setIsAssignModalOpen,
+        setAssignContext, setIsCostItemModalOpen, setEditingCostItem,
+        setIsCopyModalOpen, setCopyContext, setIsDeleteMode, setPastProjectsExpanded,
+        setIsInvoiceModalOpen, setInvoiceSelection, setInvoiceRecipient,
+        setIsProjFormOpen, setIsHelpModalOpen, setTimelineYear, setEmpForm,
+        setEditingEmpId, setProjForm, setEditingProjectId, setNewEmpCat,
+        setNewProjCat, setNewBasicTask, setNewOfftimeTask, setExpandedSetupCats,
+        setSyncStatus, setFsStatus,
+        getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
+        toggleCategory, toggleProjCategory, toggleEmpSetup,
+        handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
+        handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
+        scrollToCurrentWeek } = h;
+        const activeCategories = activeEmpCategories;
+        const currentWeek = getWeekString(new Date());
+        const currentYear = new Date().getFullYear();
+        const resourceWeeks = timelineWeeks;
+
+        return (
+            <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
+                <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
+                    <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
+                    <div className="flex items-center gap-2">
+                        <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
+                            className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
+                            {Array.from({length: 7}, (_, i) => currentYear - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                        <button onClick={() => {
+                            if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }
+                            else { scrollToCurrentWeek(resourceScrollRef, 288); }
+                        }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
+                            Heute
+                        </button>
+                        <button onClick={() => setIsHelpModalOpen(true)}
+                            className="w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center" title="Hilfe & Legende">
+                            ?
+                        </button>
+                        <button
+                            onClick={() => setIsDeleteMode(m => !m)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
+                            <IconX size={14}/> {isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'}
+                        </button>
+                    </div>
+                </div>
+                <div ref={resourceScrollRef} className="flex-1 overflow-auto relative">
+                    <table className="w-full border-collapse text-sm text-left">
+                        <thead className="sticky top-0 bg-white z-20 shadow-sm">
+                            <tr>
+                                <th className="p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium">Mitarbeiter</th>
+                                {resourceWeeks.map(w => {
+                                    const isCurrent = w.id === currentWeek;
+                                    const isPast = w.id < currentWeek;
+                                    return (
+                                        <th key={w.id} ref={isCurrent ? currentWeekColRef : null}
+                                            className={`p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
+                                            <div>{w.label}</div>
+                                            <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
+                                            {w.holidays.length > 0 && <div className="text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate" title={w.holidays.join(' · ')}>{w.holidays.join(' · ')}</div>}
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {activeCategories.map(category => {
+                                const isCollapsed = collapsedCategories[category];
+                                const catEmps = activeEmpsByCategory.get(category) || [];
+
+                                return (
+                                    <React.Fragment key={category}>
+                                        <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
+                                            <td className="p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-r border-l-4 border-l-gea-500 border-slate-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+                                                <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-medium">
+                                                    <span className="text-slate-400 group-hover:text-gea-500 transition-colors">
+                                                        {isCollapsed ? <IconChevronRight size={16}/> : <IconChevronDown size={16}/>}
+                                                    </span>
+                                                    {category}
+                                                    <span className="ml-auto text-xs bg-white px-2 py-0.5 rounded-full border border-slate-200 text-slate-500 font-medium">
+                                                        {catEmps.length}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                        </tr>
+
+                                        {!isCollapsed && catEmps.map(emp => (
+                                            <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                                    <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
+                                                </td>
+                                                {resourceWeeks.map(w => {
+                                                    const { total, isOfftime, assignments: wAss } = getUtilization(emp.id, w.id);
+                                                    const isOverbooked = total > 100;
+                                                    const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
+                                                    return (
+                                                        <td key={w.id}
+                                                            className={`p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`}
+                                                            onClick={() => { if (!isDeleteMode) { setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); } }}
+                                                            onDragOver={e => { if (!isDeleteMode) e.preventDefault(); }}
+                                                            onDrop={e => { if (!isDeleteMode) handleDrop(e, w.id, emp.id, true); }}>
+
+                                                            {wAss.length === 0 && !isOfftime && (
+                                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 text-gea-300 transition-opacity">
+                                                                    <IconPlus size={20}/>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex flex-col gap-1.5 min-h-[44px] relative z-10">
+                                                                {wAss.map(a => {
+                                                                    let label = a.reference;
+                                                                    let color = 'bg-white border-slate-200 text-slate-700';
+                                                                    let dotColor = 'bg-slate-400';
+
+                                                                    if (a.type === 'project') {
+                                                                        const p = projectById.get(a.reference);
+                                                                        label = p ? p.name : 'Unbekannt';
+                                                                        if (p) {
+                                                                            const pc = resolveProjectColor(p.color);
+                                                                            color = pc.chip;
+                                                                            dotColor = pc.dot;
+                                                                        }
+                                                                    } else if (a.type === 'support') {
+                                                                        const sc = SUPPORT_CHIP_COLORS[a.reference];
+                                                                        if (sc) { color = sc.chip; dotColor = sc.dot; }
+                                                                        else { color = 'bg-amber-50 border-amber-200 text-amber-800'; dotColor = 'bg-amber-500'; }
+                                                                    } else if (a.type === 'training') {
+                                                                        color = TRAINING_CHIP_COLOR.chip;
+                                                                        dotColor = TRAINING_CHIP_COLOR.dot;
+                                                                    } else if (a.type === 'other') {
+                                                                        const taskMeta = basicTasksMeta[a.reference];
+                                                                        if (taskMeta?.color) {
+                                                                            const tc = resolveProjectColor(taskMeta.color);
+                                                                            color = tc.chip; dotColor = tc.dot;
+                                                                        } else {
+                                                                            color = 'bg-slate-50 border-slate-200 text-slate-700';
+                                                                            dotColor = 'bg-slate-400';
+                                                                        }
+                                                                    } else if (a.type === 'offtime') {
+                                                                        color = 'bg-slate-100 border-slate-300 text-slate-600';
+                                                                        dotColor = 'bg-slate-500';
+                                                                    } else if (a.type === 'basic') {
+                                                                        const taskMeta = basicTasksMeta?.[a.reference];
+                                                                        if (taskMeta?.color) {
+                                                                            const tc = resolveProjectColor(taskMeta.color);
+                                                                            color = tc.chip; dotColor = tc.dot;
+                                                                        }
+                                                                    }
+                                                                    const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
+                                                                    const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
+                                                                    if (isOverbooked) color = 'bg-rose-50 border-rose-300 text-rose-800';
+
+                                                                    return (
+                                                                        <div key={a.id}
+                                                                            draggable={!isDeleteMode}
+                                                                            title={a.comment || undefined}
+                                                                            onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
+                                                                            onClick={e => { e.stopPropagation(); if (isDeleteMode) { handleDeleteAssignment(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
+                                                                            className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
+                                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                                <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
+                                                                                <span className="truncate font-medium px-1 py-1.5">{label}</span>
+                                                                                {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                                {a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                                <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
+                                                                                <button
+                                                                                    onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
+                                                                                    className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
+                                                                                    title="Kopieren">
+                                                                                    <IconCopy size={10}/>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+
+                                                                {wAss.length > 0 && !isOfftime && (
+                                                                    <div
+                                                                        onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); }}
+                                                                        className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">
+                                                                        <IconPlus size={12} className="mr-1"/> weitere
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {isOverbooked && <div className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.5)] z-20"></div>}
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    };
+
