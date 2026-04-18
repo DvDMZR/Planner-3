@@ -35,7 +35,26 @@ const ResourceView = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
-        const activeCategories = activeEmpCategories;
+        const WEEK_W = 140; // matches min-w-[140px]
+        const STICKY_W = 288; // matches w-72
+
+        const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
+
+        const handleScroll = (e) => {
+            const el = e.currentTarget;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            const progress = maxScroll > 0 ? el.scrollLeft / maxScroll : 0;
+            const firstIdx = Math.max(0, Math.floor(el.scrollLeft / WEEK_W));
+            const lastIdx  = Math.min(resourceWeeks.length - 1,
+                             firstIdx + Math.floor((el.clientWidth - STICKY_W) / WEEK_W) - 1);
+            const label = resourceWeeks[firstIdx] && resourceWeeks[lastIdx]
+                ? `${resourceWeeks[firstIdx].label} – ${resourceWeeks[lastIdx].label}`
+                : '';
+            setScrollInfo({ progress, label });
+        };
+
+        const scrollWeeks = (n) =>
+            resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
         const currentWeek = getWeekString(new Date());
         const currentYear = new Date().getFullYear();
         const resourceWeeks = timelineWeeks;
@@ -45,6 +64,11 @@ const ResourceView = ({ s, h }) => {
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
                     <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
                     <div className="flex items-center gap-2">
+                        <div className="flex items-center">
+                            <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
+                            <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
+                            <button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200" title="4 Wochen vor"><IconChevronRight size={16}/></button>
+                        </div>
                         <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
                             className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
                             {Array.from({length: 7}, (_, i) => currentYear - 1 + i).map(y => <option key={y} value={y}>{y}</option>)}
@@ -66,7 +90,18 @@ const ResourceView = ({ s, h }) => {
                         </button>
                     </div>
                 </div>
-                <div ref={resourceScrollRef} className="flex-1 overflow-auto relative">
+                <div className="h-0.5 bg-slate-100 shrink-0">
+                    <div className="h-full bg-gea-400 transition-all duration-150" style={{width: `${scrollInfo.progress * 100}%`}}/>
+                </div>
+                <div ref={resourceScrollRef} className="flex-1 overflow-auto relative outline-none"
+                    onScroll={handleScroll}
+                    tabIndex={-1}
+                    onKeyDown={e => {
+                        if (e.key === 'ArrowLeft')  { e.preventDefault(); scrollWeeks(-1); }
+                        if (e.key === 'ArrowRight') { e.preventDefault(); scrollWeeks(1); }
+                        if (e.key === 'PageUp')     { e.preventDefault(); scrollWeeks(-4); }
+                        if (e.key === 'PageDown')   { e.preventDefault(); scrollWeeks(4); }
+                    }}>
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
