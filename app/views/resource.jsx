@@ -61,24 +61,17 @@ const ResourceView = ({ s, h }) => {
             });
         }, [resourceWeeks]);
 
-        const scrollWeeks = (n) =>
-            resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
-        const activeCategories = activeEmpCategories;
-        const currentWeek = getWeekString(new Date());
-        const currentYear = new Date().getFullYear();
-        const resourceWeeks = timelineWeeks;
-
         const [compact, setCompact] = React.useState(false);
         const [empSearch, setEmpSearch] = React.useState('');
 
         const displayCategories = React.useMemo(() => {
-            if (!empSearch.trim()) return activeCategories;
+            if (!empSearch.trim()) return activeEmpCategories;
             const q = empSearch.toLowerCase();
-            return activeCategories.filter(cat => {
+            return activeEmpCategories.filter(cat => {
                 const emps = activeEmpsByCategory.get(cat) || [];
                 return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
             });
-        }, [empSearch, activeCategories, activeEmpsByCategory]);
+        }, [empSearch, activeEmpCategories, activeEmpsByCategory]);
 
         const getFilteredEmps = React.useCallback((cat) => {
             const emps = activeEmpsByCategory.get(cat) || [];
@@ -91,7 +84,7 @@ const ResourceView = ({ s, h }) => {
         const monthGroups = React.useMemo(() => {
             const groups = [];
             let cur = null;
-            resourceWeeks.forEach(w => {
+            timelineWeeks.forEach(w => {
                 if (!cur || cur.month !== w.month) {
                     cur = { month: w.month, count: 1 };
                     groups.push(cur);
@@ -100,7 +93,14 @@ const ResourceView = ({ s, h }) => {
                 }
             });
             return groups;
-        }, [resourceWeeks]);
+        }, [timelineWeeks]);
+
+        const scrollWeeks = (n) =>
+            resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
+        const activeCategories = activeEmpCategories;
+        const currentWeek = getWeekString(new Date());
+        const currentYear = new Date().getFullYear();
+        const resourceWeeks = timelineWeeks;
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
