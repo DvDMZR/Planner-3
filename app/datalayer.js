@@ -200,6 +200,27 @@ async function saveSplitState(state, lastSaved, writeFile) {
     }
 }
 
+// Load only specific team assignment/cost-item files from SharePoint.
+// Used by the polling loop when global files (employees, projects, settings)
+// are unchanged – avoids reloading all teams when only one changed.
+async function loadChangedTeamFilesSp(ctx, changedFiles) {
+    const results = await Promise.all(
+        changedFiles.map(f => spLoadFile(ctx, f).then(d => [f, d]).catch(() => [f, null]))
+    );
+    const assignmentsByTeam = {};
+    const costItemsByTeam = {};
+    results.forEach(([f, data]) => {
+        if (f.startsWith('assignments-')) {
+            const team = f.slice('assignments-'.length, -'.json'.length);
+            assignmentsByTeam[team] = data?.assignments || [];
+        } else if (f.startsWith('cost-items-')) {
+            const team = f.slice('cost-items-'.length, -'.json'.length);
+            costItemsByTeam[team] = data?.costItems || [];
+        }
+    });
+    return { assignmentsByTeam, costItemsByTeam };
+}
+
 // Pre-populate `lastSaved` from a state object so the next save round
 // doesn't re-write files that are already in sync.
 function seedLastSaved(state, lastSaved) {
