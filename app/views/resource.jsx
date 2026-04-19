@@ -68,11 +68,59 @@ const ResourceView = ({ s, h }) => {
         const currentYear = new Date().getFullYear();
         const resourceWeeks = timelineWeeks;
 
+        const [compact, setCompact] = React.useState(false);
+        const [empSearch, setEmpSearch] = React.useState('');
+
+        const displayCategories = React.useMemo(() => {
+            if (!empSearch.trim()) return activeCategories;
+            const q = empSearch.toLowerCase();
+            return activeCategories.filter(cat => {
+                const emps = activeEmpsByCategory.get(cat) || [];
+                return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
+            });
+        }, [empSearch, activeCategories, activeEmpsByCategory]);
+
+        const getFilteredEmps = React.useCallback((cat) => {
+            const emps = activeEmpsByCategory.get(cat) || [];
+            if (!empSearch.trim()) return emps;
+            const q = empSearch.toLowerCase();
+            if (cat.toLowerCase().includes(q)) return emps;
+            return emps.filter(e => e.name.toLowerCase().includes(q));
+        }, [empSearch, activeEmpsByCategory]);
+
+        const monthGroups = React.useMemo(() => {
+            const groups = [];
+            let cur = null;
+            resourceWeeks.forEach(w => {
+                if (!cur || cur.month !== w.month) {
+                    cur = { month: w.month, count: 1 };
+                    groups.push(cur);
+                } else {
+                    cur.count++;
+                }
+            });
+            return groups;
+        }, [resourceWeeks]);
+
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
                     <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
                     <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
+                            <input
+                                type="text"
+                                value={empSearch}
+                                onChange={e => setEmpSearch(e.target.value)}
+                                placeholder="Mitarbeiter suchen…"
+                                className="pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"/>
+                            {empSearch && (
+                                <button onClick={() => setEmpSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <IconX size={12}/>
+                                </button>
+                            )}
+                        </div>
                         <div className="flex items-center">
                             <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
                             <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
@@ -91,6 +139,12 @@ const ResourceView = ({ s, h }) => {
                         <button onClick={() => setIsHelpModalOpen(true)}
                             className="w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center" title="Hilfe & Legende">
                             ?
+                        </button>
+                        <button
+                            onClick={() => setCompact(c => !c)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}
+                            title="Kompakt-Modus umschalten">
+                            {compact ? 'Kompakt' : 'Normal'}
                         </button>
                         <button
                             onClick={() => setIsDeleteMode(m => !m)}
@@ -114,6 +168,15 @@ const ResourceView = ({ s, h }) => {
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
+                                <th className="border-b border-r border-slate-200 w-72 bg-slate-50 sticky left-0 z-30"></th>
+                                {monthGroups.map(g => (
+                                    <th key={g.month} colSpan={g.count}
+                                        className="px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide">
+                                        {g.month}
+                                    </th>
+                                ))}
+                            </tr>
+                            <tr>
                                 <th className="p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium">Mitarbeiter</th>
                                 {resourceWeeks.map(w => {
                                     const isCurrent = w.id === currentWeek;
@@ -130,9 +193,9 @@ const ResourceView = ({ s, h }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {activeCategories.map(category => {
-                                const isCollapsed = collapsedCategories[category];
-                                const catEmps = activeEmpsByCategory.get(category) || [];
+                            {displayCategories.map(category => {
+                                const isCollapsed = !empSearch && collapsedCategories[category];
+                                const catEmps = getFilteredEmps(category);
 
                                 return (
                                     <React.Fragment key={category}>
@@ -173,7 +236,7 @@ const ResourceView = ({ s, h }) => {
                                                                 </div>
                                                             )}
 
-                                                            <div className="flex flex-col gap-1.5 min-h-[44px] relative z-10">
+                                                            <div className={`flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`}>
                                                                 {wAss.map(a => {
                                                                     let label = a.reference;
                                                                     let color = 'bg-white border-slate-200 text-slate-700';
@@ -215,7 +278,6 @@ const ResourceView = ({ s, h }) => {
                                                                     }
                                                                     const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
-                                                                    if (isOverbooked) color = 'bg-rose-50 border-rose-300 text-rose-800';
 
                                                                     return (
                                                                         <div key={a.id}
@@ -223,27 +285,29 @@ const ResourceView = ({ s, h }) => {
                                                                             title={a.comment || undefined}
                                                                             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                             onClick={e => { e.stopPropagation(); if (isDeleteMode) { handleDeleteAssignment(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
-                                                                            className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
+                                                                            className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`}>
                                                                             <div className="flex items-center gap-1.5 min-w-0">
                                                                                 <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
-                                                                                <span className="truncate font-medium px-1 py-1.5">{label}</span>
-                                                                                {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
-                                                                                {a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                                <span className={`truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`}>{label}</span>
+                                                                                {!compact && a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                                {!compact && a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
                                                                             </div>
-                                                                            <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                                                                                <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
-                                                                                <button
-                                                                                    onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
-                                                                                    className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
-                                                                                    title="Kopieren">
-                                                                                    <IconCopy size={10}/>
-                                                                                </button>
-                                                                            </div>
+                                                                            {!compact && (
+                                                                                <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                                    <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
+                                                                                    <button
+                                                                                        onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
+                                                                                        className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
+                                                                                        title="Kopieren">
+                                                                                        <IconCopy size={10}/>
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })}
 
-                                                                {wAss.length > 0 && !isOfftime && (
+                                                                {!compact && wAss.length > 0 && !isOfftime && (
                                                                     <div
                                                                         onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); }}
                                                                         className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">

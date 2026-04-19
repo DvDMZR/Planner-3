@@ -67,6 +67,7 @@ const AssignmentModal = ({
     });
     const [newTaskName, setNewTaskName] = useState('');
     const [recurRule, setRecurRule] = useState({ enabled: false, everyXWeeks: 1, endWeek: addWeeks(assignContext.week || formData.week, 4) });
+    const [rangeEnd, setRangeEnd] = useState({ enabled: false, week: addWeeks(assignContext.week || formData.week, 1) });
 
     const emp = employeeById.get(formData.empId);
     const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
@@ -104,6 +105,16 @@ const AssignmentModal = ({
         if (newTotal > 100) {
             const empName = employeeById.get(formData.empId)?.name || '';
             if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
+        }
+        if (rangeEnd.enabled && !data.id && rangeEnd.week > formData.week) {
+            const series = [];
+            let cur = formData.week;
+            while (cur <= rangeEnd.week) {
+                series.push({ ...data, week: cur, id: makeId('ass') });
+                cur = addWeeks(cur, 1);
+            }
+            onSave(series);
+            return;
         }
         if (recurRule.enabled && !data.id && recurRule.endWeek > formData.week) {
             const ruleId = makeId('rule');
@@ -228,8 +239,27 @@ const AssignmentModal = ({
                         />
                     </div>
 
-                    <div className="border-t border-slate-100 pt-3">
-                        {!formData.id && (
+                    <div className="border-t border-slate-100 pt-3 space-y-2">
+                        {!formData.id && !recurRule.enabled && (
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox"
+                                checked={rangeEnd.enabled}
+                                onChange={e => setRangeEnd(r => ({ ...r, enabled: e.target.checked }))}
+                                className="rounded accent-gea-600"/>
+                            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Wochenbereich (bis KW)</span>
+                        </label>
+                        )}
+                        {rangeEnd.enabled && !formData.id && (
+                            <div className="mt-1">
+                                <label className="block text-xs text-slate-400 mb-1">Bis Woche (jede KW dazwischen wird eingetragen)</label>
+                                <input type="week"
+                                    value={rangeEnd.week}
+                                    min={addWeeks(formData.week, 1)}
+                                    onChange={e => setRangeEnd(r => ({ ...r, week: e.target.value }))}
+                                    className="w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
+                            </div>
+                        )}
+                        {!formData.id && !rangeEnd.enabled && (
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox"
                                 checked={recurRule.enabled}
