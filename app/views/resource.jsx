@@ -68,6 +68,22 @@ const ResourceView = ({ s, h }) => {
         const currentYear = new Date().getFullYear();
         const resourceWeeks = timelineWeeks;
 
+        const [compact, setCompact] = React.useState(false);
+
+        const monthGroups = React.useMemo(() => {
+            const groups = [];
+            let cur = null;
+            resourceWeeks.forEach(w => {
+                if (!cur || cur.month !== w.month) {
+                    cur = { month: w.month, count: 1 };
+                    groups.push(cur);
+                } else {
+                    cur.count++;
+                }
+            });
+            return groups;
+        }, [resourceWeeks]);
+
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
@@ -93,6 +109,12 @@ const ResourceView = ({ s, h }) => {
                             ?
                         </button>
                         <button
+                            onClick={() => setCompact(c => !c)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}
+                            title="Kompakt-Modus umschalten">
+                            {compact ? 'Kompakt' : 'Normal'}
+                        </button>
+                        <button
                             onClick={() => setIsDeleteMode(m => !m)}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
                             <IconX size={14}/> {isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'}
@@ -113,6 +135,15 @@ const ResourceView = ({ s, h }) => {
                     }}>
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
+                            <tr>
+                                <th className="border-b border-r border-slate-200 w-72 bg-slate-50 sticky left-0 z-30"></th>
+                                {monthGroups.map(g => (
+                                    <th key={g.month} colSpan={g.count}
+                                        className="px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide">
+                                        {g.month}
+                                    </th>
+                                ))}
+                            </tr>
                             <tr>
                                 <th className="p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium">Mitarbeiter</th>
                                 {resourceWeeks.map(w => {
@@ -173,7 +204,7 @@ const ResourceView = ({ s, h }) => {
                                                                 </div>
                                                             )}
 
-                                                            <div className="flex flex-col gap-1.5 min-h-[44px] relative z-10">
+                                                            <div className={`flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`}>
                                                                 {wAss.map(a => {
                                                                     let label = a.reference;
                                                                     let color = 'bg-white border-slate-200 text-slate-700';
@@ -215,7 +246,6 @@ const ResourceView = ({ s, h }) => {
                                                                     }
                                                                     const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
-                                                                    if (isOverbooked) color = 'bg-rose-50 border-rose-300 text-rose-800';
 
                                                                     return (
                                                                         <div key={a.id}
@@ -223,27 +253,29 @@ const ResourceView = ({ s, h }) => {
                                                                             title={a.comment || undefined}
                                                                             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                             onClick={e => { e.stopPropagation(); if (isDeleteMode) { handleDeleteAssignment(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
-                                                                            className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
+                                                                            className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`}>
                                                                             <div className="flex items-center gap-1.5 min-w-0">
                                                                                 <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
-                                                                                <span className="truncate font-medium px-1 py-1.5">{label}</span>
-                                                                                {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
-                                                                                {a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                                <span className={`truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`}>{label}</span>
+                                                                                {!compact && a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                                {!compact && a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
                                                                             </div>
-                                                                            <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                                                                                <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
-                                                                                <button
-                                                                                    onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
-                                                                                    className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
-                                                                                    title="Kopieren">
-                                                                                    <IconCopy size={10}/>
-                                                                                </button>
-                                                                            </div>
+                                                                            {!compact && (
+                                                                                <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                                    <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
+                                                                                    <button
+                                                                                        onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
+                                                                                        className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
+                                                                                        title="Kopieren">
+                                                                                        <IconCopy size={10}/>
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })}
 
-                                                                {wAss.length > 0 && !isOfftime && (
+                                                                {!compact && wAss.length > 0 && !isOfftime && (
                                                                     <div
                                                                         onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); }}
                                                                         className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">
