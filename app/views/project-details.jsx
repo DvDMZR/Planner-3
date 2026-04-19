@@ -36,27 +36,42 @@ const ProjectDetailsView = ({ s, h }) => {
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
         const proj = projectById.get(selectedProjectDetails);
+        const projId = proj?.id;
+
+        const projAssignments = React.useMemo(
+            () => (assignmentsByProject.get(projId) || []).filter(a => a.type === 'project'),
+            [assignmentsByProject, projId]
+        );
+        const projCostItems = React.useMemo(
+            () => costItemsByProject.get(projId) || [],
+            [costItemsByProject, projId]
+        );
+        const assignmentsByEmpId = React.useMemo(() => {
+            const m = new Map();
+            projAssignments.forEach(a => {
+                let arr = m.get(a.empId);
+                if (!arr) { arr = []; m.set(a.empId, arr); }
+                arr.push(a);
+            });
+            return m;
+        }, [projAssignments]);
+        const assignedEmpIds = React.useMemo(() => [...assignmentsByEmpId.keys()], [assignmentsByEmpId]);
+        const presenceWeeks = React.useMemo(
+            () => [...new Set(projAssignments.map(a => a.week))].sort(),
+            [projAssignments]
+        );
+        const { totalHours, totalLaborCost, totalOtherCost, grandTotal } = React.useMemo(() => {
+            let totalHours = 0, totalLaborCost = 0, totalOtherCost = 0;
+            for (const [, empAss] of assignmentsByEmpId) {
+                const hrs = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
+                totalHours += hrs;
+                if (proj?.billable !== false) totalLaborCost += hrs * (proj?.hourlyRate ?? DEFAULT_HOURLY_RATE);
+            }
+            projCostItems.forEach(ci => { totalOtherCost += ci.amount || 0; });
+            return { totalHours, totalLaborCost, totalOtherCost, grandTotal: totalLaborCost + totalOtherCost };
+        }, [assignmentsByEmpId, projCostItems, proj?.billable, proj?.hourlyRate]);
+
         if (!proj) return null;
-
-        const projAssignments = (assignmentsByProject.get(proj.id) || []).filter(a => a.type === 'project');
-        const assignedEmpIds = [...new Set(projAssignments.map(a => a.empId))];
-        const projCostItems = costItemsByProject.get(proj.id) || [];
-
-        // Presence grid: sorted weeks that have at least one assignment
-        const presenceWeeks = [...new Set(projAssignments.map(a => a.week))].sort();
-
-        // Totals
-        let totalHours = 0;
-        let totalLaborCost = 0;
-        let totalOtherCost = 0;
-        assignedEmpIds.forEach(empId => {
-            const empAss = projAssignments.filter(a => a.empId === empId);
-            const h = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
-            totalHours += h;
-            if (proj.billable !== false) totalLaborCost += h * (proj.hourlyRate ?? DEFAULT_HOURLY_RATE);
-        });
-        projCostItems.forEach(ci => { totalOtherCost += ci.amount || 0; });
-        const grandTotal = totalLaborCost + totalOtherCost;
 
         return (
             <div className="flex-1 overflow-auto bg-slate-50 flex flex-col">
@@ -136,7 +151,7 @@ const ProjectDetailsView = ({ s, h }) => {
                                     <tbody className="divide-y divide-slate-100">
                                         {assignedEmpIds.map(empId => {
                                             const emp = employeeById.get(empId);
-                                            const empAss = projAssignments.filter(a => a.empId === empId);
+                                            const empAss = assignmentsByEmpId.get(empId) || [];
                                             const empHours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
                                             return (
                                                 <tr key={empId} className="hover:bg-slate-50">

@@ -466,12 +466,15 @@ function App() {
     // One folder-list call returns timestamps for all files; if any changed
     // we reload the complete split state and apply it.
     const pollFailuresRef = useRef(0);
+    const pollInFlightRef = useRef(false);
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
             if (document.visibilityState === 'hidden') return;
+            if (pollInFlightRef.current) return;
             const st = syncStatusRef.current;
             if (st === 'syncing' || st === 'connecting' || st === 'reconnecting' || st === 'needs-auth') return;
+            pollInFlightRef.current = true;
             try {
                 const newTs = await spGetFolderTimestamps(SP_CONTEXT);
                 const prev = spFileTimestampsRef.current;
@@ -500,6 +503,8 @@ function App() {
                         setSyncStatus('offline');
                     }
                 }
+            } finally {
+                pollInFlightRef.current = false;
             }
         };
         const interval = setInterval(poll, 5000);
