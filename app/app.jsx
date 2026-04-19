@@ -1,9 +1,7 @@
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
 // --- MAIN APP ---
 function App() {
-    // Local aliases for React hooks; avoids duplicate top-level `const` clash
-    // when multiple pre-compiled scripts share the same browser global scope.
-    const { useState, useEffect, useRef, useMemo, useCallback } = React;
-
     // --- STATE ---
     const [activeTab, setActiveTab] = useState('resource'); 
     
