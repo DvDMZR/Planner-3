@@ -52,14 +52,14 @@ const ResourceView = ({ s, h }) => {
                 const maxScroll = scrollWidth - clientWidth;
                 const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
                 const firstIdx = Math.max(0, Math.floor(scrollLeft / WEEK_W));
-                const lastIdx  = Math.min(resourceWeeks.length - 1,
+                const lastIdx  = Math.min(timelineWeeks.length - 1,
                                  firstIdx + Math.floor((clientWidth - STICKY_W) / WEEK_W) - 1);
-                const label = resourceWeeks[firstIdx] && resourceWeeks[lastIdx]
-                    ? `${resourceWeeks[firstIdx].label} – ${resourceWeeks[lastIdx].label}`
+                const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx]
+                    ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
             });
-        }, [resourceWeeks]);
+        }, [timelineWeeks]);
 
         const [compact, setCompact] = React.useState(false);
         const [empSearch, setEmpSearch] = React.useState('');
