@@ -69,6 +69,24 @@ const ResourceView = ({ s, h }) => {
         const resourceWeeks = timelineWeeks;
 
         const [compact, setCompact] = React.useState(false);
+        const [empSearch, setEmpSearch] = React.useState('');
+
+        const displayCategories = React.useMemo(() => {
+            if (!empSearch.trim()) return activeCategories;
+            const q = empSearch.toLowerCase();
+            return activeCategories.filter(cat => {
+                const emps = activeEmpsByCategory.get(cat) || [];
+                return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
+            });
+        }, [empSearch, activeCategories, activeEmpsByCategory]);
+
+        const getFilteredEmps = React.useCallback((cat) => {
+            const emps = activeEmpsByCategory.get(cat) || [];
+            if (!empSearch.trim()) return emps;
+            const q = empSearch.toLowerCase();
+            if (cat.toLowerCase().includes(q)) return emps;
+            return emps.filter(e => e.name.toLowerCase().includes(q));
+        }, [empSearch, activeEmpsByCategory]);
 
         const monthGroups = React.useMemo(() => {
             const groups = [];
@@ -89,6 +107,20 @@ const ResourceView = ({ s, h }) => {
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
                     <h2 className="text-gea-800 text-xl font-semibold">Ressourcenplaner</h2>
                     <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
+                            <input
+                                type="text"
+                                value={empSearch}
+                                onChange={e => setEmpSearch(e.target.value)}
+                                placeholder="Mitarbeiter suchen…"
+                                className="pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"/>
+                            {empSearch && (
+                                <button onClick={() => setEmpSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <IconX size={12}/>
+                                </button>
+                            )}
+                        </div>
                         <div className="flex items-center">
                             <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
                             <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
@@ -161,9 +193,9 @@ const ResourceView = ({ s, h }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {activeCategories.map(category => {
-                                const isCollapsed = collapsedCategories[category];
-                                const catEmps = activeEmpsByCategory.get(category) || [];
+                            {displayCategories.map(category => {
+                                const isCollapsed = !empSearch && collapsedCategories[category];
+                                const catEmps = getFilteredEmps(category);
 
                                 return (
                                     <React.Fragment key={category}>
