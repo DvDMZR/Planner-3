@@ -38,11 +38,15 @@ const OverviewView = ({ s, h }) => {
         const fmt = n => n.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const currentWeekStr = getWeekString(new Date());
         const activeEmps = activeEmployees;
-        let activeProjects = 0;
-        projects.forEach(p => { if (computeAutoStatus(p) === 'active') activeProjects++; });
-        const weekUtils = activeEmps.map(e => getUtilization(e.id, currentWeekStr).total);
-        const avgUtil = activeEmps.length > 0 ? Math.round(weekUtils.reduce((a,b)=>a+b,0) / activeEmps.length) : 0;
-        const overbookedCount = weekUtils.filter(u => u > 100).length;
+        const activeProjects = React.useMemo(
+            () => projects.filter(p => computeAutoStatus(p) === 'active').length,
+            [projects, computeAutoStatus]
+        );
+        const { avgUtil, overbookedCount } = React.useMemo(() => {
+            const utils = activeEmps.map(e => getUtilization(e.id, currentWeekStr).total);
+            const avg = activeEmps.length > 0 ? Math.round(utils.reduce((a, b) => a + b, 0) / activeEmps.length) : 0;
+            return { avgUtil: avg, overbookedCount: utils.filter(u => u > 100).length };
+        }, [activeEmps, getUtilization, currentWeekStr]);
 
         const rows = projects.filter(p => ['active', 'planned'].includes(computeAutoStatus(p))).map(p => {
             const projAss = assignmentsByProject.get(p.id) || [];

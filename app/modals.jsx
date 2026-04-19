@@ -23,10 +23,22 @@ const AssignmentModal = ({
     onDeleteSeries,
 }) => {
     const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
-    const activeSupportTasks = SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t));
-    const activeTrainingTasks = TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t));
-    const activeOfftimeTasks = offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t));
-    const otherTasks = basicTasks.filter(t => basicTasksMeta && basicTasksMeta[t]);
+    const activeSupportTasks = useMemo(
+        () => SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)),
+        [inactiveSupportTasks]
+    );
+    const activeTrainingTasks = useMemo(
+        () => TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t)),
+        [inactiveTrainingTasks]
+    );
+    const activeOfftimeTasks = useMemo(
+        () => offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t)),
+        [offtimeTasks, inactiveOfftimeTasks]
+    );
+    const otherTasks = useMemo(
+        () => basicTasks.filter(t => basicTasksMeta && basicTasksMeta[t]),
+        [basicTasks, basicTasksMeta]
+    );
 
     const getInitialType = () => {
         const ex = assignContext.existing;
