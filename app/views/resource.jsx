@@ -52,26 +52,33 @@ const ResourceView = ({ s, h }) => {
                 const maxScroll = scrollWidth - clientWidth;
                 const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
                 const firstIdx = Math.max(0, Math.floor(scrollLeft / WEEK_W));
-                const lastIdx  = Math.min(timelineWeeks.length - 1,
+                const lastIdx  = Math.min(resourceWeeks.length - 1,
                                  firstIdx + Math.floor((clientWidth - STICKY_W) / WEEK_W) - 1);
-                const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx]
-                    ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
+                const label = resourceWeeks[firstIdx] && resourceWeeks[lastIdx]
+                    ? `${resourceWeeks[firstIdx].label} – ${resourceWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
             });
-        }, [timelineWeeks]);
+        }, [resourceWeeks]);
+
+        const scrollWeeks = (n) =>
+            resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
+        const activeCategories = activeEmpCategories;
+        const currentWeek = getWeekString(new Date());
+        const currentYear = new Date().getFullYear();
+        const resourceWeeks = timelineWeeks;
 
         const [compact, setCompact] = React.useState(false);
         const [empSearch, setEmpSearch] = React.useState('');
 
         const displayCategories = React.useMemo(() => {
-            if (!empSearch.trim()) return activeEmpCategories;
+            if (!empSearch.trim()) return activeCategories;
             const q = empSearch.toLowerCase();
-            return activeEmpCategories.filter(cat => {
+            return activeCategories.filter(cat => {
                 const emps = activeEmpsByCategory.get(cat) || [];
                 return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
             });
-        }, [empSearch, activeEmpCategories, activeEmpsByCategory]);
+        }, [empSearch, activeCategories, activeEmpsByCategory]);
 
         const getFilteredEmps = React.useCallback((cat) => {
             const emps = activeEmpsByCategory.get(cat) || [];
@@ -84,7 +91,7 @@ const ResourceView = ({ s, h }) => {
         const monthGroups = React.useMemo(() => {
             const groups = [];
             let cur = null;
-            timelineWeeks.forEach(w => {
+            resourceWeeks.forEach(w => {
                 if (!cur || cur.month !== w.month) {
                     cur = { month: w.month, count: 1 };
                     groups.push(cur);
@@ -93,14 +100,7 @@ const ResourceView = ({ s, h }) => {
                 }
             });
             return groups;
-        }, [timelineWeeks]);
-
-        const scrollWeeks = (n) =>
-            resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
-        const activeCategories = activeEmpCategories;
-        const currentWeek = getWeekString(new Date());
-        const currentYear = new Date().getFullYear();
-        const resourceWeeks = timelineWeeks;
+        }, [resourceWeeks]);
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
