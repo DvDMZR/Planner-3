@@ -61,40 +61,6 @@ const ResourceView = ({ s, h }) => {
             });
         }, [resourceWeeks]);
 
-        const [compact, setCompact] = React.useState(false);
-        const [empSearch, setEmpSearch] = React.useState('');
-
-        const displayCategories = React.useMemo(() => {
-            if (!empSearch.trim()) return activeEmpCategories;
-            const q = empSearch.toLowerCase();
-            return activeEmpCategories.filter(cat => {
-                const emps = activeEmpsByCategory.get(cat) || [];
-                return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
-            });
-        }, [empSearch, activeEmpCategories, activeEmpsByCategory]);
-
-        const getFilteredEmps = React.useCallback((cat) => {
-            const emps = activeEmpsByCategory.get(cat) || [];
-            if (!empSearch.trim()) return emps;
-            const q = empSearch.toLowerCase();
-            if (cat.toLowerCase().includes(q)) return emps;
-            return emps.filter(e => e.name.toLowerCase().includes(q));
-        }, [empSearch, activeEmpsByCategory]);
-
-        const monthGroups = React.useMemo(() => {
-            const groups = [];
-            let cur = null;
-            timelineWeeks.forEach(w => {
-                if (!cur || cur.month !== w.month) {
-                    cur = { month: w.month, count: 1 };
-                    groups.push(cur);
-                } else {
-                    cur.count++;
-                }
-            });
-            return groups;
-        }, [timelineWeeks]);
-
         const scrollWeeks = (n) =>
             resourceScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
         const activeCategories = activeEmpCategories;
