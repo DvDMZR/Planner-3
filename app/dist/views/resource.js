@@ -173,6 +173,39 @@ const ResourceView = ({
   const currentWeek = getWeekString(new Date());
   const currentYear = new Date().getFullYear();
   const resourceWeeks = timelineWeeks;
+  const [compact, setCompact] = React.useState(false);
+  const [empSearch, setEmpSearch] = React.useState('');
+  const displayCategories = React.useMemo(() => {
+    if (!empSearch.trim()) return activeCategories;
+    const q = empSearch.toLowerCase();
+    return activeCategories.filter(cat => {
+      const emps = activeEmpsByCategory.get(cat) || [];
+      return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
+    });
+  }, [empSearch, activeCategories, activeEmpsByCategory]);
+  const getFilteredEmps = React.useCallback(cat => {
+    const emps = activeEmpsByCategory.get(cat) || [];
+    if (!empSearch.trim()) return emps;
+    const q = empSearch.toLowerCase();
+    if (cat.toLowerCase().includes(q)) return emps;
+    return emps.filter(e => e.name.toLowerCase().includes(q));
+  }, [empSearch, activeEmpsByCategory]);
+  const monthGroups = React.useMemo(() => {
+    const groups = [];
+    let cur = null;
+    resourceWeeks.forEach(w => {
+      if (!cur || cur.month !== w.month) {
+        cur = {
+          month: w.month,
+          count: 1
+        };
+        groups.push(cur);
+      } else {
+        cur.count++;
+      }
+    });
+    return groups;
+  }, [resourceWeeks]);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
@@ -182,6 +215,22 @@ const ResourceView = ({
   }, "Ressourcenplaner"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/React.createElement(IconUsers, {
+    size: 14,
+    className: "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: empSearch,
+    onChange: e => setEmpSearch(e.target.value),
+    placeholder: "Mitarbeiter suchen\u2026",
+    className: "pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"
+  }), empSearch && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setEmpSearch(''),
+    className: "absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 12
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(-4),
@@ -221,6 +270,10 @@ const ResourceView = ({
     className: "w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center",
     title: "Hilfe & Legende"
   }, "?"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setCompact(c => !c),
+    className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`,
+    title: "Kompakt-Modus umschalten"
+  }, compact ? 'Kompakt' : 'Normal'), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsDeleteMode(m => !m),
     className: `flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`
   }, /*#__PURE__*/React.createElement(IconX, {
@@ -260,6 +313,12 @@ const ResourceView = ({
   }, /*#__PURE__*/React.createElement("thead", {
     className: "sticky top-0 bg-white z-20 shadow-sm"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "border-b border-r border-slate-200 w-72 bg-slate-50 sticky left-0 z-30"
+  }), monthGroups.map(g => /*#__PURE__*/React.createElement("th", {
+    key: g.month,
+    colSpan: g.count,
+    className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
+  }, g.month))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium"
   }, "Mitarbeiter"), resourceWeeks.map(w => {
     const isCurrent = w.id === currentWeek;
@@ -274,9 +333,9 @@ const ResourceView = ({
       className: "text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate",
       title: w.holidays.join(' · ')
     }, w.holidays.join(' · ')));
-  }))), /*#__PURE__*/React.createElement("tbody", null, activeCategories.map(category => {
-    const isCollapsed = collapsedCategories[category];
-    const catEmps = activeEmpsByCategory.get(category) || [];
+  }))), /*#__PURE__*/React.createElement("tbody", null, displayCategories.map(category => {
+    const isCollapsed = !empSearch && collapsedCategories[category];
+    const catEmps = getFilteredEmps(category);
     return /*#__PURE__*/React.createElement(React.Fragment, {
       key: category
     }, /*#__PURE__*/React.createElement("tr", {
@@ -335,7 +394,7 @@ const ResourceView = ({
       }, /*#__PURE__*/React.createElement(IconPlus, {
         size: 20
       })), /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-1.5 min-h-[44px] relative z-10"
+        className: `flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`
       }, wAss.map(a => {
         let label = a.reference;
         let color = 'bg-white border-slate-200 text-slate-700';
@@ -383,7 +442,6 @@ const ResourceView = ({
         }
         const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
         const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
-        if (isOverbooked) color = 'bg-rose-50 border-rose-300 text-rose-800';
         return /*#__PURE__*/React.createElement("div", {
           key: a.id,
           draggable: !isDeleteMode,
@@ -405,20 +463,20 @@ const ResourceView = ({
               setIsAssignModalOpen(true);
             }
           },
-          className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`
+          className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-1.5 min-w-0"
         }, /*#__PURE__*/React.createElement("div", {
           className: `w-1 flex-shrink-0 self-stretch ${dotColor}`
         }), /*#__PURE__*/React.createElement("span", {
-          className: "truncate font-medium px-1 py-1.5"
-        }, label), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+          className: `truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`
+        }, label), !compact && a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
           size: 9,
           className: "flex-shrink-0 opacity-60"
-        }), a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
+        }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
           size: 9,
           className: "flex-shrink-0 opacity-60"
-        })), /*#__PURE__*/React.createElement("div", {
+        })), !compact && /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-1 ml-1 flex-shrink-0"
         }, /*#__PURE__*/React.createElement("span", {
           className: "opacity-70 bg-slate-100/50 px-1 rounded font-medium"
@@ -435,7 +493,7 @@ const ResourceView = ({
         }, /*#__PURE__*/React.createElement(IconCopy, {
           size: 10
         }))));
-      }), wAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
+      }), !compact && wAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
         onClick: e => {
           e.stopPropagation();
           setAssignContext({

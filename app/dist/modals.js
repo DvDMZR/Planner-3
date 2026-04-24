@@ -62,6 +62,10 @@ const AssignmentModal = ({
     everyXWeeks: 1,
     endWeek: addWeeks(assignContext.week || formData.week, 4)
   });
+  const [rangeEnd, setRangeEnd] = useState({
+    enabled: false,
+    week: addWeeks(assignContext.week || formData.week, 1)
+  });
   const emp = employeeById.get(formData.empId);
   const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
   const handleTypeChange = type => {
@@ -107,6 +111,20 @@ const AssignmentModal = ({
     if (newTotal > 100) {
       const empName = employeeById.get(formData.empId)?.name || '';
       if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
+    }
+    if (rangeEnd.enabled && !data.id && rangeEnd.week > formData.week) {
+      const series = [];
+      let cur = formData.week;
+      while (cur <= rangeEnd.week) {
+        series.push({
+          ...data,
+          week: cur,
+          id: makeId('ass')
+        });
+        cur = addWeeks(cur, 1);
+      }
+      onSave(series);
+      return;
     }
     if (recurRule.enabled && !data.id && recurRule.endWeek > formData.week) {
       const ruleId = makeId('rule');
@@ -280,8 +298,33 @@ const AssignmentModal = ({
     rows: 2,
     className: "w-full p-2 border border-slate-300 rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-gea-400"
   })), /*#__PURE__*/React.createElement("div", {
-    className: "border-t border-slate-100 pt-3"
-  }, !formData.id && /*#__PURE__*/React.createElement("label", {
+    className: "border-t border-slate-100 pt-3 space-y-2"
+  }, !formData.id && !recurRule.enabled && /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 cursor-pointer select-none"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: rangeEnd.enabled,
+    onChange: e => setRangeEnd(r => ({
+      ...r,
+      enabled: e.target.checked
+    })),
+    className: "rounded accent-gea-600"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-medium uppercase tracking-wide text-slate-500"
+  }, "Wochenbereich (bis KW)")), rangeEnd.enabled && !formData.id && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-400 mb-1"
+  }, "Bis Woche (jede KW dazwischen wird eingetragen)"), /*#__PURE__*/React.createElement("input", {
+    type: "week",
+    value: rangeEnd.week,
+    min: addWeeks(formData.week, 1),
+    onChange: e => setRangeEnd(r => ({
+      ...r,
+      week: e.target.value
+    })),
+    className: "w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"
+  })), !formData.id && !rangeEnd.enabled && /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer select-none"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",

@@ -208,7 +208,12 @@ const OverviewView = ({
   }, activeEmps.length), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
   }, "aktiv")), /*#__PURE__*/React.createElement("div", {
-    className: `bg-white border border-l-4 rounded-xl p-5 shadow-md ${avgUtil >= 100 ? 'border-rose-300 border-l-rose-500' : avgUtil >= 80 ? 'border-amber-300 border-l-amber-500' : 'border-slate-300 border-l-emerald-500'}`
+    className: `bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${avgUtil >= 100 ? 'border-rose-300 border-l-rose-500' : avgUtil >= 80 ? 'border-amber-300 border-l-amber-500' : 'border-slate-300 border-l-emerald-500'}`,
+    onClick: () => {
+      setActiveTab('resource');
+      setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120);
+    },
+    title: "Zur Ressourcenansicht \u2013 aktuelle KW"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
   }, "\xD8 Auslastung diese KW"), /*#__PURE__*/React.createElement("p", {
@@ -216,7 +221,12 @@ const OverviewView = ({
   }, avgUtil, "%"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
   }, currentWeekStr)), /*#__PURE__*/React.createElement("div", {
-    className: `bg-white border border-l-4 rounded-xl p-5 shadow-md ${overbookedCount > 0 ? 'border-rose-300 border-l-rose-500' : 'border-slate-300 border-l-slate-400'}`
+    className: `bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${overbookedCount > 0 ? 'border-rose-300 border-l-rose-500' : 'border-slate-300 border-l-slate-400'}`,
+    onClick: () => {
+      setActiveTab('resource');
+      setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120);
+    },
+    title: "Zur Ressourcenansicht \u2013 aktuelle KW"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
   }, "\xDCberlastet diese KW"), /*#__PURE__*/React.createElement("p", {
