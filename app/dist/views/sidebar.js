@@ -177,7 +177,7 @@ const _SidebarBase = ({
       setSelectedProjectDetails(null);
     },
     className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'project' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement(IconBriefcase, {
+  }, /*#__PURE__*/React.createElement(IconGanttChart, {
     size: 18
   }), " Projekte"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -203,7 +203,7 @@ const _SidebarBase = ({
       setSelectedProjectDetails(null);
     },
     className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_emp' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement(IconUsers, {
+  }, /*#__PURE__*/React.createElement(IconUser, {
     size: 18
   }), " Mitarbeiter"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -219,7 +219,7 @@ const _SidebarBase = ({
       setSelectedProjectDetails(null);
     },
     className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_cats' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`
-  }, /*#__PURE__*/React.createElement(IconList, {
+  }, /*#__PURE__*/React.createElement(IconTag, {
     size: 18
   }), " Kategorien"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {

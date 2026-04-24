@@ -560,6 +560,67 @@ const IconRepeat = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M21 13v2a4 4 0 0 1-4 4H3"
 }));
+const IconUser = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "7",
+  r: "4"
+}));
+const IconTag = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M7 7h.01"
+}));
+const IconGanttChart = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M8 6h10"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M6 12h9"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M11 18h7"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across
