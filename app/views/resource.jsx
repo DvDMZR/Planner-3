@@ -70,6 +70,8 @@ const ResourceView = ({ s, h }) => {
 
         const [compact, setCompact] = React.useState(false);
         const [empSearch, setEmpSearch] = React.useState('');
+        const [empSearchRaw, setEmpSearchRaw] = React.useState('');
+        const empDebounceRef = React.useRef(null);
 
         const displayCategories = React.useMemo(() => {
             if (!empSearch.trim()) return activeCategories;
@@ -111,12 +113,21 @@ const ResourceView = ({ s, h }) => {
                             <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
                             <input
                                 type="text"
-                                value={empSearch}
-                                onChange={e => setEmpSearch(e.target.value)}
+                                value={empSearchRaw}
+                                onChange={e => {
+                                    const v = e.target.value;
+                                    setEmpSearchRaw(v);
+                                    if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+                                    empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
+                                }}
                                 placeholder="Mitarbeiter suchen…"
                                 className="pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"/>
-                            {empSearch && (
-                                <button onClick={() => setEmpSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {empSearchRaw && (
+                                <button onClick={() => {
+                                    if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+                                    setEmpSearchRaw('');
+                                    setEmpSearch('');
+                                }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                                     <IconX size={12}/>
                                 </button>
                             )}
@@ -214,7 +225,9 @@ const ResourceView = ({ s, h }) => {
                                             {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
                                         </tr>
 
-                                        {!isCollapsed && catEmps.map(emp => (
+                                        {!isCollapsed && catEmps.map(emp => {
+                                            const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
+                                            return (
                                             <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
@@ -276,7 +289,6 @@ const ResourceView = ({ s, h }) => {
                                                                             color = tc.chip; dotColor = tc.dot;
                                                                         }
                                                                     }
-                                                                    const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
 
                                                                     return (
@@ -320,7 +332,8 @@ const ResourceView = ({ s, h }) => {
                                                     );
                                                 })}
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </React.Fragment>
                                 );
                             })}

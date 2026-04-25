@@ -1,3 +1,5 @@
+const STATUS_ORDER = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
+
 const OverviewView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
@@ -48,7 +50,7 @@ const OverviewView = ({ s, h }) => {
             return { avgUtil: avg, overbookedCount: utils.filter(u => u > 100).length };
         }, [activeEmps, getUtilization, currentWeekStr]);
 
-        const rows = projects.filter(p => ['active', 'planned'].includes(computeAutoStatus(p))).map(p => {
+        const rows = React.useMemo(() => projects.filter(p => ['active', 'planned'].includes(computeAutoStatus(p))).map(p => {
             const projAss = assignmentsByProject.get(p.id) || [];
             let totalHours = 0, totalLaborCost = 0;
             for (let i = 0; i < projAss.length; i++) {
@@ -62,10 +64,9 @@ const OverviewView = ({ s, h }) => {
             let zusatzkosten = 0;
             for (let i = 0; i < projCosts.length; i++) zusatzkosten += projCosts[i].amount || 0;
             return { p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten: totalLaborCost + zusatzkosten };
-        }).sort((a, b) => {
-            const statusOrder = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
-            return (statusOrder[computeAutoStatus(a.p)] ?? 5) - (statusOrder[computeAutoStatus(b.p)] ?? 5);
-        });
+        }).sort((a, b) =>
+            (STATUS_ORDER[computeAutoStatus(a.p)] ?? 5) - (STATUS_ORDER[computeAutoStatus(b.p)] ?? 5)
+        ), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
 
         const totalGesamtkosten = rows.reduce((acc, r) => acc + r.gesamtkosten, 0);
         const totalHoursAll = rows.reduce((acc, r) => acc + r.totalHours, 0);
