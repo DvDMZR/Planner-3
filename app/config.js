@@ -32,6 +32,24 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.6.7 (2026-04-25)
+
+### Performance
+- Ressourcenplaner: horizontale Wochen-Virtualisierung mit 8-Wochen-Buffer.
+  Es werden nur noch ~25–30 Zellen pro Zeile gerendert statt 54 (~50 % weniger
+  DOM); off-screen Bereiche kollabieren in \`<td colSpan>\`-Spacer.
+- Projektplanung: gleiche Spalten-Virtualisierung wie im Ressourcenplaner;
+  \`pColor\` einmal pro Projektzeile statt pro Wochenzelle.
+- Auslastungs-Heatmap: komplette Auslastungsmatrix einmal pro Render
+  vorberechnet (\`utilByEmp\`) — vorher wurde \`getUtilization\` pro Mitarbeiter
+  doppelt durchlaufen (Ø Zeitraum + pro Monat).
+- Übersicht: Projekttabelle (Filter/Map/Sort) in \`useMemo\`, Sort-Reihenfolge
+  als Modul-Konstante.
+- Mitarbeitersuche im Ressourcenplaner mit 250 ms Debounce.
+- \`empWH\` einmal pro Mitarbeiterzeile statt pro Zuweisungs-Chip.
+- \`beforeunload\`-Listener wird nicht mehr bei jeder Statusänderung neu
+  registriert.
+
 ## v0.6.6 (2026-04-18)
 
 ### Performance & UX
