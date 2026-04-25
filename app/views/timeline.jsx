@@ -1,3 +1,6 @@
+const TIMELINE_WEEK_W = 120;   // matches min-w-[120px]
+const TIMELINE_STICKY_W = 256; // matches w-64
+
 const TimelineView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
@@ -35,10 +38,11 @@ const TimelineView = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
-        const WEEK_W = 120; // matches min-w-[120px]
-        const STICKY_W = 256; // matches w-64
-
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
+        // Same horizontal virtualization as resource.jsx: only body cells in
+        // the visible range (+ 8-week buffer) get rendered; the header always
+        // shows all weeks so column widths stay stable.
+        const [visibleRange, setVisibleRange] = React.useState({ start: 0, end: 25 });
         const scrollRafRef = React.useRef(null);
         React.useEffect(() => () => {
             if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -51,21 +55,41 @@ const TimelineView = ({ s, h }) => {
                 scrollRafRef.current = null;
                 const maxScroll = scrollWidth - clientWidth;
                 const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
-                const firstIdx = Math.max(0, Math.floor(scrollLeft / WEEK_W));
+                const firstIdx = Math.max(0, Math.floor(scrollLeft / TIMELINE_WEEK_W));
                 const lastIdx  = Math.min(timelineWeeks.length - 1,
-                                 firstIdx + Math.floor((clientWidth - STICKY_W) / WEEK_W) - 1);
+                                 firstIdx + Math.floor((clientWidth - TIMELINE_STICKY_W) / TIMELINE_WEEK_W) - 1);
                 const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx]
                     ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
+                const BUFFER = 8;
+                const newStart = Math.max(0, firstIdx - BUFFER);
+                const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+                setVisibleRange(prev =>
+                    prev.start === newStart && prev.end === newEnd
+                        ? prev
+                        : { start: newStart, end: newEnd }
+                );
             });
         }, [timelineWeeks]);
 
         const scrollWeeks = (n) =>
-            timelineScrollRef.current?.scrollBy({ left: n * WEEK_W, behavior: 'smooth' });
+            timelineScrollRef.current?.scrollBy({ left: n * TIMELINE_WEEK_W, behavior: 'smooth' });
         const activeProjCategories = projCategoriesFromProjects;
         const currentYear = new Date().getFullYear();
         const currentWeekStr = getWeekString(new Date());
+
+        // Clamp the visible range against the current week list (year switch
+        // can shrink it) and derive the slice + colSpan widths used by every
+        // body row.
+        const safeStart = Math.max(0, Math.min(visibleRange.start, timelineWeeks.length - 1));
+        const safeEnd = Math.max(safeStart, Math.min(visibleRange.end, timelineWeeks.length - 1));
+        const visibleWeeks = React.useMemo(
+            () => timelineWeeks.slice(safeStart, safeEnd + 1),
+            [timelineWeeks, safeStart, safeEnd]
+        );
+        const leftSpacerSpan = safeStart;
+        const rightSpacerSpan = Math.max(0, timelineWeeks.length - 1 - safeEnd);
 
         return (
             <div className="flex-1 flex h-full overflow-hidden bg-white">
@@ -188,21 +212,25 @@ const TimelineView = ({ s, h }) => {
                                                         {category}
                                                     </div>
                                                 </td>
-                                                {timelineWeeks.map(w => <td key={`header-${category}-${w.id}`} className="border-r border-slate-200"></td>)}
+                                                {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-r border-slate-200"/>}
+                                                {visibleWeeks.map(w => <td key={`header-${category}-${w.id}`} className="border-r border-slate-200"></td>)}
+                                                {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-r border-slate-200"/>}
                                             </tr>
                                             
-                                            {!isCollapsed && catProjects.map(proj => (
+                                            {!isCollapsed && catProjects.map(proj => {
+                                                const pColor = resolveProjectColor(proj.color);
+                                                return (
                                                 <tr key={proj.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10">
                                                         <div className="flex items-center gap-2">
-                                                            <div className={`w-3 h-3 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>
+                                                            <div className={`w-3 h-3 rounded-full ${pColor.dot}`}></div>
                                                             <div className="text-slate-900 font-medium">{proj.name}</div>
                                                         </div>
                                                     </td>
-                                                    {timelineWeeks.map(w => {
+                                                    {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
+                                                    {visibleWeeks.map(w => {
                                                         const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
                                                         const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
-                                                        const pColor = resolveProjectColor(proj.color);
                                                         return (
                                                             <td key={w.id}
                                                                 onDragOver={(e) => e.preventDefault()}
@@ -225,8 +253,10 @@ const TimelineView = ({ s, h }) => {
                                                             </td>
                                                         );
                                                     })}
+                                                    {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
                                                 </tr>
-                                            ))}
+                                            );
+                                            })}
                                         </React.Fragment>
                                     );
                                 })}
