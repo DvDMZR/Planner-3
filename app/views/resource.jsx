@@ -39,6 +39,11 @@ const ResourceView = ({ s, h }) => {
         const STICKY_W = 288; // matches w-72
 
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
+        // Horizontal virtualization: only render the body cells for the
+        // visible week range (+ buffer). The header keeps all weeks so the
+        // table column widths stay stable; body rows use colSpan spacers
+        // for the off-screen ranges.
+        const [visibleRange, setVisibleRange] = React.useState({ start: 0, end: 25 });
         const scrollRafRef = React.useRef(null);
         React.useEffect(() => () => {
             if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -58,6 +63,14 @@ const ResourceView = ({ s, h }) => {
                     ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
+                const BUFFER = 8;
+                const newStart = Math.max(0, firstIdx - BUFFER);
+                const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+                setVisibleRange(prev =>
+                    prev.start === newStart && prev.end === newEnd
+                        ? prev
+                        : { start: newStart, end: newEnd }
+                );
             });
         }, [timelineWeeks]);
 
@@ -103,6 +116,19 @@ const ResourceView = ({ s, h }) => {
             });
             return groups;
         }, [resourceWeeks]);
+
+        // Clamp visibleRange against the current week list (year switches can
+        // shrink it) and derive the slice + spacer widths used by every body
+        // row. The clamping happens in render so we don't need a separate
+        // effect just to keep the state consistent.
+        const safeStart = Math.max(0, Math.min(visibleRange.start, resourceWeeks.length - 1));
+        const safeEnd = Math.max(safeStart, Math.min(visibleRange.end, resourceWeeks.length - 1));
+        const visibleWeeks = React.useMemo(
+            () => resourceWeeks.slice(safeStart, safeEnd + 1),
+            [resourceWeeks, safeStart, safeEnd]
+        );
+        const leftSpacerSpan = safeStart;
+        const rightSpacerSpan = Math.max(0, resourceWeeks.length - 1 - safeEnd);
 
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
@@ -222,7 +248,9 @@ const ResourceView = ({ s, h }) => {
                                                     </span>
                                                 </div>
                                             </td>
-                                            {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                            {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-slate-300 bg-slate-200/70"/>}
+                                            {visibleWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                            {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-b border-slate-300 bg-slate-200/70"/>}
                                         </tr>
 
                                         {!isCollapsed && catEmps.map(emp => {
@@ -232,7 +260,8 @@ const ResourceView = ({ s, h }) => {
                                                 <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
-                                                {resourceWeeks.map(w => {
+                                                {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
+                                                {visibleWeeks.map(w => {
                                                     const { total, isOfftime, assignments: wAss } = getUtilization(emp.id, w.id);
                                                     const isOverbooked = total > 100;
                                                     const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
@@ -331,6 +360,7 @@ const ResourceView = ({ s, h }) => {
                                                         </td>
                                                     );
                                                 })}
+                                                {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
                                             </tr>
                                             );
                                         })}
