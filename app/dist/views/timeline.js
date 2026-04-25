@@ -1,3 +1,6 @@
+const TIMELINE_WEEK_W = 120; // matches min-w-[120px]
+const TIMELINE_STICKY_W = 256; // matches w-64
+
 const TimelineView = ({
   s,
   h
@@ -134,12 +137,16 @@ const TimelineView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
-  const WEEK_W = 120; // matches min-w-[120px]
-  const STICKY_W = 256; // matches w-64
-
   const [scrollInfo, setScrollInfo] = React.useState({
     progress: 0,
     label: ''
+  });
+  // Same horizontal virtualization as resource.jsx: only body cells in
+  // the visible range (+ 8-week buffer) get rendered; the header always
+  // shows all weeks so column widths stay stable.
+  const [visibleRange, setVisibleRange] = React.useState({
+    start: 0,
+    end: 25
   });
   const scrollRafRef = React.useRef(null);
   React.useEffect(() => () => {
@@ -156,22 +163,38 @@ const TimelineView = ({
       scrollRafRef.current = null;
       const maxScroll = scrollWidth - clientWidth;
       const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
-      const firstIdx = Math.max(0, Math.floor(scrollLeft / WEEK_W));
-      const lastIdx = Math.min(timelineWeeks.length - 1, firstIdx + Math.floor((clientWidth - STICKY_W) / WEEK_W) - 1);
+      const firstIdx = Math.max(0, Math.floor(scrollLeft / TIMELINE_WEEK_W));
+      const lastIdx = Math.min(timelineWeeks.length - 1, firstIdx + Math.floor((clientWidth - TIMELINE_STICKY_W) / TIMELINE_WEEK_W) - 1);
       const label = timelineWeeks[firstIdx] && timelineWeeks[lastIdx] ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}` : '';
       setScrollInfo({
         progress,
         label
       });
+      const BUFFER = 8;
+      const newStart = Math.max(0, firstIdx - BUFFER);
+      const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+      setVisibleRange(prev => prev.start === newStart && prev.end === newEnd ? prev : {
+        start: newStart,
+        end: newEnd
+      });
     });
   }, [timelineWeeks]);
   const scrollWeeks = n => timelineScrollRef.current?.scrollBy({
-    left: n * WEEK_W,
+    left: n * TIMELINE_WEEK_W,
     behavior: 'smooth'
   });
   const activeProjCategories = projCategoriesFromProjects;
   const currentYear = new Date().getFullYear();
   const currentWeekStr = getWeekString(new Date());
+
+  // Clamp the visible range against the current week list (year switch
+  // can shrink it) and derive the slice + colSpan widths used by every
+  // body row.
+  const safeStart = Math.max(0, Math.min(visibleRange.start, timelineWeeks.length - 1));
+  const safeEnd = Math.max(safeStart, Math.min(visibleRange.end, timelineWeeks.length - 1));
+  const visibleWeeks = React.useMemo(() => timelineWeeks.slice(safeStart, safeEnd + 1), [timelineWeeks, safeStart, safeEnd]);
+  const leftSpacerSpan = safeStart;
+  const rightSpacerSpan = Math.max(0, timelineWeeks.length - 1 - safeEnd);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex h-full overflow-hidden bg-white"
   }, /*#__PURE__*/React.createElement("div", {
@@ -325,51 +348,65 @@ const TimelineView = ({
       size: 16
     }) : /*#__PURE__*/React.createElement(IconChevronDown, {
       size: 16
-    }), category)), timelineWeeks.map(w => /*#__PURE__*/React.createElement("td", {
+    }), category)), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+      colSpan: leftSpacerSpan,
+      className: "border-r border-slate-200"
+    }), visibleWeeks.map(w => /*#__PURE__*/React.createElement("td", {
       key: `header-${category}-${w.id}`,
       className: "border-r border-slate-200"
-    }))), !isCollapsed && catProjects.map(proj => /*#__PURE__*/React.createElement("tr", {
-      key: proj.id,
-      className: "hover:bg-slate-50 transition-colors"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-3 h-3 rounded-full ${resolveProjectColor(proj.color).dot}`
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "text-slate-900 font-medium"
-    }, proj.name))), timelineWeeks.map(w => {
-      const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
-      const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
+    })), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+      colSpan: rightSpacerSpan,
+      className: "border-r border-slate-200"
+    })), !isCollapsed && catProjects.map(proj => {
       const pColor = resolveProjectColor(proj.color);
-      return /*#__PURE__*/React.createElement("td", {
-        key: w.id,
-        onDragOver: e => e.preventDefault(),
-        onDrop: e => handleDrop(e, w.id, proj.id),
-        className: `p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`
+      return /*#__PURE__*/React.createElement("tr", {
+        key: proj.id,
+        className: "hover:bg-slate-50 transition-colors"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-1 min-h-[60px]"
-      }, projAss.map(a => {
-        const emp = employeeById.get(a.empId);
-        return /*#__PURE__*/React.createElement("div", {
-          key: a.id,
-          onClick: e => {
-            e.stopPropagation();
-            setAssignContext({
-              empId: a.empId,
-              week: w.id,
-              existing: a
-            });
-            setIsAssignModalOpen(true);
-          },
-          className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${pColor.chip}`
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "truncate font-medium"
-        }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("span", {
-          className: "opacity-90 ml-1 font-medium"
-        }, a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK), "h"));
-      })));
-    }))));
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-3 h-3 rounded-full ${pColor.dot}`
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-900 font-medium"
+      }, proj.name))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+        colSpan: leftSpacerSpan,
+        className: "border-b border-r border-slate-300 bg-white"
+      }), visibleWeeks.map(w => {
+        const isProjectActive = w.id >= proj.startWeek && w.id <= proj.ibnWeek;
+        const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
+        return /*#__PURE__*/React.createElement("td", {
+          key: w.id,
+          onDragOver: e => e.preventDefault(),
+          onDrop: e => handleDrop(e, w.id, proj.id),
+          className: `p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex flex-col gap-1 min-h-[60px]"
+        }, projAss.map(a => {
+          const emp = employeeById.get(a.empId);
+          return /*#__PURE__*/React.createElement("div", {
+            key: a.id,
+            onClick: e => {
+              e.stopPropagation();
+              setAssignContext({
+                empId: a.empId,
+                week: w.id,
+                existing: a
+              });
+              setIsAssignModalOpen(true);
+            },
+            className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${pColor.chip}`
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "truncate font-medium"
+          }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("span", {
+            className: "opacity-90 ml-1 font-medium"
+          }, a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK), "h"));
+        })));
+      }), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+        colSpan: rightSpacerSpan,
+        className: "border-b border-r border-slate-300 bg-white"
+      }));
+    }));
   }))))));
 };

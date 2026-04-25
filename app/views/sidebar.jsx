@@ -43,7 +43,7 @@ const _SidebarBase = ({ s, h }) => {
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
-                            <span className="text-xs font-medium">Einsatzplanung v0.6.6</span>
+                            <span className="text-xs font-medium">Einsatzplanung v0.6.7</span>
                             <span className="bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
                         </button>
                     </div>

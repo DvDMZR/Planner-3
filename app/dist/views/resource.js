@@ -141,6 +141,14 @@ const ResourceView = ({
     progress: 0,
     label: ''
   });
+  // Horizontal virtualization: only render the body cells for the
+  // visible week range (+ buffer). The header keeps all weeks so the
+  // table column widths stay stable; body rows use colSpan spacers
+  // for the off-screen ranges.
+  const [visibleRange, setVisibleRange] = React.useState({
+    start: 0,
+    end: 25
+  });
   const scrollRafRef = React.useRef(null);
   React.useEffect(() => () => {
     if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -163,6 +171,13 @@ const ResourceView = ({
         progress,
         label
       });
+      const BUFFER = 8;
+      const newStart = Math.max(0, firstIdx - BUFFER);
+      const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+      setVisibleRange(prev => prev.start === newStart && prev.end === newEnd ? prev : {
+        start: newStart,
+        end: newEnd
+      });
     });
   }, [timelineWeeks]);
   const scrollWeeks = n => resourceScrollRef.current?.scrollBy({
@@ -175,6 +190,8 @@ const ResourceView = ({
   const resourceWeeks = timelineWeeks;
   const [compact, setCompact] = React.useState(false);
   const [empSearch, setEmpSearch] = React.useState('');
+  const [empSearchRaw, setEmpSearchRaw] = React.useState('');
+  const empDebounceRef = React.useRef(null);
   const displayCategories = React.useMemo(() => {
     if (!empSearch.trim()) return activeCategories;
     const q = empSearch.toLowerCase();
@@ -206,6 +223,16 @@ const ResourceView = ({
     });
     return groups;
   }, [resourceWeeks]);
+
+  // Clamp visibleRange against the current week list (year switches can
+  // shrink it) and derive the slice + spacer widths used by every body
+  // row. The clamping happens in render so we don't need a separate
+  // effect just to keep the state consistent.
+  const safeStart = Math.max(0, Math.min(visibleRange.start, resourceWeeks.length - 1));
+  const safeEnd = Math.max(safeStart, Math.min(visibleRange.end, resourceWeeks.length - 1));
+  const visibleWeeks = React.useMemo(() => resourceWeeks.slice(safeStart, safeEnd + 1), [resourceWeeks, safeStart, safeEnd]);
+  const leftSpacerSpan = safeStart;
+  const rightSpacerSpan = Math.max(0, resourceWeeks.length - 1 - safeEnd);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
@@ -221,12 +248,21 @@ const ResourceView = ({
     className: "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
   }), /*#__PURE__*/React.createElement("input", {
     type: "text",
-    value: empSearch,
-    onChange: e => setEmpSearch(e.target.value),
+    value: empSearchRaw,
+    onChange: e => {
+      const v = e.target.value;
+      setEmpSearchRaw(v);
+      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+      empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
+    },
     placeholder: "Mitarbeiter suchen\u2026",
     className: "pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"
-  }), empSearch && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setEmpSearch(''),
+  }), empSearchRaw && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+      setEmpSearchRaw('');
+      setEmpSearch('');
+    },
     className: "absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 12
@@ -353,162 +389,176 @@ const ResourceView = ({
       size: 16
     })), category, /*#__PURE__*/React.createElement("span", {
       className: "ml-auto text-xs bg-white px-2 py-0.5 rounded-full border border-slate-200 text-slate-500 font-medium"
-    }, catEmps.length))), resourceWeeks.map(w => /*#__PURE__*/React.createElement("td", {
+    }, catEmps.length))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+      colSpan: leftSpacerSpan,
+      className: "border-b border-slate-300 bg-slate-200/70"
+    }), visibleWeeks.map(w => /*#__PURE__*/React.createElement("td", {
       key: `header-${w.id}`,
       className: "border-b border-slate-300 bg-slate-200/70"
-    }))), !isCollapsed && catEmps.map(emp => /*#__PURE__*/React.createElement("tr", {
-      key: emp.id,
-      className: "hover:bg-slate-50/50 transition-colors"
-    }, /*#__PURE__*/React.createElement("td", {
-      className: "p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-slate-800 font-medium text-sm"
-    }, emp.name)), resourceWeeks.map(w => {
-      const {
-        total,
-        isOfftime,
-        assignments: wAss
-      } = getUtilization(emp.id, w.id);
-      const isOverbooked = total > 100;
-      const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
-      return /*#__PURE__*/React.createElement("td", {
-        key: w.id,
-        className: `p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`,
-        onClick: () => {
-          if (!isDeleteMode) {
+    })), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+      colSpan: rightSpacerSpan,
+      className: "border-b border-slate-300 bg-slate-200/70"
+    })), !isCollapsed && catEmps.map(emp => {
+      const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
+      return /*#__PURE__*/React.createElement("tr", {
+        key: emp.id,
+        className: "hover:bg-slate-50/50 transition-colors"
+      }, /*#__PURE__*/React.createElement("td", {
+        className: "p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-800 font-medium text-sm"
+      }, emp.name)), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+        colSpan: leftSpacerSpan,
+        className: "border-b border-r border-slate-300 bg-white"
+      }), visibleWeeks.map(w => {
+        const {
+          total,
+          isOfftime,
+          assignments: wAss
+        } = getUtilization(emp.id, w.id);
+        const isOverbooked = total > 100;
+        const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
+        return /*#__PURE__*/React.createElement("td", {
+          key: w.id,
+          className: `p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`,
+          onClick: () => {
+            if (!isDeleteMode) {
+              setAssignContext({
+                empId: emp.id,
+                week: w.id
+              });
+              setIsAssignModalOpen(true);
+            }
+          },
+          onDragOver: e => {
+            if (!isDeleteMode) e.preventDefault();
+          },
+          onDrop: e => {
+            if (!isDeleteMode) handleDrop(e, w.id, emp.id, true);
+          }
+        }, wAss.length === 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
+          className: "absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 text-gea-300 transition-opacity"
+        }, /*#__PURE__*/React.createElement(IconPlus, {
+          size: 20
+        })), /*#__PURE__*/React.createElement("div", {
+          className: `flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`
+        }, wAss.map(a => {
+          let label = a.reference;
+          let color = 'bg-white border-slate-200 text-slate-700';
+          let dotColor = 'bg-slate-400';
+          if (a.type === 'project') {
+            const p = projectById.get(a.reference);
+            label = p ? p.name : 'Unbekannt';
+            if (p) {
+              const pc = resolveProjectColor(p.color);
+              color = pc.chip;
+              dotColor = pc.dot;
+            }
+          } else if (a.type === 'support') {
+            const sc = SUPPORT_CHIP_COLORS[a.reference];
+            if (sc) {
+              color = sc.chip;
+              dotColor = sc.dot;
+            } else {
+              color = 'bg-amber-50 border-amber-200 text-amber-800';
+              dotColor = 'bg-amber-500';
+            }
+          } else if (a.type === 'training') {
+            color = TRAINING_CHIP_COLOR.chip;
+            dotColor = TRAINING_CHIP_COLOR.dot;
+          } else if (a.type === 'other') {
+            const taskMeta = basicTasksMeta[a.reference];
+            if (taskMeta?.color) {
+              const tc = resolveProjectColor(taskMeta.color);
+              color = tc.chip;
+              dotColor = tc.dot;
+            } else {
+              color = 'bg-slate-50 border-slate-200 text-slate-700';
+              dotColor = 'bg-slate-400';
+            }
+          } else if (a.type === 'offtime') {
+            color = 'bg-slate-100 border-slate-300 text-slate-600';
+            dotColor = 'bg-slate-500';
+          } else if (a.type === 'basic') {
+            const taskMeta = basicTasksMeta?.[a.reference];
+            if (taskMeta?.color) {
+              const tc = resolveProjectColor(taskMeta.color);
+              color = tc.chip;
+              dotColor = tc.dot;
+            }
+          }
+          const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
+          return /*#__PURE__*/React.createElement("div", {
+            key: a.id,
+            draggable: !isDeleteMode,
+            title: a.comment || undefined,
+            onDragStart: e => {
+              e.stopPropagation();
+              e.dataTransfer.setData('assignmentId', a.id);
+            },
+            onClick: e => {
+              e.stopPropagation();
+              if (isDeleteMode) {
+                handleDeleteAssignment(a.id);
+              } else {
+                setAssignContext({
+                  empId: emp.id,
+                  week: w.id,
+                  existing: a
+                });
+                setIsAssignModalOpen(true);
+              }
+            },
+            className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`
+          }, /*#__PURE__*/React.createElement("div", {
+            className: "flex items-center gap-1.5 min-w-0"
+          }, /*#__PURE__*/React.createElement("div", {
+            className: `w-1 flex-shrink-0 self-stretch ${dotColor}`
+          }), /*#__PURE__*/React.createElement("span", {
+            className: `truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`
+          }, label), !compact && a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+            size: 9,
+            className: "flex-shrink-0 opacity-60"
+          }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
+            size: 9,
+            className: "flex-shrink-0 opacity-60"
+          })), !compact && /*#__PURE__*/React.createElement("div", {
+            className: "flex items-center gap-1 ml-1 flex-shrink-0"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "opacity-70 bg-slate-100/50 px-1 rounded font-medium"
+          }, pct, "%"), /*#__PURE__*/React.createElement("button", {
+            onClick: e => {
+              e.stopPropagation();
+              setCopyContext({
+                assignment: a
+              });
+              setIsCopyModalOpen(true);
+            },
+            className: "opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded",
+            title: "Kopieren"
+          }, /*#__PURE__*/React.createElement(IconCopy, {
+            size: 10
+          }))));
+        }), !compact && wAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
+          onClick: e => {
+            e.stopPropagation();
             setAssignContext({
               empId: emp.id,
               week: w.id
             });
             setIsAssignModalOpen(true);
-          }
-        },
-        onDragOver: e => {
-          if (!isDeleteMode) e.preventDefault();
-        },
-        onDrop: e => {
-          if (!isDeleteMode) handleDrop(e, w.id, emp.id, true);
-        }
-      }, wAss.length === 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
-        className: "absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 text-gea-300 transition-opacity"
-      }, /*#__PURE__*/React.createElement(IconPlus, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: `flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`
-      }, wAss.map(a => {
-        let label = a.reference;
-        let color = 'bg-white border-slate-200 text-slate-700';
-        let dotColor = 'bg-slate-400';
-        if (a.type === 'project') {
-          const p = projectById.get(a.reference);
-          label = p ? p.name : 'Unbekannt';
-          if (p) {
-            const pc = resolveProjectColor(p.color);
-            color = pc.chip;
-            dotColor = pc.dot;
-          }
-        } else if (a.type === 'support') {
-          const sc = SUPPORT_CHIP_COLORS[a.reference];
-          if (sc) {
-            color = sc.chip;
-            dotColor = sc.dot;
-          } else {
-            color = 'bg-amber-50 border-amber-200 text-amber-800';
-            dotColor = 'bg-amber-500';
-          }
-        } else if (a.type === 'training') {
-          color = TRAINING_CHIP_COLOR.chip;
-          dotColor = TRAINING_CHIP_COLOR.dot;
-        } else if (a.type === 'other') {
-          const taskMeta = basicTasksMeta[a.reference];
-          if (taskMeta?.color) {
-            const tc = resolveProjectColor(taskMeta.color);
-            color = tc.chip;
-            dotColor = tc.dot;
-          } else {
-            color = 'bg-slate-50 border-slate-200 text-slate-700';
-            dotColor = 'bg-slate-400';
-          }
-        } else if (a.type === 'offtime') {
-          color = 'bg-slate-100 border-slate-300 text-slate-600';
-          dotColor = 'bg-slate-500';
-        } else if (a.type === 'basic') {
-          const taskMeta = basicTasksMeta?.[a.reference];
-          if (taskMeta?.color) {
-            const tc = resolveProjectColor(taskMeta.color);
-            color = tc.chip;
-            dotColor = tc.dot;
-          }
-        }
-        const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
-        const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
-        return /*#__PURE__*/React.createElement("div", {
-          key: a.id,
-          draggable: !isDeleteMode,
-          title: a.comment || undefined,
-          onDragStart: e => {
-            e.stopPropagation();
-            e.dataTransfer.setData('assignmentId', a.id);
           },
-          onClick: e => {
-            e.stopPropagation();
-            if (isDeleteMode) {
-              handleDeleteAssignment(a.id);
-            } else {
-              setAssignContext({
-                empId: emp.id,
-                week: w.id,
-                existing: a
-              });
-              setIsAssignModalOpen(true);
-            }
-          },
-          className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1.5 min-w-0"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: `w-1 flex-shrink-0 self-stretch ${dotColor}`
-        }), /*#__PURE__*/React.createElement("span", {
-          className: `truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`
-        }, label), !compact && a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
-          size: 9,
-          className: "flex-shrink-0 opacity-60"
-        }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
-          size: 9,
-          className: "flex-shrink-0 opacity-60"
-        })), !compact && /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1 ml-1 flex-shrink-0"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "opacity-70 bg-slate-100/50 px-1 rounded font-medium"
-        }, pct, "%"), /*#__PURE__*/React.createElement("button", {
-          onClick: e => {
-            e.stopPropagation();
-            setCopyContext({
-              assignment: a
-            });
-            setIsCopyModalOpen(true);
-          },
-          className: "opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded",
-          title: "Kopieren"
-        }, /*#__PURE__*/React.createElement(IconCopy, {
-          size: 10
-        }))));
-      }), !compact && wAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
-        onClick: e => {
-          e.stopPropagation();
-          setAssignContext({
-            empId: emp.id,
-            week: w.id
-          });
-          setIsAssignModalOpen(true);
-        },
-        className: "opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5"
-      }, /*#__PURE__*/React.createElement(IconPlus, {
-        size: 12,
-        className: "mr-1"
-      }), " weitere")), isOverbooked && /*#__PURE__*/React.createElement("div", {
-        className: "absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.5)] z-20"
+          className: "opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5"
+        }, /*#__PURE__*/React.createElement(IconPlus, {
+          size: 12,
+          className: "mr-1"
+        }), " weitere")), isOverbooked && /*#__PURE__*/React.createElement("div", {
+          className: "absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(244,63,94,0.5)] z-20"
+        }));
+      }), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+        colSpan: rightSpacerSpan,
+        className: "border-b border-r border-slate-300 bg-white"
       }));
-    }))));
+    }));
   })))));
 };

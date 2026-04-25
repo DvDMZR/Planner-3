@@ -134,16 +134,70 @@ const UtilizationView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
-  const visibleWeeks = weeks.slice(0, weeksAhead);
-  const months = [];
-  const weeksByMonth = {};
-  visibleWeeks.forEach(w => {
-    if (!weeksByMonth[w.month]) {
-      weeksByMonth[w.month] = [];
-      months.push(w.month);
-    }
-    weeksByMonth[w.month].push(w.id);
-  });
+  const visibleWeeks = React.useMemo(() => weeks.slice(0, weeksAhead), [weeks, weeksAhead]);
+  const {
+    months,
+    weeksByMonth
+  } = React.useMemo(() => {
+    const months = [];
+    const weeksByMonth = {};
+    visibleWeeks.forEach(w => {
+      if (!weeksByMonth[w.month]) {
+        weeksByMonth[w.month] = [];
+        months.push(w.month);
+      }
+      weeksByMonth[w.month].push(w.id);
+    });
+    return {
+      months,
+      weeksByMonth
+    };
+  }, [visibleWeeks]);
+
+  // Pre-compute the whole utilization matrix in one pass per employee
+  // so the JSX below only does Map lookups. Without this we'd call
+  // getUtilization() once for the avgAll loop and again per month —
+  // double work that scales with employees × weeks.
+  const utilByEmp = React.useMemo(() => {
+    const result = new Map();
+    activeEmployees.forEach(emp => {
+      let totalAll = 0;
+      const perMonth = {};
+      visibleWeeks.forEach(w => {
+        const {
+          total,
+          isOfftime
+        } = getUtilization(emp.id, w.id);
+        totalAll += total;
+        let bucket = perMonth[w.month];
+        if (!bucket) {
+          bucket = {
+            total: 0,
+            count: 0,
+            hasOfftime: false
+          };
+          perMonth[w.month] = bucket;
+        }
+        bucket.total += total;
+        bucket.count += 1;
+        if (isOfftime) bucket.hasOfftime = true;
+      });
+      const avgAll = visibleWeeks.length === 0 ? 0 : Math.round(totalAll / visibleWeeks.length);
+      const monthAvgs = {};
+      for (const m of Object.keys(perMonth)) {
+        const b = perMonth[m];
+        monthAvgs[m] = {
+          avg: b.count === 0 ? 0 : Math.round(b.total / b.count),
+          hasOfftime: b.hasOfftime
+        };
+      }
+      result.set(emp.id, {
+        avgAll,
+        monthAvgs
+      });
+    });
+    return result;
+  }, [activeEmployees, visibleWeeks, getUtilization]);
   const activeCategories = activeEmpCategories;
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
@@ -208,11 +262,9 @@ const UtilizationView = ({
       key: `header-${category}-${m}`,
       className: "border-b border-slate-300 bg-slate-200/70"
     }))), !isCollapsed && catEmps.map(emp => {
-      let totalPercentAll = 0;
-      visibleWeeks.forEach(w => {
-        totalPercentAll += getUtilization(emp.id, w.id).total;
-      });
-      const avgAll = visibleWeeks.length === 0 ? 0 : Math.round(totalPercentAll / visibleWeeks.length);
+      const empUtil = utilByEmp.get(emp.id);
+      const avgAll = empUtil?.avgAll ?? 0;
+      const monthAvgs = empUtil?.monthAvgs ?? {};
       return /*#__PURE__*/React.createElement("tr", {
         key: emp.id,
         className: "border-b border-slate-300 hover:bg-slate-50 transition-colors"
@@ -223,18 +275,9 @@ const UtilizationView = ({
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium"
       }, avgAll, "%")), months.map(m => {
-        const monthWeeks = weeksByMonth[m];
-        let monthTotal = 0;
-        let hasOfftime = false;
-        monthWeeks.forEach(wId => {
-          const {
-            total,
-            isOfftime
-          } = getUtilization(emp.id, wId);
-          monthTotal += total;
-          if (isOfftime) hasOfftime = true;
-        });
-        const avgMonth = monthWeeks.length === 0 ? 0 : Math.round(monthTotal / monthWeeks.length);
+        const cell = monthAvgs[m];
+        const avgMonth = cell?.avg ?? 0;
+        const hasOfftime = cell?.hasOfftime ?? false;
         let bgColor = 'bg-slate-50';
         let textColor = 'text-slate-400';
         if (avgMonth === 0 && hasOfftime) {
