@@ -102,6 +102,7 @@ function App() {
     const lastSavedFsRef = useRef({});      // same for FS
     const employeesRef = useRef([]);
     const empCategoriesRef = useRef(DEFAULT_TEAMS);
+    const latestStateRef = useRef({});
 
     // --- INIT ---
     useEffect(() => {
@@ -352,6 +353,17 @@ function App() {
         }
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
 
+    // Keep latestStateRef current so the beforeunload flush always sees the
+    // latest data without re-registering the event listener on every change.
+    useEffect(() => {
+        latestStateRef.current = {
+            employees, projects, assignments, expenses, costItems,
+            empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
+            invoiceRecipient
+        };
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
+
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
     useEffect(() => {
@@ -360,18 +372,12 @@ function App() {
             clearTimeout(localSaveTimer.current);
             localSaveTimer.current = null;
             try {
-                const stateData = {
-                    employees, projects, assignments, expenses, costItems,
-                    empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-                    offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
-                    invoiceRecipient
-                };
-                localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
+                localStorage.setItem('teamMasterProData', JSON.stringify(latestStateRef.current));
             } catch(e) {}
         };
         window.addEventListener('beforeunload', flush);
         return () => window.removeEventListener('beforeunload', flush);
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
+    }, []);
 
     const applyRemoteSnapshot = useCallback((data, { notify = true } = {}) => {
         isRemoteUpdateRef.current = true;

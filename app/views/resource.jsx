@@ -39,6 +39,11 @@ const ResourceView = ({ s, h }) => {
         const STICKY_W = 288; // matches w-72
 
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
+        // Horizontal virtualization: only render the body cells for the
+        // visible week range (+ buffer). The header keeps all weeks so the
+        // table column widths stay stable; body rows use colSpan spacers
+        // for the off-screen ranges.
+        const [visibleRange, setVisibleRange] = React.useState({ start: 0, end: 25 });
         const scrollRafRef = React.useRef(null);
         React.useEffect(() => () => {
             if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -58,6 +63,14 @@ const ResourceView = ({ s, h }) => {
                     ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
+                const BUFFER = 8;
+                const newStart = Math.max(0, firstIdx - BUFFER);
+                const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+                setVisibleRange(prev =>
+                    prev.start === newStart && prev.end === newEnd
+                        ? prev
+                        : { start: newStart, end: newEnd }
+                );
             });
         }, [timelineWeeks]);
 
@@ -70,6 +83,8 @@ const ResourceView = ({ s, h }) => {
 
         const [compact, setCompact] = React.useState(false);
         const [empSearch, setEmpSearch] = React.useState('');
+        const [empSearchRaw, setEmpSearchRaw] = React.useState('');
+        const empDebounceRef = React.useRef(null);
 
         const displayCategories = React.useMemo(() => {
             if (!empSearch.trim()) return activeCategories;
@@ -102,6 +117,19 @@ const ResourceView = ({ s, h }) => {
             return groups;
         }, [resourceWeeks]);
 
+        // Clamp visibleRange against the current week list (year switches can
+        // shrink it) and derive the slice + spacer widths used by every body
+        // row. The clamping happens in render so we don't need a separate
+        // effect just to keep the state consistent.
+        const safeStart = Math.max(0, Math.min(visibleRange.start, resourceWeeks.length - 1));
+        const safeEnd = Math.max(safeStart, Math.min(visibleRange.end, resourceWeeks.length - 1));
+        const visibleWeeks = React.useMemo(
+            () => resourceWeeks.slice(safeStart, safeEnd + 1),
+            [resourceWeeks, safeStart, safeEnd]
+        );
+        const leftSpacerSpan = safeStart;
+        const rightSpacerSpan = Math.max(0, resourceWeeks.length - 1 - safeEnd);
+
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between">
@@ -111,12 +139,21 @@ const ResourceView = ({ s, h }) => {
                             <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
                             <input
                                 type="text"
-                                value={empSearch}
-                                onChange={e => setEmpSearch(e.target.value)}
+                                value={empSearchRaw}
+                                onChange={e => {
+                                    const v = e.target.value;
+                                    setEmpSearchRaw(v);
+                                    if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+                                    empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
+                                }}
                                 placeholder="Mitarbeiter suchen…"
                                 className="pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"/>
-                            {empSearch && (
-                                <button onClick={() => setEmpSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            {empSearchRaw && (
+                                <button onClick={() => {
+                                    if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+                                    setEmpSearchRaw('');
+                                    setEmpSearch('');
+                                }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                                     <IconX size={12}/>
                                 </button>
                             )}
@@ -211,15 +248,20 @@ const ResourceView = ({ s, h }) => {
                                                     </span>
                                                 </div>
                                             </td>
-                                            {resourceWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                            {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-slate-300 bg-slate-200/70"/>}
+                                            {visibleWeeks.map(w => <td key={`header-${w.id}`} className="border-b border-slate-300 bg-slate-200/70"></td>)}
+                                            {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-b border-slate-300 bg-slate-200/70"/>}
                                         </tr>
 
-                                        {!isCollapsed && catEmps.map(emp => (
+                                        {!isCollapsed && catEmps.map(emp => {
+                                            const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
+                                            return (
                                             <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
-                                                {resourceWeeks.map(w => {
+                                                {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
+                                                {visibleWeeks.map(w => {
                                                     const { total, isOfftime, assignments: wAss } = getUtilization(emp.id, w.id);
                                                     const isOverbooked = total > 100;
                                                     const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
@@ -276,7 +318,6 @@ const ResourceView = ({ s, h }) => {
                                                                             color = tc.chip; dotColor = tc.dot;
                                                                         }
                                                                     }
-                                                                    const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                                                     const pct = Math.round((a.hours ?? (a.percent ?? 100) / 100 * empWH) / empWH * 100);
 
                                                                     return (
@@ -319,8 +360,10 @@ const ResourceView = ({ s, h }) => {
                                                         </td>
                                                     );
                                                 })}
+                                                {rightSpacerSpan > 0 && <td colSpan={rightSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </React.Fragment>
                                 );
                             })}
