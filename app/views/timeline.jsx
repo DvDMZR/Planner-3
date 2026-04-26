@@ -48,6 +48,35 @@ const TimelineView = ({ s, h }) => {
             if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
         }, []);
 
+        const [menuOpen, setMenuOpen] = React.useState(false);
+        const menuRef = React.useRef(null);
+        React.useEffect(() => {
+            if (!menuOpen) return;
+            const handler = (e) => {
+                if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+            };
+            document.addEventListener('mousedown', handler);
+            return () => document.removeEventListener('mousedown', handler);
+        }, [menuOpen]);
+
+        const [undoStack, setUndoStack] = React.useState([]);
+        React.useEffect(() => { if (!isDeleteMode) setUndoStack([]); }, [isDeleteMode]);
+
+        const deleteWithUndo = React.useCallback((id) => {
+            const a = assignments.find(x => x.id === id);
+            if (a) setUndoStack(prev => [...prev, a]);
+            handleDeleteAssignment(id);
+        }, [assignments, handleDeleteAssignment]);
+
+        const undoDelete = React.useCallback(() => {
+            setUndoStack(prev => {
+                if (!prev.length) return prev;
+                const last = prev[prev.length - 1];
+                setAssignments(a => [...a, last]);
+                return prev.slice(0, -1);
+            });
+        }, [setAssignments]);
+
         const handleScroll = React.useCallback((e) => {
             if (scrollRafRef.current) return;
             const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
@@ -143,9 +172,9 @@ const TimelineView = ({ s, h }) => {
                 </div>
 
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center">
-                        <h3 className="text-slate-900 text-lg font-medium">Projekt-Planung</h3>
-                        <div className="flex items-center gap-3">
+                    <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center gap-3">
+                        <h3 className="text-slate-900 text-lg font-medium shrink-0">Projekt-Planung</h3>
+                        <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center">
                                 <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
                                 <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
@@ -161,14 +190,54 @@ const TimelineView = ({ s, h }) => {
                             }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
                                 Heute
                             </button>
-                            <span className="text-xs text-slate-500">Zieh Mitarbeiter von links in die Kalenderwochen.</span>
+                        </div>
+                        <div className="flex items-center gap-2 ml-auto shrink-0">
+                            {isDeleteMode && (
+                                <div className="flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0">
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700">
+                                        <IconTrash size={14} className="shrink-0"/>
+                                        Löschmodus aktiv
+                                    </span>
+                                    {undoStack.length > 0 && (
+                                        <button
+                                            onClick={undoDelete}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors">
+                                            ↩ {undoStack.length}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setIsDeleteMode(false)}
+                                        className="flex items-center px-2.5 py-1.5 text-rose-500 hover:bg-rose-100 border-l border-rose-300 transition-colors">
+                                        <IconX size={14}/>
+                                    </button>
+                                </div>
+                            )}
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setMenuOpen(o => !o)}
+                                    aria-label="Weitere Optionen"
+                                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}>
+                                    <IconMoreHorizontal size={16}/>
+                                </button>
+                                {menuOpen && (
+                                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50">
+                                        <button
+                                            onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
+                                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
+                                            <IconX size={14} className={`shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`}/>
+                                            <span>Löschmodus</span>
+                                            {isDeleteMode && <span className="ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"/>}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                     
                     <div className="h-0.5 bg-slate-100 shrink-0">
                         <div className="h-full bg-gea-400 transition-all duration-150" style={{width: `${scrollInfo.progress * 100}%`}}/>
                     </div>
-                    <div ref={timelineScrollRef} className="flex-1 overflow-auto relative outline-none"
+                    <div ref={timelineScrollRef} className={`flex-1 overflow-auto relative outline-none border-2 transition-colors ${isDeleteMode ? 'border-rose-400' : 'border-transparent'}`}
                         onScroll={handleScroll}
                         tabIndex={-1}
                         onKeyDown={e => {
@@ -233,19 +302,31 @@ const TimelineView = ({ s, h }) => {
                                                         const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
                                                         return (
                                                             <td key={w.id}
-                                                                onDragOver={(e) => e.preventDefault()}
-                                                                onDrop={(e) => handleDrop(e, w.id, proj.id)}
-                                                                className={`p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`}
+                                                                onDragOver={(e) => { if (!isDeleteMode) e.preventDefault(); }}
+                                                                onDrop={(e) => { if (!isDeleteMode) handleDrop(e, w.id, proj.id); }}
+                                                                className={`p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? (isDeleteMode ? 'bg-rose-50/20' : 'bg-white hover:bg-slate-50') : 'bg-slate-100 opacity-60'}`}
                                                             >
                                                                 <div className="flex flex-col gap-1 min-h-[60px]">
                                                                     {projAss.map(a => {
                                                                         const emp = employeeById.get(a.empId);
                                                                         return (
                                                                             <div key={a.id}
-                                                                                onClick={(e) => { e.stopPropagation(); setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); }}
-                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${pColor.chip}`}>
+                                                                                draggable={!isDeleteMode}
+                                                                                onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
+                                                                                onClick={(e) => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
+                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip}`}>
                                                                                 <span className="truncate font-medium">{emp?.name || 'Unbekannt'}</span>
-                                                                                <span className="opacity-90 ml-1 font-medium">{a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h</span>
+                                                                                <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                                    <span className="opacity-90 font-medium">{a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h</span>
+                                                                                    {!isDeleteMode && (
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
+                                                                                            className="opacity-0 group-hover/chip:opacity-100 text-slate-500 hover:text-gea-700 transition-opacity p-0.5 rounded"
+                                                                                            title="Kopieren">
+                                                                                            <IconCopy size={10}/>
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
                                                                         );
                                                                     })}

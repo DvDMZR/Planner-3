@@ -46,8 +46,9 @@ const SetupProjView = ({ s, h }) => {
         };
 
         const now = getWeekString(new Date());
-        const activeProjects = projects.filter(p => p.ibnWeek >= now);
-        const pastProjects = projects.filter(p => p.ibnWeek < now);
+        const byStartWeek = (a, b) => (a.startWeek || '').localeCompare(b.startWeek || '');
+        const activeProjects = projects.filter(p => p.ibnWeek >= now).slice().sort(byStartWeek);
+        const pastProjects = projects.filter(p => p.ibnWeek < now).slice().sort(byStartWeek);
         const activeCats = [...new Set(activeProjects.map(p => p.category))];
 
         const ProjectRow = ({ p }) => {

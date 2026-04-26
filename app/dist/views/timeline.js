@@ -152,6 +152,33 @@ const TimelineView = ({
   React.useEffect(() => () => {
     if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
   }, []);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handler = e => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+  const [undoStack, setUndoStack] = React.useState([]);
+  React.useEffect(() => {
+    if (!isDeleteMode) setUndoStack([]);
+  }, [isDeleteMode]);
+  const deleteWithUndo = React.useCallback(id => {
+    const a = assignments.find(x => x.id === id);
+    if (a) setUndoStack(prev => [...prev, a]);
+    handleDeleteAssignment(id);
+  }, [assignments, handleDeleteAssignment]);
+  const undoDelete = React.useCallback(() => {
+    setUndoStack(prev => {
+      if (!prev.length) return prev;
+      const last = prev[prev.length - 1];
+      setAssignments(a => [...a, last]);
+      return prev.slice(0, -1);
+    });
+  }, [setAssignments]);
   const handleScroll = React.useCallback(e => {
     if (scrollRafRef.current) return;
     const {
@@ -241,11 +268,11 @@ const TimelineView = ({
   }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "p-4 border-b border-slate-200 bg-white flex justify-between items-center"
+    className: "p-4 border-b border-slate-200 bg-white flex justify-between items-center gap-3"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-slate-900 text-lg font-medium"
+    className: "text-slate-900 text-lg font-medium shrink-0"
   }, "Projekt-Planung"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-3"
+    className: "flex items-center gap-3 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement("button", {
@@ -281,9 +308,46 @@ const TimelineView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute"), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs text-slate-500"
-  }, "Zieh Mitarbeiter von links in die Kalenderwochen."))), /*#__PURE__*/React.createElement("div", {
+  }, "Heute")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 ml-auto shrink-0"
+  }, isDeleteMode && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700"
+  }, /*#__PURE__*/React.createElement(IconTrash, {
+    size: 14,
+    className: "shrink-0"
+  }), "L\xF6schmodus aktiv"), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: undoDelete,
+    className: "flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors"
+  }, "\u21A9 ", undoStack.length), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setIsDeleteMode(false),
+    className: "flex items-center px-2.5 py-1.5 text-rose-500 hover:bg-rose-100 border-l border-rose-300 transition-colors"
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 14
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "relative",
+    ref: menuRef
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMenuOpen(o => !o),
+    "aria-label": "Weitere Optionen",
+    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
+  }, /*#__PURE__*/React.createElement(IconMoreHorizontal, {
+    size: 16
+  })), menuOpen && /*#__PURE__*/React.createElement("div", {
+    className: "absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setIsDeleteMode(m => !m);
+      setMenuOpen(false);
+    },
+    className: `w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 14,
+    className: `shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`
+  }), /*#__PURE__*/React.createElement("span", null, "L\xF6schmodus"), isDeleteMode && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"
+  })))))), /*#__PURE__*/React.createElement("div", {
     className: "h-0.5 bg-slate-100 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gea-400 transition-all duration-150",
@@ -292,7 +356,7 @@ const TimelineView = ({
     }
   })), /*#__PURE__*/React.createElement("div", {
     ref: timelineScrollRef,
-    className: "flex-1 overflow-auto relative outline-none",
+    className: `flex-1 overflow-auto relative outline-none border-2 transition-colors ${isDeleteMode ? 'border-rose-400' : 'border-transparent'}`,
     onScroll: handleScroll,
     tabIndex: -1,
     onKeyDown: e => {
@@ -378,30 +442,57 @@ const TimelineView = ({
         const projAss = assignmentsByProjectWeek.get(proj.id + '\u0000' + w.id) || [];
         return /*#__PURE__*/React.createElement("td", {
           key: w.id,
-          onDragOver: e => e.preventDefault(),
-          onDrop: e => handleDrop(e, w.id, proj.id),
-          className: `p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`
+          onDragOver: e => {
+            if (!isDeleteMode) e.preventDefault();
+          },
+          onDrop: e => {
+            if (!isDeleteMode) handleDrop(e, w.id, proj.id);
+          },
+          className: `p-1 border-b border-r border-slate-300 relative min-w-[120px] align-top transition-colors ${isProjectActive ? isDeleteMode ? 'bg-rose-50/20' : 'bg-white hover:bg-slate-50' : 'bg-slate-100 opacity-60'}`
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex flex-col gap-1 min-h-[60px]"
         }, projAss.map(a => {
           const emp = employeeById.get(a.empId);
           return /*#__PURE__*/React.createElement("div", {
             key: a.id,
+            draggable: !isDeleteMode,
+            onDragStart: e => {
+              e.stopPropagation();
+              e.dataTransfer.setData('assignmentId', a.id);
+            },
             onClick: e => {
               e.stopPropagation();
-              setAssignContext({
-                empId: a.empId,
-                week: w.id,
-                existing: a
-              });
-              setIsAssignModalOpen(true);
+              if (isDeleteMode) {
+                deleteWithUndo(a.id);
+              } else {
+                setAssignContext({
+                  empId: a.empId,
+                  week: w.id,
+                  existing: a
+                });
+                setIsAssignModalOpen(true);
+              }
             },
-            className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${pColor.chip}`
+            className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip}`
           }, /*#__PURE__*/React.createElement("span", {
             className: "truncate font-medium"
-          }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("span", {
-            className: "opacity-90 ml-1 font-medium"
-          }, a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK), "h"));
+          }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("div", {
+            className: "flex items-center gap-1 ml-1 flex-shrink-0"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "opacity-90 font-medium"
+          }, a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK), "h"), !isDeleteMode && /*#__PURE__*/React.createElement("button", {
+            onClick: e => {
+              e.stopPropagation();
+              setCopyContext({
+                assignment: a
+              });
+              setIsCopyModalOpen(true);
+            },
+            className: "opacity-0 group-hover/chip:opacity-100 text-slate-500 hover:text-gea-700 transition-opacity p-0.5 rounded",
+            title: "Kopieren"
+          }, /*#__PURE__*/React.createElement(IconCopy, {
+            size: 10
+          }))));
         })));
       }), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
         colSpan: rightSpacerSpan,

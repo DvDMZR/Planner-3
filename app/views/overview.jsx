@@ -64,9 +64,11 @@ const OverviewView = ({ s, h }) => {
             let zusatzkosten = 0;
             for (let i = 0; i < projCosts.length; i++) zusatzkosten += projCosts[i].amount || 0;
             return { p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten: totalLaborCost + zusatzkosten };
-        }).sort((a, b) =>
-            (STATUS_ORDER[computeAutoStatus(a.p)] ?? 5) - (STATUS_ORDER[computeAutoStatus(b.p)] ?? 5)
-        ), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
+        }).sort((a, b) => {
+            const so = (STATUS_ORDER[computeAutoStatus(a.p)] ?? 5) - (STATUS_ORDER[computeAutoStatus(b.p)] ?? 5);
+            if (so !== 0) return so;
+            return (a.p.startWeek || '').localeCompare(b.p.startWeek || '');
+        }), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
 
         const totalGesamtkosten = rows.reduce((acc, r) => acc + r.gesamtkosten, 0);
         const totalHoursAll = rows.reduce((acc, r) => acc + r.totalHours, 0);

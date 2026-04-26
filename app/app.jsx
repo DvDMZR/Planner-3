@@ -687,6 +687,9 @@ function App() {
             if (!arr) { arr = []; m.set(p.category, arr); }
             arr.push(p);
         });
+        for (const arr of m.values()) {
+            arr.sort((a, b) => (a.startWeek || '').localeCompare(b.startWeek || ''));
+        }
         return m;
     }, [projects]);
 
@@ -767,12 +770,20 @@ function App() {
         e.preventDefault();
         const assignmentId = e.dataTransfer.getData('assignmentId');
         if (assignmentId) {
-            // Move existing assignment chip; clear comment when reassigning to different employee
+            // Move existing assignment chip. In resource view: reassign to target employee.
+            // In project view: reassign to target project (only for project-type chips).
             setAssignments(prev => prev.map(a => {
                 if (a.id !== assignmentId) return a;
-                const newEmpId = isResourceView ? targetEmpIdOrProjId : a.empId;
-                const updated = { ...a, week: targetWeek, empId: newEmpId };
-                if (newEmpId !== a.empId) delete updated.comment;
+                const updated = { ...a, week: targetWeek };
+                if (isResourceView) {
+                    const newEmpId = targetEmpIdOrProjId;
+                    if (newEmpId !== a.empId) {
+                        updated.empId = newEmpId;
+                        delete updated.comment;
+                    }
+                } else if (a.type === 'project' && targetEmpIdOrProjId !== a.reference) {
+                    updated.reference = targetEmpIdOrProjId;
+                }
                 return updated;
             }));
             return;

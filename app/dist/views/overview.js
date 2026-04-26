@@ -180,7 +180,11 @@ const OverviewView = ({
       zusatzkosten,
       gesamtkosten: totalLaborCost + zusatzkosten
     };
-  }).sort((a, b) => (STATUS_ORDER[computeAutoStatus(a.p)] ?? 5) - (STATUS_ORDER[computeAutoStatus(b.p)] ?? 5)), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
+  }).sort((a, b) => {
+    const so = (STATUS_ORDER[computeAutoStatus(a.p)] ?? 5) - (STATUS_ORDER[computeAutoStatus(b.p)] ?? 5);
+    if (so !== 0) return so;
+    return (a.p.startWeek || '').localeCompare(b.p.startWeek || '');
+  }), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
   const totalGesamtkosten = rows.reduce((acc, r) => acc + r.gesamtkosten, 0);
   const totalHoursAll = rows.reduce((acc, r) => acc + r.totalHours, 0);
   return /*#__PURE__*/React.createElement("div", {
