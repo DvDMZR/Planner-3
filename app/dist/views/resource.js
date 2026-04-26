@@ -303,18 +303,21 @@ const ResourceView = ({
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
   }, "Heute"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsHelpModalOpen(true),
-    className: "w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center",
-    title: "Hilfe & Legende"
+    title: "Hilfe & Legende",
+    className: "w-8 h-8 flex items-center justify-center rounded-lg border bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600 transition-colors text-sm font-bold"
   }, "?"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setCompact(c => !c),
-    className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`,
-    title: "Kompakt-Modus umschalten"
-  }, compact ? 'Kompakt' : 'Normal'), /*#__PURE__*/React.createElement("button", {
+    title: compact ? 'Zur Normal-Ansicht wechseln' : 'Zur Kompakt-Ansicht wechseln',
+    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
+  }, /*#__PURE__*/React.createElement(IconList, {
+    size: 16
+  })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsDeleteMode(m => !m),
-    className: `flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`
+    title: isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus aktivieren',
+    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`
   }, /*#__PURE__*/React.createElement(IconX, {
-    size: 14
-  }), " ", isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'))), /*#__PURE__*/React.createElement("div", {
+    size: 16
+  })))), /*#__PURE__*/React.createElement("div", {
     className: "h-0.5 bg-slate-100 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gea-400 transition-all duration-150",

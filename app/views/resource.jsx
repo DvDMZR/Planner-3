@@ -174,19 +174,21 @@ const ResourceView = ({ s, h }) => {
                             Heute
                         </button>
                         <button onClick={() => setIsHelpModalOpen(true)}
-                            className="w-7 h-7 rounded-full bg-gea-100 text-gea-700 text-sm font-bold hover:bg-gea-200 transition-colors flex items-center justify-center" title="Hilfe & Legende">
+                            title="Hilfe & Legende"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600 transition-colors text-sm font-bold">
                             ?
                         </button>
                         <button
                             onClick={() => setCompact(c => !c)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}
-                            title="Kompakt-Modus umschalten">
-                            {compact ? 'Kompakt' : 'Normal'}
+                            title={compact ? 'Zur Normal-Ansicht wechseln' : 'Zur Kompakt-Ansicht wechseln'}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}>
+                            <IconList size={16}/>
                         </button>
                         <button
                             onClick={() => setIsDeleteMode(m => !m)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
-                            <IconX size={14}/> {isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus'}
+                            title={isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus aktivieren'}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`}>
+                            <IconX size={16}/>
                         </button>
                     </div>
                 </div>
