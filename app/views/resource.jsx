@@ -96,6 +96,24 @@ const ResourceView = ({ s, h }) => {
             return () => document.removeEventListener('mousedown', handler);
         }, [menuOpen]);
 
+        const [undoStack, setUndoStack] = React.useState([]);
+        React.useEffect(() => { if (!isDeleteMode) setUndoStack([]); }, [isDeleteMode]);
+
+        const deleteWithUndo = React.useCallback((id) => {
+            const a = assignments.find(x => x.id === id);
+            if (a) setUndoStack(prev => [...prev, a]);
+            handleDeleteAssignment(id);
+        }, [assignments, handleDeleteAssignment]);
+
+        const undoDelete = React.useCallback(() => {
+            setUndoStack(prev => {
+                if (!prev.length) return prev;
+                const last = prev[prev.length - 1];
+                setAssignments(a => [...a, last]);
+                return prev.slice(0, -1);
+            });
+        }, [setAssignments]);
+
         const displayCategories = React.useMemo(() => {
             if (!empSearch.trim()) return activeCategories;
             const q = empSearch.toLowerCase();
@@ -161,6 +179,26 @@ const ResourceView = ({ s, h }) => {
                             Heute
                         </button>
                     </div>
+                    {isDeleteMode && (
+                        <div className="flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0">
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700">
+                                <IconTrash size={14} className="shrink-0"/>
+                                Löschmodus aktiv
+                            </span>
+                            {undoStack.length > 0 && (
+                                <button
+                                    onClick={undoDelete}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors">
+                                    ↩ {undoStack.length}
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setIsDeleteMode(false)}
+                                className="flex items-center px-2.5 py-1.5 text-rose-500 hover:bg-rose-100 border-l border-rose-300 transition-colors">
+                                <IconX size={14}/>
+                            </button>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 ml-auto">
                         <div className="relative">
                             <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
@@ -355,7 +393,7 @@ const ResourceView = ({ s, h }) => {
                                                                             draggable={!isDeleteMode}
                                                                             title={a.comment || undefined}
                                                                             onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
-                                                                            onClick={e => { e.stopPropagation(); if (isDeleteMode) { handleDeleteAssignment(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
+                                                                            onClick={e => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
                                                                             className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`}>
                                                                             <div className="flex items-center gap-1.5 min-w-0">
                                                                                 <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
