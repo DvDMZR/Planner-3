@@ -15,6 +15,54 @@ const migrateExpensesToCostItems = (expenses) =>
         hotelAmount: e.type === 'Hotel' ? e.amount : null,
     }));
 
+// Migrate a costItem from the legacy single-amount/extras shape to the
+// line-items shape used by the redesigned modal.
+const migrateCostItem = (ci) => {
+    if (!ci || Array.isArray(ci.lines)) return ci;
+
+    const oldTypeMap = {
+        'Reisekosten':    'travel',
+        'Dienstleistung': 'hours',
+        'Sonstiges':      'other',
+    };
+    const lines = [];
+
+    if (ci.hours != null && ci.hourlyRate != null) {
+        const hrs = ci.hours || 0;
+        const rate = ci.hourlyRate || 0;
+        lines.push({
+            id: makeId('cl'), type: 'hours',
+            hours: hrs, hourlyRate: rate, amount: hrs * rate,
+            comment: ''
+        });
+    }
+    const mainAmount = ci.mainAmount != null ? ci.mainAmount
+                     : (ci.hours == null && ci.amount != null ? ci.amount : 0);
+    if (mainAmount && (ci.hours == null || ci.hourlyRate == null)) {
+        lines.push({
+            id: makeId('cl'),
+            type: oldTypeMap[ci.type] || 'other',
+            amount: mainAmount,
+            comment: ''
+        });
+    }
+    (ci.extraCosts || []).forEach(ec => {
+        lines.push({
+            id: ec.id || makeId('cl'),
+            type: 'other',
+            amount: parseFloat(ec.amount) || 0,
+            comment: ec.type || ''
+        });
+    });
+
+    const total = lines.reduce((s, l) => s + (l.amount || 0), 0);
+    const { type, hours, hourlyRate, mainAmount: _ma, extraCosts,
+            travelAmount, hotelAmount, ...rest } = ci;
+    return { ...rest, lines, amount: total };
+};
+
+const migrateCostItems = (items) => (items || []).map(migrateCostItem);
+
 // Split a monolithic state into the new file layout.
 // Returns an object { filename: content } ready to be persisted.
 function buildSplitFiles(state) {

@@ -502,50 +502,67 @@ const CostItemModal = ({
 
     const [form, setForm] = useState({
         empId: existingItem?.empId || projEmployees[0]?.id || '',
-        type: existingItem?.type || 'Reisekosten',
         description: existingItem?.description || '',
         dateFrom: existingItem?.dateFrom || '',
         dateTo: existingItem?.dateTo || '',
-        hours: existingItem?.hours != null ? String(existingItem.hours) : '',
-        hourlyRate: existingItem?.hourlyRate != null ? String(existingItem.hourlyRate) : '',
-        amount: existingItem?.amount != null ? String(existingItem.amount) : '',
     });
 
-    const [extraCosts, setExtraCosts] = useState(
-        existingItem?.extraCosts || []
-    );
+    // Lines are kept as strings while editing so empty inputs don't read as 0.
+    const [lines, setLines] = useState(() => (existingItem?.lines || []).map(l => ({
+        id: l.id || makeId('cl'),
+        type: l.type,
+        amount: l.type === 'hours' ? '' : (l.amount != null ? String(l.amount) : ''),
+        hours:      l.hours      != null ? String(l.hours)      : '',
+        hourlyRate: l.hourlyRate != null ? String(l.hourlyRate) : '',
+        comment: l.comment || '',
+    })));
 
-    const updateExtra = (i, field, val) =>
-        setExtraCosts(prev => prev.map((c, idx) => idx === i ? {...c, [field]: val} : c));
-    const addExtra = () =>
-        setExtraCosts(prev => [...prev, { id: makeId('ec'), type: '', amount: '' }]);
-    const removeExtra = (i) =>
-        setExtraCosts(prev => prev.filter((_, idx) => idx !== i));
+    const addLine = (type) => {
+        const base = { id: makeId('cl'), type, amount: '', comment: '' };
+        if (type === 'hours') {
+            base.hours = '';
+            base.hourlyRate = String(DEFAULT_HOURLY_RATE);
+        }
+        setLines(prev => [...prev, base]);
+    };
+    const updateLine = (id, field, val) =>
+        setLines(prev => prev.map(l => l.id === id ? {...l, [field]: val} : l));
+    const removeLine = (id) =>
+        setLines(prev => prev.filter(l => l.id !== id));
 
-    const autoAmount = (form.hours !== '' && form.hourlyRate !== '')
-        ? (parseFloat(form.hours) || 0) * (parseFloat(form.hourlyRate) || 0)
-        : null;
+    const lineAmount = (l) => l.type === 'hours'
+        ? (parseFloat(l.hours) || 0) * (parseFloat(l.hourlyRate) || 0)
+        : (parseFloat(l.amount) || 0);
+    const total = lines.reduce((s, l) => s + lineAmount(l), 0);
 
     const handleSave = () => {
-        if (!form.empId) return;
-        const mainAmount = autoAmount !== null ? autoAmount : parseFloat(form.amount) || 0;
-        const extraTotal = extraCosts.reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+        if (!form.empId || lines.length === 0) return;
+        const cleanedLines = lines.map(l => {
+            if (l.type === 'hours') {
+                const hrs = parseFloat(l.hours) || 0;
+                const rate = parseFloat(l.hourlyRate) || 0;
+                return {
+                    id: l.id, type: 'hours',
+                    hours: hrs, hourlyRate: rate, amount: hrs * rate,
+                    comment: l.comment || ''
+                };
+            }
+            return {
+                id: l.id, type: l.type,
+                amount: parseFloat(l.amount) || 0,
+                comment: l.comment || ''
+            };
+        });
         const item = {
             id: existingItem?.id || makeId('ci'),
             projectId,
             empId: form.empId,
-            type: form.type,
             description: form.description,
             dateFrom: form.dateFrom || null,
             dateTo: form.dateTo || null,
             week: form.dateFrom ? getWeekString(new Date(form.dateFrom)) : null,
-            hours: form.hours !== '' ? parseFloat(form.hours) : null,
-            hourlyRate: form.hourlyRate !== '' ? parseFloat(form.hourlyRate) : null,
-            amount: mainAmount + extraTotal,
-            mainAmount,
-            extraCosts: extraCosts.filter(c => c.type || c.amount).map(c => ({
-                ...c, amount: parseFloat(c.amount) || 0
-            })),
+            lines: cleanedLines,
+            amount: cleanedLines.reduce((s, l) => s + (l.amount || 0), 0),
         };
         if (existingItem) {
             setCostItems(costItems.map(c => c.id === existingItem.id ? item : c));
@@ -564,124 +581,111 @@ const CostItemModal = ({
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
                 <ModalHeader
                     title={existingItem ? 'Kostenpunkt bearbeiten' : 'Kostenpunkt erfassen'}
                     onClose={onClose}
                 />
-                <div className="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
-                    {/* Mitarbeiter */}
-                    <div>
-                        <label className="block text-xs text-slate-500 mb-1 font-medium">Mitarbeiter</label>
-                        <select value={form.empId} onChange={e => setForm({...form, empId: e.target.value})}
-                            className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                            <option value="">Bitte wählen…</option>
-                            {projEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                            {employees.filter(e => !empIds.includes(e.id)).map(e =>
-                                <option key={e.id} value={e.id}>{e.name} (nicht verplant)</option>
-                            )}
-                        </select>
+                <div className="p-6 space-y-5 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">Mitarbeiter</label>
+                            <select value={form.empId} onChange={e => setForm({...form, empId: e.target.value})}
+                                className="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                <option value="">Bitte wählen…</option>
+                                {projEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                {employees.filter(e => !empIds.includes(e.id)).map(e =>
+                                    <option key={e.id} value={e.id}>{e.name} (nicht verplant)</option>
+                                )}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">Anlass (optional)</label>
+                            <input type="text" value={form.description}
+                                onChange={e => setForm({...form, description: e.target.value})}
+                                placeholder="z.B. Vor-Ort-Einsatz Wien"
+                                className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
+                        </div>
                     </div>
 
-                    {/* Typ */}
-                    <div>
-                        <label className="block text-xs text-slate-500 mb-1 font-medium">Art</label>
-                        <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}
-                            className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                            <option value="Reisekosten">Reisekosten</option>
-                            <option value="Dienstleistung">Dienstleistung</option>
-                            <option value="Sonstiges">Sonstiges</option>
-                        </select>
-                    </div>
-
-                    {/* Beschreibung */}
-                    <div>
-                        <label className="block text-xs text-slate-500 mb-1 font-medium">Beschreibung</label>
-                        <input type="text" value={form.description}
-                            onChange={e => setForm({...form, description: e.target.value})}
-                            placeholder="z.B. Vor-Ort-Einsatz"
-                            className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
-                    </div>
-
-                    {/* Zeitraum */}
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 font-medium">
                             Zeitraum (optional)
                             {kwLabel && <span className="ml-2 text-gea-600 font-medium">{kwLabel}</span>}
                         </label>
                         <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <span className="block text-xs text-slate-400 mb-1">Von</span>
-                                <input type="date" value={form.dateFrom}
-                                    onChange={e => setForm({...form, dateFrom: e.target.value})}
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
-                            </div>
-                            <div>
-                                <span className="block text-xs text-slate-400 mb-1">Bis</span>
-                                <input type="date" value={form.dateTo}
-                                    min={form.dateFrom}
-                                    onChange={e => setForm({...form, dateTo: e.target.value})}
-                                    className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
-                            </div>
+                            <input type="date" value={form.dateFrom}
+                                onChange={e => setForm({...form, dateFrom: e.target.value})}
+                                className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
+                            <input type="date" value={form.dateTo}
+                                min={form.dateFrom}
+                                onChange={e => setForm({...form, dateTo: e.target.value})}
+                                className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
                         </div>
                     </div>
 
-                    {/* Stunden + Rate + Betrag */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">Stunden (opt.)</label>
-                            <input type="number" min="0" step="0.5" value={form.hours}
-                                onChange={e => setForm({...form, hours: e.target.value})}
-                                className="w-full p-2 border border-slate-300 rounded-md text-sm" placeholder="z.B. 40"/>
-                        </div>
-                        <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">€/Std. (opt.)</label>
-                            <input type="number" min="0" step="1" value={form.hourlyRate}
-                                onChange={e => setForm({...form, hourlyRate: e.target.value})}
-                                className="w-full p-2 border border-slate-300 rounded-md text-sm" placeholder={`${DEFAULT_HOURLY_RATE}`}/>
-                        </div>
-                        <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">
-                                Betrag (€){autoAmount !== null && <span className="ml-1 text-gea-600">= {autoAmount.toFixed(2)}</span>}
-                            </label>
-                            <input type="number" min="0" step="0.01"
-                                value={autoAmount !== null ? autoAmount.toFixed(2) : form.amount}
-                                onChange={e => setForm({...form, amount: e.target.value})}
-                                disabled={autoAmount !== null}
-                                className={`w-full p-2 border border-slate-300 rounded-md text-sm ${autoAmount !== null ? 'bg-slate-50 text-slate-400' : ''}`}
-                                placeholder="0.00"/>
-                        </div>
-                    </div>
-
-                    {/* Zusatzkosten */}
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
-                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-600">Weitere Kosten</span>
-                            <button onClick={addExtra}
-                                className="text-xs text-gea-600 hover:text-gea-700 font-medium flex items-center gap-1">
-                                <IconPlus size={12}/> Hinzufügen
-                            </button>
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-medium text-slate-600 mr-1">Posten</span>
+                            {COST_LINE_TYPE_ORDER.map(t => {
+                                const cfg = COST_LINE_TYPES[t];
+                                return (
+                                    <button key={t} onClick={() => addLine(t)}
+                                        className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 transition-opacity hover:opacity-80 ${cfg.chip}`}>
+                                        <IconPlus size={11}/> {cfg.label}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        {extraCosts.length === 0 ? (
-                            <div className="px-4 py-3 text-xs text-slate-400">
-                                Noch keine Zusatzkosten. Auf <strong>+ Hinzufügen</strong> klicken.
+
+                        {lines.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-xs text-slate-400">
+                                Noch keine Posten. Oben einen Typ wählen, um eine Zeile hinzuzufügen.
                             </div>
                         ) : (
                             <div className="p-3 space-y-2">
-                                {extraCosts.map((c, i) => (
-                                    <div key={c.id} className="flex gap-2 items-center">
-                                        <input type="text" value={c.type}
-                                            onChange={e => updateExtra(i, 'type', e.target.value)}
-                                            placeholder="Kostenart (z.B. Dienstleistung)"
-                                            className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                                        <input type="number" min="0" step="0.01" value={c.amount}
-                                            onChange={e => updateExtra(i, 'amount', e.target.value)}
-                                            placeholder="€"
-                                            className="w-28 p-2 border border-slate-300 rounded text-sm"/>
-                                        <button onClick={() => removeExtra(i)}
-                                            className="text-slate-400 hover:text-rose-500 p-1 flex-shrink-0"><IconX size={14}/></button>
-                                    </div>
-                                ))}
+                                {lines.map(l => {
+                                    const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                                    return (
+                                        <div key={l.id} className="flex gap-2 items-center">
+                                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border w-32 text-center shrink-0 ${cfg.chip}`}>
+                                                {cfg.label}
+                                            </span>
+                                            {l.type === 'hours' ? (
+                                                <div className="flex gap-1 items-center w-44 shrink-0">
+                                                    <input type="number" min="0" step="0.5" value={l.hours}
+                                                        onChange={e => updateLine(l.id, 'hours', e.target.value)}
+                                                        placeholder="Std."
+                                                        className="w-20 p-2 border border-slate-300 rounded text-sm"/>
+                                                    <span className="text-slate-400 text-xs">×</span>
+                                                    <input type="number" min="0" step="1" value={l.hourlyRate}
+                                                        onChange={e => updateLine(l.id, 'hourlyRate', e.target.value)}
+                                                        placeholder="€/h"
+                                                        className="w-20 p-2 border border-slate-300 rounded text-sm"/>
+                                                </div>
+                                            ) : (
+                                                <input type="number" min="0" step="0.01" value={l.amount}
+                                                    onChange={e => updateLine(l.id, 'amount', e.target.value)}
+                                                    placeholder="€"
+                                                    className="w-28 p-2 border border-slate-300 rounded text-sm shrink-0"/>
+                                            )}
+                                            <input type="text" value={l.comment}
+                                                onChange={e => updateLine(l.id, 'comment', e.target.value)}
+                                                placeholder={l.type === 'hours' ? 'Kommentar (optional)' : 'Kommentar (z.B. Hotel Marriott)'}
+                                                className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                            <span className="w-20 text-right text-sm text-slate-700 tabular-nums shrink-0">{lineAmount(l).toFixed(2)} €</span>
+                                            <button onClick={() => removeLine(l.id)}
+                                                className="text-slate-400 hover:text-rose-500 p-1 shrink-0"><IconX size={14}/></button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {lines.length > 0 && (
+                            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                                <span className="text-xs text-slate-500">Summe</span>
+                                <span className="text-base font-semibold text-slate-900 tabular-nums">{total.toFixed(2)} €</span>
                             </div>
                         )}
                     </div>
@@ -692,7 +696,10 @@ const CostItemModal = ({
                     ) : <div/>}
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
-                        <button onClick={handleSave} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium">Speichern</button>
+                        <button onClick={handleSave} disabled={!form.empId || lines.length === 0}
+                            className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed">
+                            Speichern
+                        </button>
                     </div>
                 </div>
             </div>
