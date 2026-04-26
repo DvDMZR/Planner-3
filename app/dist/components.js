@@ -651,6 +651,31 @@ const IconMoreHorizontal = ({
   r: "1",
   fill: "currentColor"
 }));
+const IconTrash = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("polyline", {
+  points: "3 6 5 6 21 6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M10 11v6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M14 11v6"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across

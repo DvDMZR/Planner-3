@@ -202,6 +202,23 @@ const ResourceView = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
+  const [undoStack, setUndoStack] = React.useState([]);
+  React.useEffect(() => {
+    if (!isDeleteMode) setUndoStack([]);
+  }, [isDeleteMode]);
+  const deleteWithUndo = React.useCallback(id => {
+    const a = assignments.find(x => x.id === id);
+    if (a) setUndoStack(prev => [...prev, a]);
+    handleDeleteAssignment(id);
+  }, [assignments, handleDeleteAssignment]);
+  const undoDelete = React.useCallback(() => {
+    setUndoStack(prev => {
+      if (!prev.length) return prev;
+      const last = prev[prev.length - 1];
+      setAssignments(a => [...a, last]);
+      return prev.slice(0, -1);
+    });
+  }, [setAssignments]);
   const displayCategories = React.useMemo(() => {
     if (!empSearch.trim()) return activeCategories;
     const q = empSearch.toLowerCase();
@@ -286,7 +303,22 @@ const ResourceView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute")), /*#__PURE__*/React.createElement("div", {
+  }, "Heute")), isDeleteMode && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700"
+  }, /*#__PURE__*/React.createElement(IconTrash, {
+    size: 14,
+    className: "shrink-0"
+  }), "L\xF6schmodus aktiv"), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: undoDelete,
+    className: "flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors"
+  }, "\u21A9 ", undoStack.length), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setIsDeleteMode(false),
+    className: "flex items-center px-2.5 py-1.5 text-rose-500 hover:bg-rose-100 border-l border-rose-300 transition-colors"
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 14
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 ml-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "relative"
@@ -541,7 +573,7 @@ const ResourceView = ({
             onClick: e => {
               e.stopPropagation();
               if (isDeleteMode) {
-                handleDeleteAssignment(a.id);
+                deleteWithUndo(a.id);
               } else {
                 setAssignContext({
                   empId: emp.id,
