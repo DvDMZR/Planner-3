@@ -144,7 +144,7 @@ const ResourceView = ({ s, h }) => {
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3">
                     <h2 className="text-gea-800 text-xl font-semibold shrink-0">Ressourcenplaner</h2>
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-2">
                         <div className="flex items-center">
                             <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
                             <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
@@ -160,7 +160,8 @@ const ResourceView = ({ s, h }) => {
                         }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
                             Heute
                         </button>
-                        <div className="w-px h-5 bg-slate-200 shrink-0"/>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
                         <div className="relative">
                             <IconUsers size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
                             <input
@@ -187,7 +188,7 @@ const ResourceView = ({ s, h }) => {
                         <div className="relative" ref={menuRef}>
                             <button
                                 onClick={() => setMenuOpen(o => !o)}
-                                title="Weitere Optionen"
+                                aria-label="Weitere Optionen"
                                 className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}>
                                 <IconMoreHorizontal size={16}/>
                             </button>

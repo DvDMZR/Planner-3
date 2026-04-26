@@ -250,7 +250,7 @@ const ResourceView = ({
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-gea-800 text-xl font-semibold shrink-0"
   }, "Ressourcenplaner"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 ml-auto"
+    className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement("button", {
@@ -286,9 +286,9 @@ const ResourceView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute"), /*#__PURE__*/React.createElement("div", {
-    className: "w-px h-5 bg-slate-200 shrink-0"
-  }), /*#__PURE__*/React.createElement("div", {
+  }, "Heute")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 ml-auto"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "relative"
   }, /*#__PURE__*/React.createElement(IconUsers, {
     size: 14,
@@ -318,7 +318,7 @@ const ResourceView = ({
     ref: menuRef
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setMenuOpen(o => !o),
-    title: "Weitere Optionen",
+    "aria-label": "Weitere Optionen",
     className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
   }, /*#__PURE__*/React.createElement(IconMoreHorizontal, {
     size: 16
