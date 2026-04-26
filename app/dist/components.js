@@ -621,6 +621,36 @@ const IconGanttChart = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M11 18h7"
 }));
+const IconMoreHorizontal = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "1",
+  fill: "currentColor"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "19",
+  cy: "12",
+  r: "1",
+  fill: "currentColor"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "5",
+  cy: "12",
+  r: "1",
+  fill: "currentColor"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across

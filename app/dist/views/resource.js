@@ -192,6 +192,16 @@ const ResourceView = ({
   const [empSearch, setEmpSearch] = React.useState('');
   const [empSearchRaw, setEmpSearchRaw] = React.useState('');
   const empDebounceRef = React.useRef(null);
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handler = e => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
   const displayCategories = React.useMemo(() => {
     if (!empSearch.trim()) return activeCategories;
     const q = empSearch.toLowerCase();
@@ -236,37 +246,12 @@ const ResourceView = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "p-4 border-b border-slate-300 bg-gea-50 flex items-center justify-between"
+    className: "p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-gea-800 text-xl font-semibold"
+    className: "text-gea-800 text-xl font-semibold shrink-0"
   }, "Ressourcenplaner"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 ml-auto"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "relative"
-  }, /*#__PURE__*/React.createElement(IconUsers, {
-    size: 14,
-    className: "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-  }), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: empSearchRaw,
-    onChange: e => {
-      const v = e.target.value;
-      setEmpSearchRaw(v);
-      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
-      empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
-    },
-    placeholder: "Mitarbeiter suchen\u2026",
-    className: "pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"
-  }), empSearchRaw && /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
-      setEmpSearchRaw('');
-      setEmpSearch('');
-    },
-    className: "absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-  }, /*#__PURE__*/React.createElement(IconX, {
-    size: 12
-  }))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(-4),
@@ -301,23 +286,77 @@ const ResourceView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setIsHelpModalOpen(true),
-    title: "Hilfe & Legende",
-    className: "w-8 h-8 flex items-center justify-center rounded-lg border bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600 transition-colors text-sm font-bold"
-  }, "?"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setCompact(c => !c),
-    title: compact ? 'Zur Normal-Ansicht wechseln' : 'Zur Kompakt-Ansicht wechseln',
-    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${compact ? 'bg-gea-600 text-white border-gea-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
-  }, /*#__PURE__*/React.createElement(IconList, {
-    size: 16
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setIsDeleteMode(m => !m),
-    title: isDeleteMode ? 'Löschmodus aktiv — klicken zum Beenden' : 'Löschmodus aktivieren',
-    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${isDeleteMode ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:border-rose-400 hover:text-rose-600'}`
+  }, "Heute"), /*#__PURE__*/React.createElement("div", {
+    className: "w-px h-5 bg-slate-200 shrink-0"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/React.createElement(IconUsers, {
+    size: 14,
+    className: "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: empSearchRaw,
+    onChange: e => {
+      const v = e.target.value;
+      setEmpSearchRaw(v);
+      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+      empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
+    },
+    placeholder: "Mitarbeiter suchen\u2026",
+    className: "pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"
+  }), empSearchRaw && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
+      setEmpSearchRaw('');
+      setEmpSearch('');
+    },
+    className: "absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
   }, /*#__PURE__*/React.createElement(IconX, {
+    size: 12
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "relative",
+    ref: menuRef
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setMenuOpen(o => !o),
+    title: "Weitere Optionen",
+    className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
+  }, /*#__PURE__*/React.createElement(IconMoreHorizontal, {
     size: 16
-  })))), /*#__PURE__*/React.createElement("div", {
+  })), menuOpen && /*#__PURE__*/React.createElement("div", {
+    className: "absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setCompact(c => !c);
+      setMenuOpen(false);
+    },
+    className: "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+  }, /*#__PURE__*/React.createElement(IconList, {
+    size: 14,
+    className: "shrink-0 text-slate-400"
+  }), /*#__PURE__*/React.createElement("span", null, "Kompaktansicht"), compact && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto text-gea-600 font-bold text-xs"
+  }, "\u2713")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setIsDeleteMode(m => !m);
+      setMenuOpen(false);
+    },
+    className: `w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 14,
+    className: `shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`
+  }), /*#__PURE__*/React.createElement("span", null, "L\xF6schmodus"), isDeleteMode && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "my-1 border-t border-slate-100"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setIsHelpModalOpen(true);
+      setMenuOpen(false);
+    },
+    className: "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-sm font-bold w-3.5 text-center text-slate-400 shrink-0"
+  }, "?"), /*#__PURE__*/React.createElement("span", null, "Hilfe & Legende")))))), /*#__PURE__*/React.createElement("div", {
     className: "h-0.5 bg-slate-100 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gea-400 transition-all duration-150",
@@ -326,7 +365,7 @@ const ResourceView = ({
     }
   })), /*#__PURE__*/React.createElement("div", {
     ref: resourceScrollRef,
-    className: "flex-1 overflow-auto relative outline-none",
+    className: `flex-1 overflow-auto relative outline-none border-2 transition-colors ${isDeleteMode ? 'border-rose-400' : 'border-transparent'}`,
     onScroll: handleScroll,
     tabIndex: -1,
     onKeyDown: e => {
