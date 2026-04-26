@@ -32,6 +32,36 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7 (2026-04-26)
+
+### Projekte-Tab: Drag-Drop, Löschmodus, Kopieren
+- Mitarbeiter-Chips lassen sich jetzt direkt im Projekte-Tab per Drag-and-Drop
+  zwischen Wochen verschieben (innerhalb eines Projekts oder auf ein anderes
+  Projekt). Änderungen erscheinen automatisch in der Ressourcenplanung.
+- Übernommen aus dem Ressourcen-Tab: **Löschmodus** mit Undo-Stack (rote Pille
+  im Header) und **Kopieren-Button** auf jedem Chip beim Hover, der die
+  bekannte Kopier-Maske öffnet.
+- Projekte sind in allen Listen nach Startdatum sortiert (Projekte-, Auslastungs-,
+  Übersichts- und Verwaltungs-Tab).
+
+### Kostenpunkt-Erfassung neu gedacht
+- Eine Erfassung besteht jetzt aus typisierten **Posten-Zeilen**: Travel,
+  Accommodation, Other, Hours. Quick-Add-Pills oben (Tooltips: z.B. Flug/Auto,
+  Hotel, Werkzeug) fügen Zeilen hinzu, jede Zeile ist inline editierbar mit
+  Typ-Pille · Betrag · Kommentar · Zeilensumme.
+- Top-Level-Felder reduziert: nur noch Mitarbeiter, optionaler **Anlass**,
+  Zeitraum. Der frühere Stunden/Rate/Betrag-Toggle ist entfernt — Stunden
+  sind jetzt einfach eine eigene Zeile.
+- Projekt-Detail-Tabelle zeigt eine kompakte **Posten-Spalte** statt der
+  alten Art/Std/€/Std/Extras-Spalten. Rechnungs-Modal listet die Zeilen je
+  Erfassung; CSV- und E-Mail-Export geben pro Posten-Zeile eine eigene
+  Rechnungsposition aus (Travel und Accommodation also getrennt).
+- Bestehende Daten werden beim Laden transparent migriert (mainAmount +
+  hours/rate + extraCosts → lines).
+
+### UI-Politur
+- Changelog-Button in der Sidebar leuchtet jetzt sanft pulsierend.
+
 ## v0.6.7 (2026-04-25)
 
 ### Performance
@@ -159,10 +189,10 @@ const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 12;
 
 const COST_LINE_TYPES = {
-    travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',  chip: 'bg-amber-100 text-amber-700 border-amber-200',     dot: 'bg-amber-500'   },
-    accommodation: { label: 'Accommodation', invoiceLabel: 'Unterkunft',   chip: 'bg-indigo-100 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-500'  },
-    other:         { label: 'Other',         invoiceLabel: 'Sonstiges',    chip: 'bg-slate-100 text-slate-700 border-slate-200',     dot: 'bg-slate-400'   },
-    hours:         { label: 'Hours',         invoiceLabel: 'Dienstleistung', chip: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+    travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',    example: 'Flug/Auto', chip: 'bg-amber-100 text-amber-700 border-amber-200',         dot: 'bg-amber-500'   },
+    accommodation: { label: 'Accommodation', invoiceLabel: 'Unterkunft',     example: 'Hotel',     chip: 'bg-indigo-100 text-indigo-700 border-indigo-200',      dot: 'bg-indigo-500'  },
+    other:         { label: 'Other',         invoiceLabel: 'Sonstiges',      example: 'Werkzeug',  chip: 'bg-slate-100 text-slate-700 border-slate-200',         dot: 'bg-slate-400'   },
+    hours:         { label: 'Hours',         invoiceLabel: 'Dienstleistung', example: '',          chip: 'bg-emerald-100 text-emerald-700 border-emerald-200',   dot: 'bg-emerald-500' },
 };
 const COST_LINE_TYPE_ORDER = ['travel', 'accommodation', 'other', 'hours'];
 

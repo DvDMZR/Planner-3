@@ -603,7 +603,7 @@ const CostItemModal = ({
                             <label className="block text-xs text-slate-500 mb-1 font-medium">Anlass (optional)</label>
                             <input type="text" value={form.description}
                                 onChange={e => setForm({...form, description: e.target.value})}
-                                placeholder="z.B. Vor-Ort-Einsatz Wien"
+                                placeholder="z.B. Vor-Ort-Einsatz"
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
                         </div>
                     </div>
@@ -631,6 +631,7 @@ const CostItemModal = ({
                                 const cfg = COST_LINE_TYPES[t];
                                 return (
                                     <button key={t} onClick={() => addLine(t)}
+                                        title={cfg.example ? `z.B. ${cfg.example}` : 'Stunden × Satz'}
                                         className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 transition-opacity hover:opacity-80 ${cfg.chip}`}>
                                         <IconPlus size={11}/> {cfg.label}
                                     </button>
@@ -671,7 +672,7 @@ const CostItemModal = ({
                                             )}
                                             <input type="text" value={l.comment}
                                                 onChange={e => updateLine(l.id, 'comment', e.target.value)}
-                                                placeholder={l.type === 'hours' ? 'Kommentar (optional)' : 'Kommentar (z.B. Hotel Marriott)'}
+                                                placeholder={cfg.example ? `Kommentar (z.B. ${cfg.example})` : 'Kommentar (optional)'}
                                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                                             <span className="w-20 text-right text-sm text-slate-700 tabular-nums shrink-0">{lineAmount(l).toFixed(2)} €</span>
                                             <button onClick={() => removeLine(l.id)}

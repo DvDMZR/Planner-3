@@ -154,8 +154,8 @@ const _SidebarBase = ({
     className: "flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-medium"
-  }, "Einsatzplanung v0.6.7"), /*#__PURE__*/React.createElement("span", {
-    className: "bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
+  }, "Einsatzplanung v0.7"), /*#__PURE__*/React.createElement("span", {
+    className: "changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconHistory, {
     size: 12
   })))))), /*#__PURE__*/React.createElement("nav", {

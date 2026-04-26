@@ -6,3 +6,11 @@ body {
     padding: 0;
     background-color: #ffffff;
 }
+
+@keyframes gea-glow {
+    0%, 100% { box-shadow: 0 0 4px rgba(38, 168, 167, 0.35); }
+    50%      { box-shadow: 0 0 11px rgba(38, 168, 167, 0.75); }
+}
+.changelog-glow {
+    animation: gea-glow 2.6s ease-in-out infinite;
+}
