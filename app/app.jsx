@@ -183,11 +183,12 @@ function App() {
                 setProjects(parsedData.projects || []);
                 setAssignments(parsedData.assignments || []);
                 setExpenses(parsedData.expenses || []);
-                // Load costItems or migrate old expenses
+                // Load costItems or migrate old expenses; then bring forward
+                // single-amount entries to the new line-items shape.
                 if (parsedData.costItems) {
-                    setCostItems(parsedData.costItems);
+                    setCostItems(migrateCostItems(parsedData.costItems));
                 } else if (parsedData.expenses && parsedData.expenses.length > 0) {
-                    setCostItems(migrateExpensesToCostItems(parsedData.expenses));
+                    setCostItems(migrateCostItems(migrateExpensesToCostItems(parsedData.expenses)));
                 }
                 if (parsedData.empCategories) {
                     // Migrate old team name 'ME' → 'CSS'
@@ -385,8 +386,8 @@ function App() {
         setProjects(data.projects || []);
         setAssignments(data.assignments || []);
         setExpenses(data.expenses || []);
-        if (data.costItems) setCostItems(data.costItems);
-        else if (data.expenses && data.expenses.length > 0) setCostItems(migrateExpensesToCostItems(data.expenses));
+        if (data.costItems) setCostItems(migrateCostItems(data.costItems));
+        else if (data.expenses && data.expenses.length > 0) setCostItems(migrateCostItems(migrateExpensesToCostItems(data.expenses)));
         if (data.empCategories) setEmpCategories(data.empCategories);
         if (data.projCategories) setProjCategories(data.projCategories);
         if (data.basicTasks) setBasicTasks(data.basicTasks);
@@ -448,7 +449,7 @@ function App() {
                         });
                         setCostItems(prev => {
                             const kept = prev.filter(c => !teamsUpdated.has(empTeamMap.get(c.empId) || 'Other'));
-                            return [...kept, ...Object.values(costItemsByTeam).flat()];
+                            return [...kept, ...migrateCostItems(Object.values(costItemsByTeam).flat())];
                         });
                         spFileTimestampsRef.current = newTs;
                         changedFiles.forEach(f => {
@@ -834,9 +835,9 @@ function App() {
                 if (parsed.assignments) setAssignments(parsed.assignments);
                 if (parsed.expenses) setExpenses(parsed.expenses);
                 if (parsed.costItems) {
-                    setCostItems(parsed.costItems);
+                    setCostItems(migrateCostItems(parsed.costItems));
                 } else if (parsed.expenses && parsed.expenses.length > 0) {
-                    setCostItems(migrateExpensesToCostItems(parsed.expenses));
+                    setCostItems(migrateCostItems(migrateExpensesToCostItems(parsed.expenses)));
                 }
                 if (parsed.empCategories) setEmpCategories(parsed.empCategories);
                 if (parsed.projCategories) setProjCategories(parsed.projCategories);
@@ -927,7 +928,17 @@ function App() {
         });
         costLines.forEach(({ ci, emp, included }) => {
             if (!included) return;
-            rows.push([ci.type, emp?.name || 'Unbekannt', ci.description || '', "1", `${(ci.amount || 0).toFixed(2)} EUR`, `${(ci.amount || 0).toFixed(2)} EUR`]);
+            (ci.lines || []).forEach(l => {
+                const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                const desc = [ci.description, l.comment].filter(Boolean).join(' – ');
+                if (l.type === 'hours') {
+                    const hrs = l.hours || 0, rate = l.hourlyRate || 0;
+                    rows.push([cfg.invoiceLabel, emp?.name || 'Unbekannt', desc || 'Arbeitszeit', `${hrs} Std.`, `${rate} EUR`, `${(hrs * rate).toFixed(2)} EUR`]);
+                } else {
+                    const amt = l.amount || 0;
+                    rows.push([cfg.invoiceLabel, emp?.name || 'Unbekannt', desc, "1", `${amt.toFixed(2)} EUR`, `${amt.toFixed(2)} EUR`]);
+                }
+            });
         });
 
         rows.push([]);
@@ -957,7 +968,17 @@ function App() {
         });
         costLines.forEach(({ ci, included }) => {
             if (!included) return;
-            rows.push(`  - ${ci.type}${ci.description ? ' (' + ci.description + ')' : ''}: ${(ci.amount || 0).toFixed(2)} EUR`);
+            (ci.lines || []).forEach(l => {
+                const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                const desc = [ci.description, l.comment].filter(Boolean).join(' – ');
+                const detail = desc ? ` (${desc})` : '';
+                if (l.type === 'hours') {
+                    const hrs = l.hours || 0, rate = l.hourlyRate || 0;
+                    rows.push(`  - ${cfg.invoiceLabel}${detail}: ${hrs} Std. x ${rate} EUR/h = ${(hrs * rate).toFixed(2)} EUR`);
+                } else {
+                    rows.push(`  - ${cfg.invoiceLabel}${detail}: ${(l.amount || 0).toFixed(2)} EUR`);
+                }
+            });
         });
 
         const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
@@ -1140,17 +1161,33 @@ function App() {
                             <div className="space-y-2">
                                 {costLines.map(({ ci, emp }) => {
                                     return (
-                                        <label key={ci.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
-                                            <input type="checkbox" checked={!!invoiceSelection.costs[ci.id]}
-                                                onChange={e => setInvoiceSelection({...invoiceSelection, costs: {...invoiceSelection.costs, [ci.id]: e.target.checked}})}
-                                                className="w-5 h-5 text-gea-600 rounded"/>
-                                            <div className="flex-1 text-sm">
-                                                <span className="text-slate-800 font-medium">{ci.type}</span>
-                                                {ci.description && <span className="text-slate-500 ml-2">{ci.description}</span>}
-                                                <span className="text-slate-400 ml-2">({emp?.name || 'Unbekannt'})</span>
+                                        <label key={ci.id} className="flex flex-col gap-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <input type="checkbox" checked={!!invoiceSelection.costs[ci.id]}
+                                                    onChange={e => setInvoiceSelection({...invoiceSelection, costs: {...invoiceSelection.costs, [ci.id]: e.target.checked}})}
+                                                    className="w-5 h-5 text-gea-600 rounded"/>
+                                                <div className="flex-1 text-sm">
+                                                    <span className="text-slate-800 font-medium">{ci.description || 'Kostenpunkt'}</span>
+                                                    <span className="text-slate-400 ml-2">({emp?.name || 'Unbekannt'})</span>
+                                                </div>
+                                                {ci.week && <div className="text-xs text-slate-400">{ci.week}</div>}
+                                                <div className="text-sm text-slate-900 w-24 text-right font-medium">{(ci.amount || 0).toFixed(2)} €</div>
                                             </div>
-                                            {ci.week && <div className="text-xs text-slate-400">{ci.week}</div>}
-                                            <div className="text-sm text-slate-900 w-24 text-right font-medium">{(ci.amount || 0).toFixed(2)} €</div>
+                                            {(ci.lines || []).length > 0 && (
+                                                <div className="pl-8 flex flex-col gap-1">
+                                                    {(ci.lines || []).map(l => {
+                                                        const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                                                        return (
+                                                            <div key={l.id} className="flex items-center gap-2 text-xs">
+                                                                <span className={`px-2 py-0.5 rounded-full border font-medium shrink-0 ${cfg.chip}`}>{cfg.label}</span>
+                                                                {l.type === 'hours' && <span className="text-slate-500 tabular-nums">{l.hours || 0}h × {l.hourlyRate || 0}€</span>}
+                                                                {l.comment && <span className="text-slate-500 truncate">{l.comment}</span>}
+                                                                <span className="text-slate-600 tabular-nums ml-auto">{(l.amount || 0).toFixed(2)} €</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </label>
                                     );
                                 })}

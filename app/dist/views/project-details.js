@@ -335,37 +335,28 @@ const ProjectDetailsView = ({
     className: "p-3 text-slate-500 font-medium"
   }, "Mitarbeiter"), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium"
-  }, "Art"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-slate-500 font-medium"
-  }, "Beschreibung"), /*#__PURE__*/React.createElement("th", {
+  }, "Anlass"), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-center"
   }, "KW"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-slate-500 font-medium text-right"
-  }, "Std."), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-slate-500 font-medium text-right"
-  }, "\u20AC/Std."), /*#__PURE__*/React.createElement("th", {
+    className: "p-3 text-slate-500 font-medium"
+  }, "Posten"), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-right"
   }, "Betrag"), /*#__PURE__*/React.createElement("th", {
-    className: "p-3 text-slate-500 font-medium text-right"
-  }, "Details"), /*#__PURE__*/React.createElement("th", {
     className: "p-3"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100"
   }, projCostItems.map(ci => {
     const emp = employeeById.get(ci.empId);
+    const ciLines = ci.lines || [];
     return /*#__PURE__*/React.createElement("tr", {
       key: ci.id,
-      className: "hover:bg-slate-50 transition-colors"
+      className: "hover:bg-slate-50 transition-colors align-top"
     }, /*#__PURE__*/React.createElement("td", {
       className: "p-3 text-slate-800 font-medium"
     }, emp?.name || '–'), /*#__PURE__*/React.createElement("td", {
-      className: "p-3"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-xs px-2 py-0.5 rounded-full font-medium ${ci.type === 'Dienstleistung' ? 'bg-blue-100 text-blue-700' : ci.type === 'Reisekosten' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`
-    }, ci.type)), /*#__PURE__*/React.createElement("td", {
       className: "p-3 text-slate-600"
     }, ci.description || '–'), /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-slate-500 text-xs"
+      className: "p-3 text-slate-500 text-xs text-center"
     }, (() => {
       if (ci.dateFrom) {
         const kwF = parseInt(getWeekString(new Date(ci.dateFrom)).split('-W')[1]);
@@ -374,18 +365,29 @@ const ProjectDetailsView = ({
       }
       return ci.week ? `KW${ci.week.split('-W')[1]}` : '–';
     })()), /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-right text-slate-600"
-    }, ci.hours != null ? `${ci.hours}h` : '–'), /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-right text-slate-600"
-    }, ci.hourlyRate != null ? `${ci.hourlyRate} €` : '–'), /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-right text-slate-900 font-medium"
+      className: "p-3"
+    }, ciLines.length === 0 ? /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-xs"
+    }, "\u2013") : /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col gap-1"
+    }, ciLines.map(l => {
+      const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+      const amt = l.amount || 0;
+      return /*#__PURE__*/React.createElement("div", {
+        key: l.id,
+        className: "flex items-center gap-2 text-xs"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `px-2 py-0.5 rounded-full border font-medium shrink-0 ${cfg.chip}`
+      }, cfg.label), l.type === 'hours' && l.hours != null && /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500 tabular-nums"
+      }, l.hours, "h \xD7 ", l.hourlyRate, "\u20AC"), l.comment && /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500 truncate"
+      }, l.comment), /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-700 tabular-nums ml-auto"
+      }, amt.toFixed(2), " \u20AC"));
+    }))), /*#__PURE__*/React.createElement("td", {
+      className: "p-3 text-right text-slate-900 font-medium tabular-nums"
     }, (ci.amount || 0).toFixed(2), " \u20AC"), /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-xs text-slate-400"
-    }, ci.extraCosts?.length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "space-y-0.5"
-    }, ci.extraCosts.map((ec, i) => /*#__PURE__*/React.createElement("div", {
-      key: i
-    }, ec.type, ": ", (ec.amount || 0).toFixed(0), "\u20AC")))), /*#__PURE__*/React.createElement("td", {
       className: "p-3 text-right"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => {

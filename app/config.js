@@ -158,6 +158,14 @@ const WEEKS_IN_YEAR = 52;
 const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 12;
 
+const COST_LINE_TYPES = {
+    travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',  chip: 'bg-amber-100 text-amber-700 border-amber-200',     dot: 'bg-amber-500'   },
+    accommodation: { label: 'Accommodation', invoiceLabel: 'Unterkunft',   chip: 'bg-indigo-100 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-500'  },
+    other:         { label: 'Other',         invoiceLabel: 'Sonstiges',    chip: 'bg-slate-100 text-slate-700 border-slate-200',     dot: 'bg-slate-400'   },
+    hours:         { label: 'Hours',         invoiceLabel: 'Dienstleistung', chip: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+};
+const COST_LINE_TYPE_ORDER = ['travel', 'accommodation', 'other', 'hours'];
+
 const TRAINING_TASKS = [
     'R95 Training: I&C', 'R95 Training: S&T',
     'F45 Training: I&C', 'F45 Training: S&T',
