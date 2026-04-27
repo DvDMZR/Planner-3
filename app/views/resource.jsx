@@ -289,7 +289,7 @@ const ResourceView = ({ s, h }) => {
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
-                                <th className="border-b border-r-4 border-r-slate-500 border-slate-200 w-72 bg-slate-50 sticky left-0 z-30 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]"></th>
+                                <th className="border-b border-slate-200 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 "></th>
                                 {monthGroups.map(g => (
                                     <th key={g.month} colSpan={g.count}
                                         className="px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide">
@@ -298,7 +298,7 @@ const ResourceView = ({ s, h }) => {
                                 ))}
                             </tr>
                             <tr>
-                                <th className="p-4 border-b-2 border-r-4 border-r-slate-500 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">Mitarbeiter</th>
+                                <th className="p-4 border-b-2 border-slate-300 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium ">Mitarbeiter</th>
                                 {resourceWeeks.map(w => {
                                     const isCurrent = w.id === currentWeek;
                                     const isPast = w.id < currentWeek;
@@ -321,7 +321,7 @@ const ResourceView = ({ s, h }) => {
                                 return (
                                     <React.Fragment key={category}>
                                         <tr className="bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group" onClick={() => toggleCategory(category)}>
-                                            <td className="p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-r-4 border-r-slate-500 border-l-4 border-l-gea-500 border-b border-slate-300 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">
+                                            <td className="p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-l-4 border-l-gea-500 border-b border-slate-300 sticky-col-divider">
                                                 <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-medium">
                                                     <span className="text-slate-400 group-hover:text-gea-500 transition-colors">
                                                         {isCollapsed ? <IconChevronRight size={16}/> : <IconChevronDown size={16}/>}
@@ -341,7 +341,7 @@ const ResourceView = ({ s, h }) => {
                                             const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                             return (
                                             <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="p-3 border-b border-r-4 border-r-slate-500 border-slate-300 bg-white sticky left-0 z-20 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">
+                                                <td className="p-3 border-b border-slate-300 sticky-col-divider bg-white sticky left-0 z-20 ">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
                                                 {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}

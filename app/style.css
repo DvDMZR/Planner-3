@@ -14,3 +14,22 @@ body {
 .changelog-glow {
     animation: gea-glow 2.6s ease-in-out infinite;
 }
+
+/* Cross-browser sticky-column divider.
+   border-r + box-shadow on position:sticky cells inside border-collapse
+   tables are clipped in Chromium. An ::after pseudo-element is reliable. */
+.sticky-col-divider {
+    position: relative;
+}
+.sticky-col-divider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #94a3b8; /* slate-400 */
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+    z-index: 1;
+}
