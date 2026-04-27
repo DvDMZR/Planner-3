@@ -98,6 +98,8 @@ const SupportView = ({ s, h }) => {
     const [undoStack, setUndoStack] = React.useState([]);
     React.useEffect(() => { if (!isDeleteMode) setUndoStack([]); }, [isDeleteMode]);
 
+    const [compact, setCompact] = React.useState(true);
+
     const deleteWithUndo = React.useCallback((id) => {
         const a = assignments.find(x => x.id === id);
         if (a) setUndoStack(prev => [...prev, a]);
@@ -187,6 +189,13 @@ const SupportView = ({ s, h }) => {
                         </button>
                         {menuOpen && (
                             <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50">
+                                <button
+                                    onClick={() => { setCompact(c => !c); setMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <IconList size={14} className="shrink-0 text-slate-400"/>
+                                    <span>Kompaktansicht</span>
+                                    {compact && <span className="ml-auto text-gea-600 font-bold text-xs">✓</span>}
+                                </button>
                                 <button
                                     onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
                                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
@@ -294,7 +303,7 @@ const SupportView = ({ s, h }) => {
                                                             </div>
                                                         )}
 
-                                                        <div className="flex flex-col gap-1 relative z-10 min-h-[44px]">
+                                                        <div className={`flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`}>
                                                             {supportAss.map(a => {
                                                                 const sc = SUPPORT_CHIP_COLORS[a.reference];
                                                                 const color = sc ? sc.chip : 'bg-amber-50 border-amber-200 text-amber-800';
@@ -309,24 +318,26 @@ const SupportView = ({ s, h }) => {
                                                                         className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
                                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                                             <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
-                                                                            <span className="truncate font-medium px-1 py-1.5">{a.reference}</span>
-                                                                            {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
-                                                                            {a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                            <span className={`truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`}>{a.reference}</span>
+                                                                            {!compact && a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                            {!compact && a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
                                                                         </div>
-                                                                        <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                                                                            <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
-                                                                            <button
-                                                                                onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
-                                                                                className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
-                                                                                title="Kopieren">
-                                                                                <IconCopy size={10}/>
-                                                                            </button>
-                                                                        </div>
+                                                                        {!compact && (
+                                                                            <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                                <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
+                                                                                <button
+                                                                                    onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
+                                                                                    className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
+                                                                                    title="Kopieren">
+                                                                                    <IconCopy size={10}/>
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 );
                                                             })}
 
-                                                            {supportAss.length > 0 && !isOfftime && (
+                                                            {!compact && supportAss.length > 0 && !isOfftime && (
                                                                 <div
                                                                     onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id, defaultType: 'support' }); setIsAssignModalOpen(true); }}
                                                                     className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">

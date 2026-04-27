@@ -204,6 +204,7 @@ const SupportView = ({
   React.useEffect(() => {
     if (!isDeleteMode) setUndoStack([]);
   }, [isDeleteMode]);
+  const [compact, setCompact] = React.useState(true);
   const deleteWithUndo = React.useCallback(id => {
     const a = assignments.find(x => x.id === id);
     if (a) setUndoStack(prev => [...prev, a]);
@@ -310,6 +311,17 @@ const SupportView = ({
   })), menuOpen && /*#__PURE__*/React.createElement("div", {
     className: "absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50"
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setCompact(c => !c);
+      setMenuOpen(false);
+    },
+    className: "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+  }, /*#__PURE__*/React.createElement(IconList, {
+    size: 14,
+    className: "shrink-0 text-slate-400"
+  }), /*#__PURE__*/React.createElement("span", null, "Kompaktansicht"), compact && /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto text-gea-600 font-bold text-xs"
+  }, "\u2713")), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setIsDeleteMode(m => !m);
       setMenuOpen(false);
@@ -454,7 +466,7 @@ const SupportView = ({
         }, /*#__PURE__*/React.createElement(IconPlus, {
           size: 20
         })), /*#__PURE__*/React.createElement("div", {
-          className: "flex flex-col gap-1 relative z-10 min-h-[44px]"
+          className: `flex flex-col gap-1 relative z-10 ${compact ? 'min-h-[20px]' : 'min-h-[44px]'}`
         }, supportAss.map(a => {
           const sc = SUPPORT_CHIP_COLORS[a.reference];
           const color = sc ? sc.chip : 'bg-amber-50 border-amber-200 text-amber-800';
@@ -487,14 +499,14 @@ const SupportView = ({
           }, /*#__PURE__*/React.createElement("div", {
             className: `w-1 flex-shrink-0 self-stretch ${dotColor}`
           }), /*#__PURE__*/React.createElement("span", {
-            className: "truncate font-medium px-1 py-1.5"
-          }, a.reference), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+            className: `truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`
+          }, a.reference), !compact && a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
             size: 9,
             className: "flex-shrink-0 opacity-60"
-          }), a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
+          }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
             size: 9,
             className: "flex-shrink-0 opacity-60"
-          })), /*#__PURE__*/React.createElement("div", {
+          })), !compact && /*#__PURE__*/React.createElement("div", {
             className: "flex items-center gap-1 ml-1 flex-shrink-0"
           }, /*#__PURE__*/React.createElement("span", {
             className: "opacity-70 bg-slate-100/50 px-1 rounded font-medium"
@@ -511,7 +523,7 @@ const SupportView = ({
           }, /*#__PURE__*/React.createElement(IconCopy, {
             size: 10
           }))));
-        }), supportAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
+        }), !compact && supportAss.length > 0 && !isOfftime && /*#__PURE__*/React.createElement("div", {
           onClick: e => {
             e.stopPropagation();
             setAssignContext({
