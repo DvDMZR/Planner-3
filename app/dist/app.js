@@ -787,6 +787,51 @@ function App() {
     return m;
   }, [activeEmployees]);
   const activeEmpCategories = useMemo(() => Array.from(activeEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [activeEmpsByCategory]);
+
+  // Employees who have ever been planned for any 'support' assignment
+  // (past or future). Drives the optional Support tab.
+  const supportEmpIds = useMemo(() => {
+    const s = new Set();
+    for (let i = 0; i < assignments.length; i++) {
+      if (assignments[i].type === 'support') s.add(assignments[i].empId);
+    }
+    return s;
+  }, [assignments]);
+  const supportEmpsByCategory = useMemo(() => {
+    const m = new Map();
+    const seen = new Set();
+    const add = e => {
+      if (seen.has(e.id)) return;
+      seen.add(e.id);
+      let arr = m.get(e.category);
+      if (!arr) {
+        arr = [];
+        m.set(e.category, arr);
+      }
+      arr.push(e);
+    };
+    // Active employees first (so a deactivated employee with an old
+    // support stint still shows up under their team).
+    activeEmployees.forEach(e => {
+      if (supportEmpIds.has(e.id)) add(e);
+    });
+    employees.forEach(e => {
+      if (supportEmpIds.has(e.id)) add(e);
+    });
+    m.forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name, 'de')));
+    return m;
+  }, [activeEmployees, employees, supportEmpIds]);
+  const supportEmpCategories = useMemo(() => Array.from(supportEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [supportEmpsByCategory]);
+  const hasSupportEmployees = supportEmpIds.size > 0;
+
+  // If the user is on the Support tab and the last support assignment
+  // disappears (e.g. delete-mode purge in another tab), fall back to
+  // Ressourcen so we never show a blank workspace.
+  useEffect(() => {
+    if (activeTab === 'support' && !hasSupportEmployees) {
+      setActiveTab('resource');
+    }
+  }, [activeTab, hasSupportEmployees]);
   const projectsByCategory = useMemo(() => {
     const m = new Map();
     projects.forEach(p => {
@@ -1584,6 +1629,9 @@ function App() {
     activeEmployees,
     activeEmpsByCategory,
     activeEmpCategories,
+    supportEmpsByCategory,
+    supportEmpCategories,
+    hasSupportEmployees,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -1669,6 +1717,9 @@ function App() {
     s: s,
     h: h
   }), activeTab === 'project' && /*#__PURE__*/React.createElement(TimelineView, {
+    s: s,
+    h: h
+  }), activeTab === 'support' && hasSupportEmployees && /*#__PURE__*/React.createElement(SupportView, {
     s: s,
     h: h
   }), activeTab === 'utilization' && /*#__PURE__*/React.createElement(UtilizationView, {

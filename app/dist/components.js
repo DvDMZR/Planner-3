@@ -676,6 +676,49 @@ const IconTrash = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
 }));
+const IconLifebuoy = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "10"
+}), /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "4"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "4.93",
+  y1: "4.93",
+  x2: "9.17",
+  y2: "9.17"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "14.83",
+  y1: "14.83",
+  x2: "19.07",
+  y2: "19.07"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "14.83",
+  y1: "9.17",
+  x2: "19.07",
+  y2: "4.93"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "4.93",
+  y1: "19.07",
+  x2: "9.17",
+  y2: "14.83"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across
