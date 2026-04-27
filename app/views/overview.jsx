@@ -162,7 +162,7 @@ const OverviewView = ({ s, h }) => {
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-gea-200 bg-gea-50">
                                     <tr>
-                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={4}>Gesamt</td>
+                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={3}>Gesamt</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(totalHoursAll)} h</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.totalLaborCost,0))} €</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.zusatzkosten,0))} €</td>
@@ -171,7 +171,7 @@ const OverviewView = ({ s, h }) => {
                                 </tfoot>
                             )}
                             {rows.length === 0 && (
-                                <tbody><tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
+                                <tbody><tr><td colSpan={7} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
                             )}
                         </table>
                     </div>
