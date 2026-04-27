@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120;   // matches min-w-[120px]
-const TIMELINE_STICKY_W = 864; // matches w-[54rem] (project name column)
+const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
 
 const TimelineView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
@@ -249,7 +249,7 @@ const TimelineView = ({ s, h }) => {
                         <table className="w-full border-collapse text-sm text-left">
                             <thead className="bg-white z-20">
                                 <tr>
-                                    <th className="p-3 border-b border-r-2 border-r-slate-400 border-slate-200 w-[54rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]">Projekt</th>
+                                    <th className="p-3 border-b border-r-4 border-r-slate-500 border-slate-200 w-[72rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">Projekt</th>
                                     {timelineWeeks.map(w => (
                                         <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
                                             className={`p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
@@ -275,7 +275,7 @@ const TimelineView = ({ s, h }) => {
                                     return (
                                         <React.Fragment key={category}>
                                             <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => toggleProjCategory(category)}>
-                                                <td className="p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-2 border-r-slate-400 border-slate-200 font-medium shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]">
+                                                <td className="p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-4 border-r-slate-500 border-slate-200 font-medium shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">
                                                     <div className="flex items-center gap-2 text-lg">
                                                         {isCollapsed ? <IconChevronRight size={16}/> : <IconChevronDown size={16}/>}
                                                         {category}
@@ -291,7 +291,7 @@ const TimelineView = ({ s, h }) => {
                                                 const cc = resolveCountryCode(proj.country);
                                                 return (
                                                 <tr key={proj.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-3 border-b border-r-2 border-r-slate-400 border-slate-200 bg-white sticky left-0 z-10 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]">
+                                                    <td className="p-3 border-b border-r-4 border-r-slate-500 border-slate-200 bg-white sticky left-0 z-10 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-3 h-3 rounded-full ${pColor.dot}`}></div>
                                                             <button

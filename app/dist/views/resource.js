@@ -438,13 +438,13 @@ const ResourceView = ({
   }, /*#__PURE__*/React.createElement("thead", {
     className: "sticky top-0 bg-white z-20 shadow-sm"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "border-b border-r-2 border-r-slate-400 border-slate-200 w-72 bg-slate-50 sticky left-0 z-30 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
+    className: "border-b border-r-4 border-r-slate-500 border-slate-200 w-72 bg-slate-50 sticky left-0 z-30 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]"
   }), monthGroups.map(g => /*#__PURE__*/React.createElement("th", {
     key: g.month,
     colSpan: g.count,
     className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
   }, g.month))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-4 border-b-2 border-r-2 border-r-slate-400 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
+    className: "p-4 border-b-2 border-r-4 border-r-slate-500 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]"
   }, "Mitarbeiter"), resourceWeeks.map(w => {
     const isCurrent = w.id === currentWeek;
     const isPast = w.id < currentWeek;
@@ -467,7 +467,7 @@ const ResourceView = ({
       className: "bg-slate-200/70 border-t-2 border-b border-slate-300 cursor-pointer hover:bg-slate-300/50 transition-colors group",
       onClick: () => toggleCategory(category)
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-r-2 border-r-slate-400 border-l-4 border-l-gea-500 border-b border-slate-300 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
+      className: "p-3 text-slate-700 sticky left-0 z-20 bg-slate-200 border-r-4 border-r-slate-500 border-l-4 border-l-gea-500 border-b border-slate-300 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 text-sm uppercase tracking-wider font-medium"
     }, /*#__PURE__*/React.createElement("span", {
@@ -493,7 +493,7 @@ const ResourceView = ({
         key: emp.id,
         className: "hover:bg-slate-50/50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-3 border-b border-r-2 border-r-slate-400 border-slate-300 bg-white sticky left-0 z-20 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
+        className: "p-3 border-b border-r-4 border-r-slate-500 border-slate-300 bg-white sticky left-0 z-20 shadow-[10px_0_16px_-4px_rgba(0,0,0,0.30)]"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-slate-800 font-medium text-sm"
       }, emp.name)), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
