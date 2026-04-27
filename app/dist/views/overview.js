@@ -326,7 +326,7 @@ const OverviewView = ({
     className: "border-t-2 border-gea-200 bg-gea-50"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-gea-800 font-semibold text-sm",
-    colSpan: 4
+    colSpan: 3
   }, "Gesamt"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
   }, fmt(totalHoursAll), " h"), /*#__PURE__*/React.createElement("td", {
@@ -336,7 +336,7 @@ const OverviewView = ({
   }, fmt(rows.reduce((a, r) => a + r.zusatzkosten, 0)), " \u20AC"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-bold text-gea-700 tabular-nums"
   }, fmt(totalGesamtkosten), " \u20AC"))), rows.length === 0 && /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: 8,
+    colSpan: 7,
     className: "text-center text-slate-400 text-sm py-12"
   }, "Keine Projekte vorhanden.")))))));
 };
