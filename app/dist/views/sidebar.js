@@ -62,6 +62,9 @@ const _SidebarBase = ({
     activeEmployees,
     activeEmpsByCategory,
     activeEmpCategories,
+    supportEmpsByCategory,
+    supportEmpCategories,
+    hasSupportEmployees,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -154,7 +157,7 @@ const _SidebarBase = ({
     className: "flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-medium"
-  }, "Einsatzplanung v0.7"), /*#__PURE__*/React.createElement("span", {
+  }, "Einsatzplanung v0.7.1"), /*#__PURE__*/React.createElement("span", {
     className: "changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconHistory, {
     size: 12
@@ -179,7 +182,15 @@ const _SidebarBase = ({
     className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'project' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`
   }, /*#__PURE__*/React.createElement(IconGanttChart, {
     size: 18
-  }), " Projekte"), /*#__PURE__*/React.createElement("button", {
+  }), " Projekte"), hasSupportEmployees && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setActiveTab('support');
+      setSelectedProjectDetails(null);
+    },
+    className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'support' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`
+  }, /*#__PURE__*/React.createElement(IconLifebuoy, {
+    size: 18
+  }), " Support"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setActiveTab('utilization');
       setSelectedProjectDetails(null);
@@ -245,5 +256,7 @@ const _SidebarBase = ({
 
 // Only re-render when sidebar-visible state actually changes (not on every
 // background poll that touches employees/projects/assignments).
-const SidebarView = React.memo(_SidebarBase, (prev, next) => prev.s.activeTab === next.s.activeTab && prev.s.syncStatus === next.s.syncStatus && prev.s.fsStatus === next.s.fsStatus && prev.s.projects === next.s.projects // needed for onClick: setSelectedProject(projects[0])
+const SidebarView = React.memo(_SidebarBase, (prev, next) => prev.s.activeTab === next.s.activeTab && prev.s.syncStatus === next.s.syncStatus && prev.s.fsStatus === next.s.fsStatus && prev.s.projects === next.s.projects &&
+// needed for onClick: setSelectedProject(projects[0])
+prev.s.hasSupportEmployees === next.s.hasSupportEmployees // toggles the Support tab
 );

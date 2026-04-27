@@ -42,8 +42,8 @@ const AssignmentModal = ({
 
     const getInitialType = () => {
         const ex = assignContext.existing;
-        if (!ex) return 'basic';
-        return ex.type || 'basic';
+        if (ex) return ex.type || 'basic';
+        return assignContext.defaultType || 'basic';
     };
     const getInitialRef = (type) => {
         const ex = assignContext.existing;

@@ -32,6 +32,20 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7.1 (2026-04-27)
+
+### Support-Reiter
+- Neuer Reiter **Support** unter Planung, direkt nach Projekte. Erscheint
+  automatisch, sobald mindestens ein Mitarbeiter eine Support-Planung hat
+  (auch in der Vergangenheit) — und verschwindet, wenn die letzte
+  Support-Zuweisung gelöscht wurde.
+- Listet ausschließlich Mitarbeiter mit Support-Bezug, nach Team gruppiert
+  wie im Ressourcenplaner. In den Zellen tauchen nur Support-Chips auf,
+  damit man fokussiert disponieren kann.
+- Klick auf eine leere Zelle öffnet die Zuweisungs-Maske mit vorausgewähltem
+  Typ "Support". Drag-and-Drop, Löschmodus mit Undo-Stack und Kopier-Button
+  funktionieren wie im Ressourcen-Reiter.
+
 ## v0.7 (2026-04-26)
 
 ### Projekte-Tab: Drag-Drop, Löschmodus, Kopieren
