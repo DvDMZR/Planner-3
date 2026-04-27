@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120; // matches min-w-[120px]
-const TIMELINE_STICKY_W = 576; // matches w-[36rem] (project name column)
+const TIMELINE_STICKY_W = 864; // matches w-[54rem] (project name column)
 
 const TimelineView = ({
   s,
@@ -382,7 +382,7 @@ const TimelineView = ({
   }, /*#__PURE__*/React.createElement("thead", {
     className: "bg-white z-20"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-[36rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
+    className: "p-3 border-b border-r-2 border-r-slate-400 border-slate-200 w-[54rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
   }, "Projekt"), timelineWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w.id,
     ref: w.id === currentWeekStr ? currentWeekColRef : null,
@@ -405,7 +405,7 @@ const TimelineView = ({
       className: "bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors",
       onClick: () => toggleProjCategory(category)
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-2 border-r-slate-300 border-slate-200 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
+      className: "p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-2 border-r-slate-400 border-slate-200 font-medium shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 text-lg"
     }, isCollapsed ? /*#__PURE__*/React.createElement(IconChevronRight, {
@@ -428,7 +428,7 @@ const TimelineView = ({
         key: proj.id,
         className: "hover:bg-slate-50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+        className: "p-3 border-b border-r-2 border-r-slate-400 border-slate-200 bg-white sticky left-0 z-10 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.18)]"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("div", {
