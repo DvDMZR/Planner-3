@@ -117,6 +117,7 @@ const OverviewView = ({ s, h }) => {
                             <thead className="bg-gea-50 border-b-2 border-gea-200">
                                 <tr>
                                     <th className="p-4 text-gea-800 font-semibold">Projekt</th>
+                                    <th className="p-4 text-gea-800 font-semibold">Land</th>
                                     <th className="p-4 text-gea-800 font-semibold">Status</th>
                                     <th className="p-4 text-gea-800 font-semibold">IBN</th>
                                     <th className="p-4 text-gea-800 font-semibold text-right">Stunden</th>
@@ -135,13 +136,13 @@ const OverviewView = ({ s, h }) => {
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-slate-900 flex items-center gap-2">
-                                                        <span className="truncate">{p.name}</span>
-                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
-                                                    </div>
+                                                    <div className="font-medium text-slate-900 truncate">{p.name}</div>
                                                     <div className="text-xs text-slate-400 font-mono">{p.projectNumber || '–'} · {p.category}</div>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                                         </td>
                                         <td className="p-4"><StatusBadge status={computeAutoStatus(p)}/></td>
                                         <td className="p-4 text-slate-500 text-xs font-mono">{p.ibnWeek || '–'}</td>
@@ -162,7 +163,7 @@ const OverviewView = ({ s, h }) => {
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-gea-200 bg-gea-50">
                                     <tr>
-                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={3}>Gesamt</td>
+                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={4}>Gesamt</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(totalHoursAll)} h</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.totalLaborCost,0))} €</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.zusatzkosten,0))} €</td>
@@ -171,7 +172,7 @@ const OverviewView = ({ s, h }) => {
                                 </tfoot>
                             )}
                             {rows.length === 0 && (
-                                <tbody><tr><td colSpan={7} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
+                                <tbody><tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
                             )}
                         </table>
                     </div>

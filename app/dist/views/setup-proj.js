@@ -163,6 +163,7 @@ const SetupProjView = ({
     p
   }) => {
     const effStatus = computeAutoStatus(p);
+    const cc = resolveCountryCode(p.country);
     return /*#__PURE__*/React.createElement("tr", {
       key: p.id,
       className: "hover:bg-slate-50 transition-colors"
@@ -176,6 +177,11 @@ const SetupProjView = ({
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-slate-900 font-medium group-hover:text-gea-600 transition-colors"
     }, p.name))), /*#__PURE__*/React.createElement("td", {
+      className: "p-4"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
+      title: "Land"
+    }, cc)), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-500 font-mono text-xs"
     }, p.projectNumber || '–'), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
@@ -257,6 +263,8 @@ const SetupProjView = ({
       className: "p-4 text-slate-700 font-semibold"
     }, "Name"), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
+    }, "Land"), /*#__PURE__*/React.createElement("th", {
+      className: "p-4 text-slate-700 font-semibold"
     }, "Nr."), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
     }, "Status"), /*#__PURE__*/React.createElement("th", {
@@ -291,6 +299,8 @@ const SetupProjView = ({
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
   }, "Name"), /*#__PURE__*/React.createElement("th", {
+    className: "p-4 text-slate-700 font-semibold"
+  }, "Land"), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
   }, "Nr."), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
