@@ -235,6 +235,7 @@ const ProjectDetailsView = ({
         category: proj.category || projCategories[0] || '',
         projectNumber: proj.projectNumber || '',
         address: proj.address || '',
+        country: proj.country || '',
         startWeek: proj.startWeek,
         ibnWeek: proj.ibnWeek,
         color: resolveProjectColor(proj.color).id

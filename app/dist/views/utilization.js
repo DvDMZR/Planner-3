@@ -294,11 +294,23 @@ const UtilizationView = ({
           textColor = 'text-white';
         }
         const label = avgMonth > 0 ? `${avgMonth}%` : hasOfftime ? 'OFF' : '-';
+        const firstWeek = weeksByMonth[m]?.[0];
+        const jump = () => {
+          if (!firstWeek) return;
+          const yr = parseInt(firstWeek.split('-W')[0], 10);
+          if (!Number.isNaN(yr)) setTimelineYear(yr);
+          h.setScrollTarget({
+            weekId: firstWeek
+          });
+          setActiveTab('resource');
+        };
         return /*#__PURE__*/React.createElement("td", {
           key: m,
           className: "p-1 border-r border-slate-300 last:border-0"
         }, /*#__PURE__*/React.createElement("div", {
-          className: `w-full h-8 rounded flex items-center justify-center text-xs transition-colors ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} font-medium`
+          onClick: jump,
+          title: firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined,
+          className: `w-full h-8 rounded flex items-center justify-center text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`
         }, label));
       }));
     }));

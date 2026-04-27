@@ -146,6 +146,7 @@ const SetupProjView = ({
       category: p.category || projCategories[0] || '',
       projectNumber: p.projectNumber || '',
       address: p.address || '',
+      country: p.country || '',
       startWeek: p.startWeek,
       ibnWeek: p.ibnWeek,
       color: resolveProjectColor(p.color).id
@@ -216,6 +217,8 @@ const SetupProjView = ({
         name: '',
         category: projCategories[0] || '',
         projectNumber: '',
+        address: '',
+        country: '',
         startWeek: weeks[0]?.id || '',
         ibnWeek: weeks[10]?.id || '',
         color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id

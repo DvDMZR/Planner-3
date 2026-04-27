@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120;   // matches min-w-[120px]
-const TIMELINE_STICKY_W = 256; // matches w-64
+const TIMELINE_STICKY_W = 384; // matches w-96 (project name column)
 
 const TimelineView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
@@ -122,7 +122,7 @@ const TimelineView = ({ s, h }) => {
 
         return (
             <div className="flex-1 flex h-full overflow-hidden bg-white">
-                <div className="w-72 border-r border-slate-200 flex flex-col bg-slate-50 shrink-0">
+                <div className="w-fit min-w-[10rem] max-w-[20rem] border-r border-slate-200 flex flex-col bg-slate-50 shrink-0">
                     <div className="p-4 border-b border-slate-200 bg-white">
                         <h3 className="text-slate-900 text-lg font-medium">Mitarbeiter (Drag)</h3>
                         <p className="text-xs text-slate-500 mt-1">Zieh Mitarbeiter in den Kalender</p>
@@ -247,12 +247,12 @@ const TimelineView = ({ s, h }) => {
                             if (e.key === 'PageDown')   { e.preventDefault(); scrollWeeks(4); }
                         }}>
                         <table className="w-full border-collapse text-sm text-left">
-                            <thead className="sticky top-0 bg-white z-20 shadow-sm">
+                            <thead className="bg-white z-20">
                                 <tr>
-                                    <th className="p-3 border-b border-r border-slate-200 w-64 bg-slate-50 sticky left-0 z-30 text-slate-600 font-medium">Projekt</th>
+                                    <th className="p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-96 bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">Projekt</th>
                                     {timelineWeeks.map(w => (
                                         <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
-                                            className={`p-2 border-b border-r min-w-[120px] text-center font-medium ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                            className={`p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                                             <div>{w.label}</div>
                                             <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
                                             {w.holidays.length > 0 && <div className="text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate" title={w.holidays.join(' · ')}>{w.holidays.join(' · ')}</div>}
@@ -275,7 +275,7 @@ const TimelineView = ({ s, h }) => {
                                     return (
                                         <React.Fragment key={category}>
                                             <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => toggleProjCategory(category)}>
-                                                <td className="p-3 text-slate-900 sticky left-0 z-10 bg-inherit border-r border-slate-200 font-medium">
+                                                <td className="p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-2 border-r-slate-300 border-slate-200 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                                                     <div className="flex items-center gap-2 text-lg">
                                                         {isCollapsed ? <IconChevronRight size={16}/> : <IconChevronDown size={16}/>}
                                                         {category}
@@ -288,12 +288,14 @@ const TimelineView = ({ s, h }) => {
                                             
                                             {!isCollapsed && catProjects.map(proj => {
                                                 const pColor = resolveProjectColor(proj.color);
+                                                const cc = resolveCountryCode(proj.country);
                                                 return (
                                                 <tr key={proj.id} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10">
+                                                    <td className="p-3 border-b border-r-2 border-r-slate-300 border-slate-200 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-3 h-3 rounded-full ${pColor.dot}`}></div>
-                                                            <div className="text-slate-900 font-medium">{proj.name}</div>
+                                                            <div className="text-slate-900 font-medium flex-1 min-w-0">{proj.name}</div>
+                                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                                                         </div>
                                                     </td>
                                                     {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}

@@ -42,6 +42,14 @@ function App() {
   // Zeitspanne für Auslastungs-Berechnung
   const [weeksAhead, setWeeksAhead] = useState(DEFAULT_WEEKS_AHEAD);
 
+  // Compact chip rendering shared by Ressourcen + Support so the choice
+  // survives tab switches.
+  const [compactView, setCompactView] = useState(true);
+
+  // Auslastung click → Ressourcen jump: target week to scroll to once
+  // ResourceView mounts. Cleared after the scroll runs.
+  const [scrollTarget, setScrollTarget] = useState(null);
+
   // Modals
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignContext, setAssignContext] = useState(null);
@@ -74,6 +82,16 @@ function App() {
     container.scrollLeft = container.scrollLeft + (thRect.left - cRect.left) - stickyWidth;
   }, []);
 
+  // Scroll a specific week (by id) into view, just past the sticky column.
+  // Used by the Auslastung-cell → Ressourcen jump.
+  const scrollToWeekById = useCallback((containerRef, weeks, weekId, weekW) => {
+    const container = containerRef?.current;
+    if (!container || !weeks) return;
+    const idx = weeks.findIndex(w => w.id === weekId);
+    if (idx < 0) return;
+    container.scrollLeft = idx * weekW;
+  }, []);
+
   // Forms
   const [empForm, setEmpForm] = useState({
     name: '',
@@ -86,6 +104,7 @@ function App() {
     category: '',
     projectNumber: '',
     address: '',
+    country: '',
     startWeek: '',
     ibnWeek: '',
     color: 'gea',
@@ -675,9 +694,13 @@ function App() {
     }
   }, [empCategories, projCategories]);
 
-  // Auto-scroll to current week when switching to resource or project tab
+  // Auto-scroll to current week when switching to resource or project tab.
+  // If a scrollTarget was set (e.g. via the Auslastung cell-jump), the
+  // ResourceView itself honours it from its own effect so we just skip
+  // the default jump-to-today here.
   useEffect(() => {
     if (activeTab === 'resource') {
+      if (scrollTarget?.weekId) return; // ResourceView handles it
       const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 80);
       return () => clearTimeout(timer);
     }
@@ -1184,6 +1207,7 @@ function App() {
         category: projCategories[0] || '',
         projectNumber: '',
         address: '',
+        country: '',
         startWeek: weeks[0]?.id || '',
         ibnWeek: weeks[10]?.id || '',
         color: nextColorId
@@ -1254,7 +1278,31 @@ function App() {
       }),
       placeholder: "Stra\xDFe, PLZ Ort, Land",
       className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "col-span-2"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-slate-700 mb-1 font-semibold"
+    }, "Land"), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2 items-stretch"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      value: projForm.country || '',
+      onChange: e => setProjForm({
+        ...projForm,
+        country: e.target.value
+      }),
+      placeholder: "z.B. DE oder Deutschland",
+      className: "flex-1 p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"
+    }), (() => {
+      const code = resolveCountryCode(projForm.country);
+      const styled = code === '??' ? 'bg-rose-50 border-rose-300 text-rose-700' : code === '/' ? 'bg-slate-50 border-slate-300 text-slate-400' : 'bg-emerald-50 border-emerald-300 text-emerald-700';
+      return /*#__PURE__*/React.createElement("span", {
+        className: `px-3 py-2 rounded text-sm font-mono font-bold border min-w-[3.5rem] text-center flex items-center justify-center ${styled}`,
+        title: "Aufl\xF6sung des Eingabefelds"
+      }, code);
+    })()), /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-slate-500 mt-1"
+    }, "Land oder ISO-K\xFCrzel eingeben \u2014 wird auf einen 2-Buchstaben-Code aufgel\xF6st. Erscheint in \xDCbersicht und Projekte.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "block text-xs text-slate-700 mb-1 font-semibold"
     }, "Projektnr."), /*#__PURE__*/React.createElement("input", {
       type: "text",
@@ -1637,7 +1685,9 @@ function App() {
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    compactView,
+    scrollTarget
   };
   const h = useMemo(() => ({
     setActiveTab,
@@ -1687,6 +1737,8 @@ function App() {
     setExpandedSetupCats,
     setSyncStatus,
     setFsStatus,
+    setCompactView,
+    setScrollTarget,
     getEmpWeeklyHours,
     computeAutoStatus,
     getWeeksForYear,
@@ -1703,11 +1755,12 @@ function App() {
     buildInvoiceData,
     openInvoiceModal,
     scrollToCurrentWeek,
+    scrollToWeekById,
     reconnectSharePoint
   }), [
   // useState setters are stable – no deps needed for those.
   // Only useCallback refs with real deps need listing:
-  getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint]);
+  getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById]);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex h-screen w-full font-sans text-slate-800 bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement(SidebarView, {

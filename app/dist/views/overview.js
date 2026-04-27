@@ -275,44 +275,54 @@ const OverviewView = ({
     totalLaborCost,
     zusatzkosten,
     gesamtkosten
-  }) => /*#__PURE__*/React.createElement("tr", {
-    key: p.id,
-    className: "hover:bg-slate-50 cursor-pointer transition-colors",
-    onClick: () => {
-      setSelectedProjectDetails(p.id);
-      setActiveTab('setup_proj');
-    }
-  }, /*#__PURE__*/React.createElement("td", {
-    className: "p-4"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: `w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "font-medium text-slate-900"
-  }, p.name), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-slate-400 font-mono"
-  }, p.projectNumber || '–', " \xB7 ", p.category)))), /*#__PURE__*/React.createElement("td", {
-    className: "p-4"
-  }, /*#__PURE__*/React.createElement(StatusBadge, {
-    status: computeAutoStatus(p)
-  })), /*#__PURE__*/React.createElement("td", {
-    className: "p-4 text-slate-500 text-xs font-mono"
-  }, p.ibnWeek || '–'), /*#__PURE__*/React.createElement("td", {
-    className: "p-4 text-right text-slate-700 tabular-nums"
-  }, fmt(totalHours), " h"), /*#__PURE__*/React.createElement("td", {
-    className: "p-4 text-right text-slate-700 tabular-nums"
-  }, p.billable !== false ? `${fmt(totalLaborCost)} €` : /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 text-xs"
-  }, "\u2013")), /*#__PURE__*/React.createElement("td", {
-    className: "p-4 text-right text-slate-700 tabular-nums"
-  }, zusatzkosten > 0 ? `${fmt(zusatzkosten)} €` : /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400"
-  }, "\u2013")), /*#__PURE__*/React.createElement("td", {
-    className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
-  }, gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-normal"
-  }, "\u2013"))))), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
+  }) => {
+    const cc = resolveCountryCode(p.country);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: p.id,
+      className: "hover:bg-slate-50 cursor-pointer transition-colors",
+      onClick: () => {
+        setSelectedProjectDetails(p.id);
+        setActiveTab('setup_proj');
+      }
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "font-medium text-slate-900 flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, p.name), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
+      title: "Land"
+    }, cc)), /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-slate-400 font-mono"
+    }, p.projectNumber || '–', " \xB7 ", p.category)))), /*#__PURE__*/React.createElement("td", {
+      className: "p-4"
+    }, /*#__PURE__*/React.createElement(StatusBadge, {
+      status: computeAutoStatus(p)
+    })), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-slate-500 text-xs font-mono"
+    }, p.ibnWeek || '–'), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-right text-slate-700 tabular-nums"
+    }, fmt(totalHours), " h"), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-right text-slate-700 tabular-nums"
+    }, p.billable !== false ? `${fmt(totalLaborCost)} €` : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 text-xs"
+    }, "\u2013")), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-right text-slate-700 tabular-nums"
+    }, zusatzkosten > 0 ? `${fmt(zusatzkosten)} €` : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u2013")), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
+    }, gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 font-normal"
+    }, "\u2013")));
+  })), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
     className: "border-t-2 border-gea-200 bg-gea-50"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-gea-800 font-semibold text-sm",
