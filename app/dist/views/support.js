@@ -205,6 +205,15 @@ const SupportView = ({
     if (!isDeleteMode) setUndoStack([]);
   }, [isDeleteMode]);
   const [compact, setCompact] = React.useState(true);
+
+  // Jump to the current week as soon as the tab opens, mirroring how
+  // app.jsx handles Ressourcen / Projekte (which use refs owned by App
+  // itself — Support keeps its scroll ref locally, so the effect lives
+  // here too).
+  React.useEffect(() => {
+    const timer = setTimeout(() => scrollToCurrentWeek(scrollRef, STICKY_W), 80);
+    return () => clearTimeout(timer);
+  }, []);
   const deleteWithUndo = React.useCallback(id => {
     const a = assignments.find(x => x.id === id);
     if (a) setUndoStack(prev => [...prev, a]);
