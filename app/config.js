@@ -32,6 +32,35 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7.2 (2026-04-27)
+
+### Kompaktansicht
+- Standardmäßig aktiv in Ressourcen und Support; bleibt jetzt erhalten,
+  wenn man zwischen den Reitern wechselt (zentral im App-State statt
+  pro View).
+
+### Land pro Projekt
+- Neues Feld in der Projekt-Maske mit smarter Auflösung: ISO-Kürzel
+  ("DE") oder Klartext ("Deutschland", "Germany"), inkl. Schreibweise
+  ohne Umlaute. Unsinnige Eingaben werden als ?? markiert, leere als /.
+- Das aufgelöste Kürzel erscheint als Badge in den Reitern Übersicht
+  und Projekte direkt am Projektnamen.
+
+### Auslastung
+- Vorschau startet jetzt bei 52 Wochen statt 12.
+- Klick auf eine Monatszelle springt direkt zur entsprechenden Woche
+  in der Ressourcenplanung (passt das Jahr automatisch an, falls die
+  Woche im Folgejahr liegt).
+
+### Layout-Politur
+- Projekte: Mitarbeiter-Sidebar passt ihre Breite an den längsten
+  Namen an (10–20 rem). Projekt-Spalte ist jetzt 50 % breiter (w-96).
+- Erste Spalte hat in Projekte, Ressourcen und Support eine
+  deutlichere Trennlinie inkl. Soft-Shadow zum Tabellenkörper.
+- Projekte: oberste Zeile ist jetzt zuverlässig sticky (sticky liegt
+  pro \`<th>\` statt nur am \`<thead>\`, das in border-collapse-Tabellen
+  manchmal nicht greift).
+
 ## v0.7.1 (2026-04-27)
 
 ### Support-Reiter
@@ -200,7 +229,7 @@ const DEFAULT_HOURLY_RATE = 80;
 const HOURS_PER_WEEK = 40;
 const WEEKS_IN_YEAR = 52;
 const BASIC_TASK_EXPIRY_WEEKS = 12;
-const DEFAULT_WEEKS_AHEAD = 12;
+const DEFAULT_WEEKS_AHEAD = 52;
 
 const COST_LINE_TYPES = {
     travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',    example: 'Flug/Auto', chip: 'bg-amber-100 text-amber-700 border-amber-200',         dot: 'bg-amber-500'   },

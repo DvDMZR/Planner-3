@@ -204,7 +204,8 @@ const SupportView = ({
   React.useEffect(() => {
     if (!isDeleteMode) setUndoStack([]);
   }, [isDeleteMode]);
-  const [compact, setCompact] = React.useState(true);
+  const compact = s.compactView;
+  const setCompact = next => h.setCompactView(typeof next === 'function' ? next(s.compactView) : next);
 
   // Jump to the current week as soon as the tab opens, mirroring how
   // app.jsx handles Ressourcen / Projekte (which use refs owned by App
@@ -386,13 +387,13 @@ const SupportView = ({
   }, /*#__PURE__*/React.createElement("thead", {
     className: "sticky top-0 bg-white z-20 shadow-sm"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "border-b border-r border-slate-200 w-72 bg-slate-50 sticky left-0 z-30"
+    className: "border-b border-r-2 border-r-slate-300 border-slate-200 w-72 bg-slate-50 sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
   }), monthGroups.map(g => /*#__PURE__*/React.createElement("th", {
     key: g.month,
     colSpan: g.count,
     className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
   }, g.month))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium"
+    className: "p-4 border-b-2 border-r-2 border-r-slate-300 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
   }, "Mitarbeiter"), supportWeeks.map(w => {
     const isCurrent = w.id === currentWeek;
     const isPast = w.id < currentWeek;
@@ -441,7 +442,7 @@ const SupportView = ({
         key: emp.id,
         className: "hover:bg-slate-50/50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+        className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-slate-800 font-medium text-sm"
       }, emp.name)), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {

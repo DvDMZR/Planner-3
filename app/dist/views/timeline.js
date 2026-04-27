@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120; // matches min-w-[120px]
-const TIMELINE_STICKY_W = 256; // matches w-64
+const TIMELINE_STICKY_W = 384; // matches w-96 (project name column)
 
 const TimelineView = ({
   s,
@@ -225,7 +225,7 @@ const TimelineView = ({
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex h-full overflow-hidden bg-white"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-72 border-r border-slate-200 flex flex-col bg-slate-50 shrink-0"
+    className: "w-fit min-w-[10rem] max-w-[20rem] border-r border-slate-200 flex flex-col bg-slate-50 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 border-b border-slate-200 bg-white"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -380,13 +380,13 @@ const TimelineView = ({
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full border-collapse text-sm text-left"
   }, /*#__PURE__*/React.createElement("thead", {
-    className: "sticky top-0 bg-white z-20 shadow-sm"
+    className: "bg-white z-20"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-3 border-b border-r border-slate-200 w-64 bg-slate-50 sticky left-0 z-30 text-slate-600 font-medium"
+    className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-96 bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
   }, "Projekt"), timelineWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w.id,
     ref: w.id === currentWeekStr ? currentWeekColRef : null,
-    className: `p-2 border-b border-r min-w-[120px] text-center font-medium ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`
+    className: `p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`
   }, /*#__PURE__*/React.createElement("div", null, w.label), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-normal opacity-70"
   }, w.sub), w.holidays.length > 0 && /*#__PURE__*/React.createElement("div", {
@@ -405,7 +405,7 @@ const TimelineView = ({
       className: "bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors",
       onClick: () => toggleProjCategory(category)
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-3 text-slate-900 sticky left-0 z-10 bg-inherit border-r border-slate-200 font-medium"
+      className: "p-3 text-slate-900 sticky left-0 z-10 bg-slate-100 border-r-2 border-r-slate-300 border-slate-200 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 text-lg"
     }, isCollapsed ? /*#__PURE__*/React.createElement(IconChevronRight, {
@@ -423,18 +423,22 @@ const TimelineView = ({
       className: "border-r border-slate-200"
     })), !isCollapsed && catProjects.map(proj => {
       const pColor = resolveProjectColor(proj.color);
+      const cc = resolveCountryCode(proj.country);
       return /*#__PURE__*/React.createElement("tr", {
         key: proj.id,
         className: "hover:bg-slate-50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-3 border-b border-r border-slate-200 bg-white sticky left-0 z-10"
+        className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: `w-3 h-3 rounded-full ${pColor.dot}`
       }), /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-900 font-medium"
-      }, proj.name))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+        className: "text-slate-900 font-medium flex-1 min-w-0"
+      }, proj.name), /*#__PURE__*/React.createElement("span", {
+        className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
+        title: "Land"
+      }, cc))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
         colSpan: leftSpacerSpan,
         className: "border-b border-r border-slate-300 bg-white"
       }), visibleWeeks.map(w => {

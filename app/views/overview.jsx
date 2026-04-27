@@ -126,14 +126,19 @@ const OverviewView = ({ s, h }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
-                                {rows.map(({ p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten }) => (
+                                {rows.map(({ p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten }) => {
+                                    const cc = resolveCountryCode(p.country);
+                                    return (
                                     <tr key={p.id} className="hover:bg-slate-50 cursor-pointer transition-colors"
                                         onClick={() => { setSelectedProjectDetails(p.id); setActiveTab('setup_proj'); }}>
                                         <td className="p-4">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
-                                                <div>
-                                                    <div className="font-medium text-slate-900">{p.name}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-slate-900 flex items-center gap-2">
+                                                        <span className="truncate">{p.name}</span>
+                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
+                                                    </div>
                                                     <div className="text-xs text-slate-400 font-mono">{p.projectNumber || '–'} · {p.category}</div>
                                                 </div>
                                             </div>
@@ -151,7 +156,8 @@ const OverviewView = ({ s, h }) => {
                                             {gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : <span className="text-slate-400 font-normal">–</span>}
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-gea-200 bg-gea-50">

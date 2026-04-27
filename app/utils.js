@@ -83,6 +83,117 @@ const generateWeeksForYear = (year) => {
     return w;
 };
 
+// Country lookup: maps loose human input (German + English names, ISO-2 codes,
+// common synonyms) to an uppercase ISO-3166-1 alpha-2 code. Empty input → '/',
+// unrecognised input → '??'.
+const COUNTRY_CODE_LOOKUP = (() => {
+    const codes = ['DE','AT','CH','FR','IT','ES','PT','NL','BE','LU','GB','IE','DK','SE','NO','FI','IS',
+        'PL','CZ','SK','HU','RO','BG','GR','HR','SI','RS','BA','MK','AL','ME','MD','UA','BY','RU',
+        'EE','LV','LT','TR','CY','MT','LI','MC','SM','VA','AD',
+        'US','CA','MX','BR','AR','CL','CO','PE','UY','VE',
+        'AU','NZ','JP','CN','IN','SG','TH','VN','MY','ID','PH','KR','TW','HK',
+        'AE','SA','QA','KW','BH','OM','IL','EG','ZA','MA','TN','DZ','KE','NG'];
+    const m = {};
+    codes.forEach(c => { m[c.toLowerCase()] = c; });
+    Object.assign(m, {
+        'd': 'DE', 'deutschland': 'DE', 'germany': 'DE', 'allemagne': 'DE',
+        'österreich': 'AT', 'oesterreich': 'AT', 'austria': 'AT',
+        'schweiz': 'CH', 'switzerland': 'CH', 'suisse': 'CH', 'svizzera': 'CH',
+        'frankreich': 'FR', 'france': 'FR',
+        'italien': 'IT', 'italy': 'IT', 'italia': 'IT',
+        'spanien': 'ES', 'spain': 'ES', 'espana': 'ES',
+        'portugal': 'PT',
+        'niederlande': 'NL', 'netherlands': 'NL', 'holland': 'NL',
+        'belgien': 'BE', 'belgium': 'BE', 'belgique': 'BE',
+        'luxemburg': 'LU', 'luxembourg': 'LU',
+        'großbritannien': 'GB', 'grossbritannien': 'GB', 'vereinigtes königreich': 'GB',
+        'vereinigtes koenigreich': 'GB', 'united kingdom': 'GB', 'great britain': 'GB',
+        'england': 'GB', 'britain': 'GB', 'uk': 'GB',
+        'irland': 'IE', 'ireland': 'IE',
+        'dänemark': 'DK', 'daenemark': 'DK', 'denmark': 'DK',
+        'schweden': 'SE', 'sweden': 'SE', 'sverige': 'SE',
+        'norwegen': 'NO', 'norway': 'NO', 'norge': 'NO',
+        'finnland': 'FI', 'finland': 'FI',
+        'island': 'IS', 'iceland': 'IS',
+        'polen': 'PL', 'poland': 'PL', 'polska': 'PL',
+        'tschechien': 'CZ', 'tschechische republik': 'CZ', 'czechia': 'CZ', 'czech republic': 'CZ',
+        'slowakei': 'SK', 'slovakia': 'SK',
+        'ungarn': 'HU', 'hungary': 'HU',
+        'rumänien': 'RO', 'rumaenien': 'RO', 'romania': 'RO',
+        'bulgarien': 'BG', 'bulgaria': 'BG',
+        'griechenland': 'GR', 'greece': 'GR',
+        'kroatien': 'HR', 'croatia': 'HR',
+        'slowenien': 'SI', 'slovenia': 'SI',
+        'serbien': 'RS', 'serbia': 'RS',
+        'bosnien': 'BA', 'bosnia': 'BA', 'bosnien und herzegowina': 'BA',
+        'mazedonien': 'MK', 'nordmazedonien': 'MK', 'macedonia': 'MK', 'north macedonia': 'MK',
+        'albanien': 'AL', 'albania': 'AL',
+        'montenegro': 'ME',
+        'moldau': 'MD', 'moldova': 'MD', 'moldawien': 'MD',
+        'ukraine': 'UA',
+        'weißrussland': 'BY', 'weissrussland': 'BY', 'belarus': 'BY',
+        'russland': 'RU', 'russia': 'RU',
+        'estland': 'EE', 'estonia': 'EE',
+        'lettland': 'LV', 'latvia': 'LV',
+        'litauen': 'LT', 'lithuania': 'LT',
+        'türkei': 'TR', 'tuerkei': 'TR', 'turkey': 'TR',
+        'zypern': 'CY', 'cyprus': 'CY',
+        'malta': 'MT',
+        'liechtenstein': 'LI',
+        'monaco': 'MC',
+        'usa': 'US', 'united states': 'US', 'vereinigte staaten': 'US', 'amerika': 'US', 'america': 'US',
+        'kanada': 'CA', 'canada': 'CA',
+        'mexiko': 'MX', 'mexico': 'MX',
+        'brasilien': 'BR', 'brazil': 'BR', 'brasil': 'BR',
+        'argentinien': 'AR', 'argentina': 'AR',
+        'chile': 'CL',
+        'kolumbien': 'CO', 'colombia': 'CO',
+        'peru': 'PE',
+        'uruguay': 'UY',
+        'venezuela': 'VE',
+        'australien': 'AU', 'australia': 'AU',
+        'neuseeland': 'NZ', 'new zealand': 'NZ',
+        'japan': 'JP',
+        'china': 'CN', 'volksrepublik china': 'CN',
+        'indien': 'IN', 'india': 'IN',
+        'singapur': 'SG', 'singapore': 'SG',
+        'thailand': 'TH',
+        'vietnam': 'VN',
+        'malaysia': 'MY',
+        'indonesien': 'ID', 'indonesia': 'ID',
+        'philippinen': 'PH', 'philippines': 'PH',
+        'südkorea': 'KR', 'suedkorea': 'KR', 'korea': 'KR', 'south korea': 'KR',
+        'taiwan': 'TW',
+        'hongkong': 'HK', 'hong kong': 'HK',
+        'vereinigte arabische emirate': 'AE', 'uae': 'AE', 'emirates': 'AE',
+        'saudi-arabien': 'SA', 'saudi arabien': 'SA', 'saudi arabia': 'SA',
+        'katar': 'QA', 'qatar': 'QA',
+        'kuwait': 'KW',
+        'bahrain': 'BH',
+        'oman': 'OM',
+        'israel': 'IL',
+        'ägypten': 'EG', 'aegypten': 'EG', 'egypt': 'EG',
+        'südafrika': 'ZA', 'suedafrika': 'ZA', 'south africa': 'ZA',
+        'marokko': 'MA', 'morocco': 'MA',
+        'tunesien': 'TN', 'tunisia': 'TN',
+        'algerien': 'DZ', 'algeria': 'DZ',
+        'kenia': 'KE', 'kenya': 'KE',
+        'nigeria': 'NG',
+    });
+    return m;
+})();
+
+const resolveCountryCode = (input) => {
+    if (input == null) return '/';
+    const v = String(input).trim();
+    if (!v) return '/';
+    const lower = v.toLowerCase();
+    if (COUNTRY_CODE_LOOKUP[lower]) return COUNTRY_CODE_LOOKUP[lower];
+    const norm = lower.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (COUNTRY_CODE_LOOKUP[norm]) return COUNTRY_CODE_LOOKUP[norm];
+    return '??';
+};
+
 const generateInitialData = (empCats) => {
     const emps = Array.from({ length: 5 }, (_, i) => ({
         id: `emp-${i}`,

@@ -81,7 +81,23 @@ const ResourceView = ({ s, h }) => {
         const currentYear = new Date().getFullYear();
         const resourceWeeks = timelineWeeks;
 
-        const [compact, setCompact] = React.useState(false);
+        const compact = s.compactView;
+        const setCompact = (next) => h.setCompactView(typeof next === 'function' ? next(s.compactView) : next);
+
+        // Honour scrollTarget set by the Auslastung-cell jump.
+        React.useEffect(() => {
+            const target = s.scrollTarget;
+            if (!target?.weekId) return;
+            const timer = setTimeout(() => {
+                const idx = resourceWeeks.findIndex(w => w.id === target.weekId);
+                if (idx >= 0 && resourceScrollRef.current) {
+                    resourceScrollRef.current.scrollLeft = idx * WEEK_W;
+                }
+                h.setScrollTarget(null);
+            }, 80);
+            return () => clearTimeout(timer);
+        }, [s.scrollTarget, resourceWeeks]);
+
         const [empSearch, setEmpSearch] = React.useState('');
         const [empSearchRaw, setEmpSearchRaw] = React.useState('');
         const empDebounceRef = React.useRef(null);
@@ -273,7 +289,7 @@ const ResourceView = ({ s, h }) => {
                     <table className="w-full border-collapse text-sm text-left">
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
-                                <th className="border-b border-r border-slate-200 w-72 bg-slate-50 sticky left-0 z-30"></th>
+                                <th className="border-b border-r-2 border-r-slate-300 border-slate-200 w-72 bg-slate-50 sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"></th>
                                 {monthGroups.map(g => (
                                     <th key={g.month} colSpan={g.count}
                                         className="px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide">
@@ -282,7 +298,7 @@ const ResourceView = ({ s, h }) => {
                                 ))}
                             </tr>
                             <tr>
-                                <th className="p-4 border-b-2 border-r border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium">Mitarbeiter</th>
+                                <th className="p-4 border-b-2 border-r-2 border-r-slate-300 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">Mitarbeiter</th>
                                 {resourceWeeks.map(w => {
                                     const isCurrent = w.id === currentWeek;
                                     const isPast = w.id < currentWeek;
@@ -325,7 +341,7 @@ const ResourceView = ({ s, h }) => {
                                             const empWH = emp.weeklyHours ?? HOURS_PER_WEEK;
                                             return (
                                             <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="p-3 border-b border-r border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                                <td className="p-3 border-b border-r-2 border-r-slate-300 border-slate-300 bg-white sticky left-0 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                                                     <div className="text-slate-800 font-medium text-sm">{emp.name}</div>
                                                 </td>
                                                 {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
