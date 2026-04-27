@@ -257,6 +257,8 @@ const OverviewView = ({
     className: "p-4 text-gea-800 font-semibold"
   }, "Projekt"), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
+  }, "Land"), /*#__PURE__*/React.createElement("th", {
+    className: "p-4 text-gea-800 font-semibold"
   }, "Status"), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
   }, "IBN"), /*#__PURE__*/React.createElement("th", {
@@ -293,15 +295,15 @@ const OverviewView = ({
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "font-medium text-slate-900 flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "truncate"
-    }, p.name), /*#__PURE__*/React.createElement("span", {
-      className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
-      title: "Land"
-    }, cc)), /*#__PURE__*/React.createElement("div", {
+      className: "font-medium text-slate-900 truncate"
+    }, p.name), /*#__PURE__*/React.createElement("div", {
       className: "text-xs text-slate-400 font-mono"
     }, p.projectNumber || '–', " \xB7 ", p.category)))), /*#__PURE__*/React.createElement("td", {
+      className: "p-4"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
+      title: "Land"
+    }, cc)), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement(StatusBadge, {
       status: computeAutoStatus(p)
@@ -326,7 +328,7 @@ const OverviewView = ({
     className: "border-t-2 border-gea-200 bg-gea-50"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-gea-800 font-semibold text-sm",
-    colSpan: 3
+    colSpan: 4
   }, "Gesamt"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
   }, fmt(totalHoursAll), " h"), /*#__PURE__*/React.createElement("td", {
@@ -336,7 +338,7 @@ const OverviewView = ({
   }, fmt(rows.reduce((a, r) => a + r.zusatzkosten, 0)), " \u20AC"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-bold text-gea-700 tabular-nums"
   }, fmt(totalGesamtkosten), " \u20AC"))), rows.length === 0 && /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: 7,
+    colSpan: 8,
     className: "text-center text-slate-400 text-sm py-12"
   }, "Keine Projekte vorhanden.")))))));
 };

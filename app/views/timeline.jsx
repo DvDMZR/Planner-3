@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120;   // matches min-w-[120px]
-const TIMELINE_STICKY_W = 384; // matches w-96 (project name column)
+const TIMELINE_STICKY_W = 576; // matches w-[36rem] (project name column)
 
 const TimelineView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
@@ -249,7 +249,7 @@ const TimelineView = ({ s, h }) => {
                         <table className="w-full border-collapse text-sm text-left">
                             <thead className="bg-white z-20">
                                 <tr>
-                                    <th className="p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-96 bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">Projekt</th>
+                                    <th className="p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-[36rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">Projekt</th>
                                     {timelineWeeks.map(w => (
                                         <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
                                             className={`p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
@@ -294,7 +294,12 @@ const TimelineView = ({ s, h }) => {
                                                     <td className="p-3 border-b border-r-2 border-r-slate-300 border-slate-200 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-3 h-3 rounded-full ${pColor.dot}`}></div>
-                                                            <div className="text-slate-900 font-medium flex-1 min-w-0">{proj.name}</div>
+                                                            <button
+                                                                onClick={() => { setSelectedProjectDetails(proj.id); setActiveTab('setup_proj'); }}
+                                                                className="text-slate-900 font-medium flex-1 min-w-0 text-left truncate hover:text-gea-700 hover:underline transition-colors"
+                                                                title="Projekt-Einstellungen öffnen">
+                                                                {proj.name}
+                                                            </button>
                                                             <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                                                         </div>
                                                     </td>

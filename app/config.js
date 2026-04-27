@@ -32,6 +32,26 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7.3 (2026-04-27)
+
+### Land als eigene Spalte
+- In **Übersicht** und **Verwaltung → Projekte** ist das Land nun
+  eine eigene Spalte direkt nach dem Projektnamen (statt eines Badges
+  am Namen).
+
+### Verwaltung → Projekte
+- Land wird in der Liste angezeigt – inkl. Farb-Kennzeichnung für
+  unklare (??) und leere (/) Einträge.
+
+### Status umbenannt
+- "Hat angefangen" → "Angefangen" (kürzer, präziser).
+
+### Projekte (Planung)
+- Klick auf den Projektnamen öffnet jetzt die Projekt-Einstellungen
+  (springt zu Verwaltung → Projekte mit der Detailansicht).
+- Projekt-Spalte um weitere 50 % verbreitert (jetzt 36 rem statt 24 rem),
+  damit lange Namen samt Land-Badge sauber Platz haben.
+
 ## v0.7.2 (2026-04-27)
 
 ### Kompaktansicht
@@ -278,7 +298,7 @@ const resolveProjectColor = (colorVal) => {
 
 const PROJECT_STATUSES = [
     { value: 'planned',         label: 'Fängt noch an',       color: 'bg-blue-100 text-blue-700' },
-    { value: 'active',          label: 'Hat angefangen',      color: 'bg-emerald-100 text-emerald-700' },
+    { value: 'active',          label: 'Angefangen',          color: 'bg-emerald-100 text-emerald-700' },
     { value: 'completed',       label: 'Abgeschlossen',       color: 'bg-slate-200 text-slate-600' },
     { value: 'missing_costs',   label: 'Fehlende Kosten',     color: 'bg-amber-100 text-amber-700' },
     { value: 'costs_submitted', label: 'Kosten übermittelt',  color: 'bg-gea-100 text-gea-700' },

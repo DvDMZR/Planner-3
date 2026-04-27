@@ -1,5 +1,5 @@
 const TIMELINE_WEEK_W = 120; // matches min-w-[120px]
-const TIMELINE_STICKY_W = 384; // matches w-96 (project name column)
+const TIMELINE_STICKY_W = 576; // matches w-[36rem] (project name column)
 
 const TimelineView = ({
   s,
@@ -382,7 +382,7 @@ const TimelineView = ({
   }, /*#__PURE__*/React.createElement("thead", {
     className: "bg-white z-20"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-96 bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
+    className: "p-3 border-b border-r-2 border-r-slate-300 border-slate-200 w-[36rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]"
   }, "Projekt"), timelineWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w.id,
     ref: w.id === currentWeekStr ? currentWeekColRef : null,
@@ -433,8 +433,13 @@ const TimelineView = ({
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: `w-3 h-3 rounded-full ${pColor.dot}`
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-900 font-medium flex-1 min-w-0"
+      }), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setSelectedProjectDetails(proj.id);
+          setActiveTab('setup_proj');
+        },
+        className: "text-slate-900 font-medium flex-1 min-w-0 text-left truncate hover:text-gea-700 hover:underline transition-colors",
+        title: "Projekt-Einstellungen \xF6ffnen"
       }, proj.name), /*#__PURE__*/React.createElement("span", {
         className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
         title: "Land"

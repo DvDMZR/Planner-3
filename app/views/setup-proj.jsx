@@ -53,6 +53,7 @@ const SetupProjView = ({ s, h }) => {
 
         const ProjectRow = ({ p }) => {
             const effStatus = computeAutoStatus(p);
+            const cc = resolveCountryCode(p.country);
             return (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
@@ -61,6 +62,9 @@ const SetupProjView = ({ s, h }) => {
                             <div className={`w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
                             <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors">{p.name}</span>
                         </button>
+                    </td>
+                    <td className="p-4">
+                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                     </td>
                     <td className="p-4 text-slate-500 font-mono text-xs">{p.projectNumber || '–'}</td>
                     <td className="p-4"><StatusBadge status={effStatus}/></td>
@@ -120,6 +124,7 @@ const SetupProjView = ({ s, h }) => {
                                         <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
                                                 <th className="p-4 text-slate-700 font-semibold">Name</th>
+                                                <th className="p-4 text-slate-700 font-semibold">Land</th>
                                                 <th className="p-4 text-slate-700 font-semibold">Nr.</th>
                                                 <th className="p-4 text-slate-700 font-semibold">Status</th>
                                                 <th className="p-4 text-slate-700 font-semibold">Zeitraum</th>
@@ -149,6 +154,7 @@ const SetupProjView = ({ s, h }) => {
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
                                             <th className="p-4 text-slate-700 font-semibold">Name</th>
+                                            <th className="p-4 text-slate-700 font-semibold">Land</th>
                                             <th className="p-4 text-slate-700 font-semibold">Nr.</th>
                                             <th className="p-4 text-slate-700 font-semibold">Status</th>
                                             <th className="p-4 text-slate-700 font-semibold">Zeitraum</th>
