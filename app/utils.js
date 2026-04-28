@@ -11,9 +11,9 @@ const getWeekString = (date) => {
 const addWeeks = (weekId, n) => {
     const [yearStr, wStr] = weekId.split('-W');
     const year = parseInt(yearStr), week = parseInt(wStr);
-    const jan4 = new Date(year, 0, 4);
-    const dow = jan4.getDay() || 7;
-    const monday = new Date(year, jan4.getMonth(), jan4.getDate() - dow + 1 + (week - 1) * 7);
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const dow = jan4.getUTCDay() || 7;
+    const monday = new Date(Date.UTC(year, 0, 4 - dow + 1 + (week - 1) * 7));
     return getWeekString(new Date(monday.getTime() + n * 7 * 86400000));
 };
 
