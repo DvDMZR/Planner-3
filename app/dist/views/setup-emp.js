@@ -43,6 +43,7 @@ const SetupEmpView = ({
     timelineYear,
     empForm,
     editingEmpId,
+    isEmpFormOpen,
     projForm,
     editingProjectId,
     newEmpCat,
@@ -108,6 +109,7 @@ const SetupEmpView = ({
     setTimelineYear,
     setEmpForm,
     setEditingEmpId,
+    setIsEmpFormOpen,
     setProjForm,
     setEditingProjectId,
     setNewEmpCat,
@@ -134,48 +136,74 @@ const SetupEmpView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
+  const emptyForm = {
+    name: '',
+    category: empCategories[0] || '',
+    weeklyHours: HOURS_PER_WEEK,
+    email: '',
+    phone: '',
+    role: '',
+    hourlyRate: '',
+    notes: ''
+  };
+  const isValidEmail = v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const openCreateForm = () => {
+    setEmpForm(emptyForm);
+    setEditingEmpId(null);
+    setIsEmpFormOpen(true);
+  };
   const handleSaveEmp = () => {
     if (!empForm.name.trim()) return;
+    if (!isValidEmail(empForm.email)) return;
     const wh = Math.max(1, parseInt(empForm.weeklyHours) || HOURS_PER_WEEK);
+    const rate = empForm.hourlyRate === '' || empForm.hourlyRate == null ? null : Math.max(0, parseFloat(empForm.hourlyRate) || 0);
+    const payload = {
+      name: empForm.name.trim(),
+      category: empForm.category,
+      weeklyHours: wh,
+      email: (empForm.email || '').trim() || null,
+      phone: (empForm.phone || '').trim() || null,
+      role: (empForm.role || '').trim() || null,
+      hourlyRate: rate,
+      notes: (empForm.notes || '').trim() || null
+    };
     if (editingEmpId) {
       setEmployees(employees.map(e => e.id === editingEmpId ? {
         ...e,
-        name: empForm.name,
-        category: empForm.category,
-        weeklyHours: wh
+        ...payload
       } : e));
-      setEditingEmpId(null);
     } else {
       setEmployees([...employees, {
         id: makeId('emp'),
-        name: empForm.name,
-        category: empForm.category,
-        weeklyHours: wh,
+        ...payload,
         active: true
       }]);
     }
-    setEmpForm({
-      name: '',
-      category: empCategories[0] || '',
-      weeklyHours: HOURS_PER_WEEK
-    });
+    setIsEmpFormOpen(false);
+    setEditingEmpId(null);
+    setEmpForm(emptyForm);
   };
   const handleEditEmp = e => {
     setEmpForm({
-      name: e.name,
-      category: e.category,
-      weeklyHours: e.weeklyHours ?? HOURS_PER_WEEK
+      name: e.name || '',
+      category: e.category || empCategories[0] || '',
+      weeklyHours: e.weeklyHours ?? HOURS_PER_WEEK,
+      email: e.email || '',
+      phone: e.phone || '',
+      role: e.role || '',
+      hourlyRate: e.hourlyRate != null ? String(e.hourlyRate) : '',
+      notes: e.notes || ''
     });
     setEditingEmpId(e.id);
+    setIsEmpFormOpen(true);
   };
-  const cancelEditEmp = () => {
+  const closeForm = () => {
+    setIsEmpFormOpen(false);
     setEditingEmpId(null);
-    setEmpForm({
-      name: '',
-      category: empCategories[0] || '',
-      weeklyHours: HOURS_PER_WEEK
-    });
+    setEmpForm(emptyForm);
   };
+  const emailValid = isValidEmail(empForm.email);
+  const canSave = empForm.name.trim() && emailValid;
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-auto p-8 bg-slate-50"
   }, /*#__PURE__*/React.createElement("div", {
@@ -183,60 +211,15 @@ const SetupEmpView = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "p-6 border-b border-slate-200 bg-slate-50"
+    className: "p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-slate-900 font-medium"
-  }, "Mitarbeiterverwaltung")), /*#__PURE__*/React.createElement("div", {
-    className: "p-6 flex gap-4 items-end bg-white"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex-1"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Name"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: empForm.name,
-    onChange: e => setEmpForm({
-      ...empForm,
-      name: e.target.value
-    }),
-    className: "w-full p-2 border border-slate-300 rounded text-sm"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "w-44"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Kategorie"), /*#__PURE__*/React.createElement("select", {
-    value: empForm.category,
-    onChange: e => setEmpForm({
-      ...empForm,
-      category: e.target.value
-    }),
-    className: "w-full p-2 border border-slate-300 rounded text-sm"
-  }, empCategories.map(c => /*#__PURE__*/React.createElement("option", {
-    key: c,
-    value: c
-  }, c)))), /*#__PURE__*/React.createElement("div", {
-    className: "w-36"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Std./Woche"), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    min: "1",
-    max: "80",
-    value: empForm.weeklyHours,
-    onChange: e => setEmpForm({
-      ...empForm,
-      weeklyHours: e.target.value
-    }),
-    className: "w-full p-2 border border-slate-300 rounded text-sm"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, editingEmpId && /*#__PURE__*/React.createElement("button", {
-    onClick: cancelEditEmp,
-    className: "bg-slate-200 text-slate-600 px-4 py-2 rounded text-sm hover:bg-slate-300 h-[38px] font-medium transition-colors"
-  }, "Abbruch"), /*#__PURE__*/React.createElement("button", {
-    onClick: handleSaveEmp,
-    className: "bg-gea-600 text-white px-4 py-2 rounded text-sm hover:bg-gea-700 h-[38px] font-medium transition-colors"
-  }, editingEmpId ? 'Speichern' : 'Hinzufügen')))), /*#__PURE__*/React.createElement("div", {
+  }, "Mitarbeiterverwaltung"), /*#__PURE__*/React.createElement("button", {
+    onClick: openCreateForm,
+    className: "bg-gea-600 text-white px-4 py-2 rounded text-sm hover:bg-gea-700 font-medium transition-colors flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(IconPlus, {
+    size: 16
+  }), " Mitarbeiter hinzuf\xFCgen"))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, empCategories.map(category => {
     const isCollapsed = collapsedEmpSetup[category];
@@ -264,6 +247,8 @@ const SetupEmpView = ({
     }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium"
     }, "Name"), /*#__PURE__*/React.createElement("th", {
+      className: "p-4 text-slate-500 font-medium"
+    }, "Email"), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium text-center"
     }, "Std./Woche"), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium"
@@ -276,7 +261,16 @@ const SetupEmpView = ({
       className: "hover:bg-slate-50 transition-colors"
     }, /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-900 font-medium"
-    }, e.name), /*#__PURE__*/React.createElement("td", {
+    }, e.name, e.role && /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-slate-400 font-normal mt-0.5"
+    }, e.role)), /*#__PURE__*/React.createElement("td", {
+      className: "p-4 text-slate-600 text-sm"
+    }, e.email ? /*#__PURE__*/React.createElement("a", {
+      href: `mailto:${e.email}`,
+      className: "text-gea-600 hover:text-gea-700"
+    }, e.email) : /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-300"
+    }, "\u2014")), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-center"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-sm font-medium text-slate-700"
@@ -298,5 +292,137 @@ const SetupEmpView = ({
     }, "Toggle Status")))))) : /*#__PURE__*/React.createElement("div", {
       className: "p-4 text-sm text-slate-400 text-center bg-white"
     }, "Keine Mitarbeiter in dieser Kategorie.")));
-  }))));
+  }))), isEmpFormOpen && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden",
+    style: {
+      maxHeight: '90vh'
+    }
+  }, /*#__PURE__*/React.createElement(ModalHeader, {
+    title: editingEmpId ? 'Mitarbeiter bearbeiten' : 'Mitarbeiter hinzufügen',
+    onClose: closeForm
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "p-6 space-y-4 overflow-y-auto",
+    style: {
+      maxHeight: 'calc(90vh - 130px)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Name *"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    autoFocus: true,
+    value: empForm.name,
+    onChange: e => setEmpForm({
+      ...empForm,
+      name: e.target.value
+    }),
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Kategorie"), /*#__PURE__*/React.createElement("select", {
+    value: empForm.category,
+    onChange: e => setEmpForm({
+      ...empForm,
+      category: e.target.value
+    }),
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  }, empCategories.map(c => /*#__PURE__*/React.createElement("option", {
+    key: c,
+    value: c
+  }, c)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Std./Woche"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: "80",
+    value: empForm.weeklyHours,
+    onChange: e => setEmpForm({
+      ...empForm,
+      weeklyHours: e.target.value
+    }),
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Email"), /*#__PURE__*/React.createElement("input", {
+    type: "email",
+    value: empForm.email,
+    onChange: e => setEmpForm({
+      ...empForm,
+      email: e.target.value
+    }),
+    placeholder: "vorname.nachname@firma.de",
+    className: `w-full p-2 border rounded text-sm ${emailValid ? 'border-slate-300' : 'border-rose-400 bg-rose-50'}`
+  }), !emailValid && /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-rose-600 mt-1"
+  }, "Bitte eine g\xFCltige Email-Adresse eingeben."), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400 mt-1"
+  }, "Wird f\xFCr automatische Benachrichtigungen bei neuen Planungen verwendet.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Telefon"), /*#__PURE__*/React.createElement("input", {
+    type: "tel",
+    value: empForm.phone,
+    onChange: e => setEmpForm({
+      ...empForm,
+      phone: e.target.value
+    }),
+    placeholder: "+49 \u2026",
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Rolle / Funktion"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: empForm.role,
+    onChange: e => setEmpForm({
+      ...empForm,
+      role: e.target.value
+    }),
+    placeholder: "z.B. Projektleiter",
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Stundensatz (\u20AC/h, optional)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "1",
+    value: empForm.hourlyRate,
+    onChange: e => setEmpForm({
+      ...empForm,
+      hourlyRate: e.target.value
+    }),
+    placeholder: `Standard: ${DEFAULT_HOURLY_RATE} €/h`,
+    className: "w-full p-2 border border-slate-300 rounded text-sm"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400 mt-1"
+  }, "\xDCberschreibt den Standardsatz, falls gesetzt.")), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
+  }, "Notizen"), /*#__PURE__*/React.createElement("textarea", {
+    rows: "2",
+    value: empForm.notes,
+    onChange: e => setEmpForm({
+      ...empForm,
+      notes: e.target.value
+    }),
+    placeholder: "Interne Notizen zum Mitarbeiter\u2026",
+    className: "w-full p-2 border border-slate-300 rounded text-sm resize-none"
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: closeForm,
+    className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
+  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+    onClick: handleSaveEmp,
+    disabled: !canSave,
+    className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
+  }, editingEmpId ? 'Speichern' : 'Hinzufügen')))));
 };

@@ -11,6 +11,7 @@ const AssignmentModal = ({
     inactiveOfftimeTasks,
     inactiveSupportTasks,
     inactiveTrainingTasks,
+    customTrainingTasks,
     projects,
     computeAutoStatus,
     getUtilization,
@@ -28,8 +29,9 @@ const AssignmentModal = ({
         [inactiveSupportTasks]
     );
     const activeTrainingTasks = useMemo(
-        () => TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t)),
-        [inactiveTrainingTasks]
+        () => [...TRAINING_TASKS, ...(customTrainingTasks || [])]
+            .filter(t => !(inactiveTrainingTasks || []).includes(t)),
+        [inactiveTrainingTasks, customTrainingTasks]
     );
     const activeOfftimeTasks = useMemo(
         () => offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t)),
@@ -67,10 +69,13 @@ const AssignmentModal = ({
     });
     const [newTaskName, setNewTaskName] = useState('');
     const [recurRule, setRecurRule] = useState({ enabled: false, everyXWeeks: 1, endWeek: addWeeks(assignContext.week || formData.week, 4) });
-    const [rangeEnd, setRangeEnd] = useState({ enabled: false, week: addWeeks(assignContext.week || formData.week, 1) });
+    const [planWeeks, setPlanWeeks] = useState(1);
+    const [notifyByEmail, setNotifyByEmail] = useState(false);
 
     const emp = employeeById.get(formData.empId);
     const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
+    const empEmail = emp?.email || '';
+    const canNotify = !!empEmail && !formData.id;
 
     const handleTypeChange = (type) => {
         let ref = '';
@@ -82,6 +87,45 @@ const AssignmentModal = ({
         else if (type === 'offtime') ref = activeOfftimeTasks[0] || '';
         setFormData({...formData, type, reference: ref});
         setNewTaskName('');
+    };
+
+    const buildEmailDraft = (data, lastWeek) => {
+        const empName = emp?.name || '';
+        const refLabel = data.type === 'project'
+            ? (projects.find(p => p.id === data.reference)?.name || data.reference)
+            : data.reference;
+        const typeLabel = ({
+            project: 'Project', basic: 'Task', other: 'Task', support: 'Support',
+            training: 'Training', offtime: 'Time off',
+        })[data.type] || 'Assignment';
+        const hrs = data.hours ?? empWeeklyHours;
+        const pctVal = Math.round(hrs / empWeeklyHours * 100);
+        const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
+        const subject = `New assignment: ${refLabel} (${weekRange})`;
+        const lines = [
+            `Hi ${empName.split(' ')[0] || empName},`,
+            ``,
+            `You have been scheduled for the following work:`,
+            ``,
+            `  ${typeLabel}: ${refLabel}`,
+            `  Calendar week: ${weekRange}`,
+            `  Workload: ${pctVal}% (${hrs} h/week)`,
+        ];
+        if (data.comment) lines.push(`  Note: ${data.comment}`);
+        lines.push(
+            ``,
+            `Please review the entry in the planner and let me know if there are any conflicts or questions.`,
+            ``,
+            `Best regards`,
+        );
+        return { subject, body: lines.join('\n') };
+    };
+
+    const openEmailDraft = (data, lastWeek) => {
+        if (!empEmail) return;
+        const { subject, body } = buildEmailDraft(data, lastWeek);
+        const url = `mailto:${encodeURIComponent(empEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(url, '_blank');
     };
 
     const handleSave = () => {
@@ -106,13 +150,16 @@ const AssignmentModal = ({
             const empName = employeeById.get(formData.empId)?.name || '';
             if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
         }
-        if (rangeEnd.enabled && !data.id && rangeEnd.week > formData.week) {
+        const numWeeks = Math.max(1, parseInt(planWeeks) || 1);
+        if (numWeeks > 1 && !data.id) {
             const series = [];
             let cur = formData.week;
-            while (cur <= rangeEnd.week) {
+            for (let i = 0; i < numWeeks; i++) {
                 series.push({ ...data, week: cur, id: makeId('ass') });
                 cur = addWeeks(cur, 1);
             }
+            const lastWeek = series[series.length - 1].week;
+            if (canNotify && notifyByEmail) openEmailDraft(data, lastWeek);
             onSave(series);
             return;
         }
@@ -124,9 +171,11 @@ const AssignmentModal = ({
                 series.push({ ...data, week: cur, id: makeId('ass'), ruleId });
                 cur = addWeeks(cur, recurRule.everyXWeeks);
             }
+            if (canNotify && notifyByEmail) openEmailDraft(data, recurRule.endWeek);
             onSave(series);
             return;
         }
+        if (canNotify && notifyByEmail) openEmailDraft(data, null);
         onSave(data);
     };
 
@@ -239,59 +288,70 @@ const AssignmentModal = ({
                         />
                     </div>
 
-                    <div className="border-t border-slate-100 pt-3 space-y-2">
-                        {!formData.id && !recurRule.enabled && (
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox"
-                                checked={rangeEnd.enabled}
-                                onChange={e => setRangeEnd(r => ({ ...r, enabled: e.target.checked }))}
-                                className="rounded accent-gea-600"/>
-                            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Wochenbereich (bis KW)</span>
-                        </label>
-                        )}
-                        {rangeEnd.enabled && !formData.id && (
-                            <div className="mt-1">
-                                <label className="block text-xs text-slate-400 mb-1">Bis Woche (jede KW dazwischen wird eingetragen)</label>
-                                <input type="week"
-                                    value={rangeEnd.week}
-                                    min={addWeeks(formData.week, 1)}
-                                    onChange={e => setRangeEnd(r => ({ ...r, week: e.target.value }))}
-                                    className="w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
+                    {!formData.id && (
+                        <div className="border-t border-slate-100 pt-3 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <label className="text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap">Planen für</label>
+                                <input type="number" min="1" max="52"
+                                    value={planWeeks}
+                                    onChange={e => setPlanWeeks(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
+                                <span className="text-sm text-slate-600">Woche{planWeeks > 1 ? 'n' : ''}</span>
+                                {planWeeks > 1 && (
+                                    <span className="text-xs text-slate-400 ml-auto">bis {addWeeks(formData.week, planWeeks - 1)}</span>
+                                )}
                             </div>
-                        )}
-                        {!formData.id && !rangeEnd.enabled && (
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input type="checkbox"
-                                checked={recurRule.enabled}
-                                onChange={e => setRecurRule(r => ({ ...r, enabled: e.target.checked }))}
-                                className="rounded accent-gea-600"/>
-                            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 flex items-center gap-1">
-                                <IconRepeat size={12}/> Wiederkehrend (Regel)
-                            </span>
-                        </label>
-                        )}
-                        {recurRule.enabled && !formData.id && (
-                            <div className="mt-2 space-y-2">
-                                <div className="flex items-center gap-3">
-                                    <div>
-                                        <label className="block text-xs text-slate-400 mb-1">Alle X Wochen</label>
-                                        <input type="number" min="1" max="52"
-                                            value={recurRule.everyXWeeks}
-                                            onChange={e => setRecurRule(r => ({ ...r, everyXWeeks: Math.max(1, parseInt(e.target.value)||1) }))}
-                                            className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="block text-xs text-slate-400 mb-1">Bis Woche</label>
-                                        <input type="week"
-                                            value={recurRule.endWeek}
-                                            min={addWeeks(formData.week, 1)}
-                                            onChange={e => setRecurRule(r => ({ ...r, endWeek: e.target.value }))}
-                                            className="w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            {planWeeks === 1 && (
+                                <>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox"
+                                            checked={recurRule.enabled}
+                                            onChange={e => setRecurRule(r => ({ ...r, enabled: e.target.checked }))}
+                                            className="rounded accent-gea-600"/>
+                                        <span className="text-xs font-medium uppercase tracking-wide text-slate-500 flex items-center gap-1">
+                                            <IconRepeat size={12}/> Wiederkehrend (Regel)
+                                        </span>
+                                    </label>
+                                    {recurRule.enabled && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <div>
+                                                    <label className="block text-xs text-slate-400 mb-1">Alle X Wochen</label>
+                                                    <input type="number" min="1" max="52"
+                                                        value={recurRule.everyXWeeks}
+                                                        onChange={e => setRecurRule(r => ({ ...r, everyXWeeks: Math.max(1, parseInt(e.target.value)||1) }))}
+                                                        className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="block text-xs text-slate-400 mb-1">Bis Woche</label>
+                                                    <input type="week"
+                                                        value={recurRule.endWeek}
+                                                        min={addWeeks(formData.week, 1)}
+                                                        onChange={e => setRecurRule(r => ({ ...r, endWeek: e.target.value }))}
+                                                        className="w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            <label className={`flex items-start gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
+                                <input type="checkbox"
+                                    checked={notifyByEmail && canNotify}
+                                    disabled={!canNotify}
+                                    onChange={e => setNotifyByEmail(e.target.checked)}
+                                    className="rounded accent-gea-600 mt-0.5"/>
+                                <span className="text-xs">
+                                    <span className="font-medium uppercase tracking-wide text-slate-500">Per Email benachrichtigen</span>
+                                    <span className="block text-slate-400 mt-0.5">
+                                        {empEmail
+                                            ? `Öffnet einen Email-Entwurf an ${empEmail} mit den Planungsdetails.`
+                                            : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'}
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    )}
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
                     {formData.id ? (
@@ -330,14 +390,15 @@ const CopyModal = ({
 
     const [selWeeks, setSelWeeks] = useState({});
     const [selEmps, setSelEmps] = useState({});
+    const [error, setError] = useState('');
     const [collapsedTeams, setCollapsedTeams] = useState(() => {
         const init = {};
         (empCategories || []).forEach(cat => { init[cat] = true; });
         return init;
     });
 
-    const toggleWeek = (wId) => setSelWeeks(prev => ({...prev, [wId]: !prev[wId]}));
-    const toggleEmp = (eId) => setSelEmps(prev => ({...prev, [eId]: !prev[eId]}));
+    const toggleWeek = (wId) => { setError(''); setSelWeeks(prev => ({...prev, [wId]: !prev[wId]})); };
+    const toggleEmp = (eId) => { setError(''); setSelEmps(prev => ({...prev, [eId]: !prev[eId]})); };
     const toggleTeam = (cat) => setCollapsedTeams(prev => ({...prev, [cat]: !prev[cat]}));
     const toggleAllWeeks = () => {
         const allSelected = weeks.every(w => selWeeks[w.id]);
@@ -364,7 +425,19 @@ const CopyModal = ({
     const handleCopy = () => {
         const targetWeeks = weeks.filter(w => selWeeks[w.id]).map(w => w.id);
         const targetEmps = activeEmps.filter(e => selEmps[e.id]).map(e => e.id);
-        if (targetWeeks.length === 0 || targetEmps.length === 0) return;
+        if (targetEmps.length === 0 && targetWeeks.length === 0) {
+            setError('Bitte mindestens einen Mitarbeiter und eine Woche auswählen.');
+            return;
+        }
+        if (targetEmps.length === 0) {
+            setError('Bitte mindestens einen Mitarbeiter auswählen.');
+            return;
+        }
+        if (targetWeeks.length === 0) {
+            setError('Bitte mindestens eine Woche auswählen.');
+            return;
+        }
+        setError('');
         const newAssignments = [];
         targetEmps.forEach(empId => {
             targetWeeks.forEach(week => {
@@ -463,11 +536,18 @@ const CopyModal = ({
                         </div>
                     </div>
                 </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-xs text-slate-400">
-                        {selEmpCount} MA × {selWeekCount} KW = {selEmpCount * selWeekCount} Einträge
-                    </span>
-                    <div className="flex gap-2">
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-3">
+                    {error ? (
+                        <span className="text-xs text-rose-600 font-medium flex items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            {error}
+                        </span>
+                    ) : (
+                        <span className="text-xs text-slate-400">
+                            {selEmpCount} MA × {selWeekCount} KW = {selEmpCount * selWeekCount} Einträge
+                        </span>
+                    )}
+                    <div className="flex gap-2 shrink-0">
                         <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
                         <button onClick={handleCopy} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium flex items-center gap-2">
                             <IconCopy size={15}/> Kopieren

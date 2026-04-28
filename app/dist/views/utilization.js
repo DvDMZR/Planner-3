@@ -226,13 +226,13 @@ const UtilizationView = ({
   }, "24 Wochen"), /*#__PURE__*/React.createElement("option", {
     value: 52
   }, "52 Wochen")))), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-auto p-6"
+    className: "flex-1 overflow-auto px-6 pb-6"
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full border-collapse text-sm"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white"
   }, "Mitarbeiter"), /*#__PURE__*/React.createElement("th", {
-    className: "p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium sticky top-0 z-20"
+    className: "p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 font-medium sticky top-0 z-20"
   }, "\xD8 Zeitraum"), months.map(m => /*#__PURE__*/React.createElement("th", {
     key: m,
     className: "p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white"

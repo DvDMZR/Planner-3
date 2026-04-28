@@ -108,12 +108,12 @@ const UtilizationView = ({ s, h }) => {
                         </select>
                     </div>
                 </div>
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto px-6 pb-6">
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr>
                                 <th className="p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white">Mitarbeiter</th>
-                                <th className="p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium sticky top-0 z-20">Ø Zeitraum</th>
+                                <th className="p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 font-medium sticky top-0 z-20">Ø Zeitraum</th>
                                 {months.map(m => <th key={m} className="p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white">{m}</th>)}
                             </tr>
                         </thead>
