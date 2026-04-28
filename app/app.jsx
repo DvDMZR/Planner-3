@@ -786,7 +786,7 @@ function App() {
             let isOfftime = false;
             for (let i = 0; i < weekAss.length; i++) {
                 const a = weekAss[i];
-                total += ((a.hours ?? (a.percent / 100 * weeklyHours)) / weeklyHours) * 100;
+                total += ((a.hours ?? ((a.percent ?? 100) / 100 * weeklyHours)) / weeklyHours) * 100;
                 if (a.type === 'offtime') isOfftime = true;
             }
             m.set(key, { total, isOfftime, assignments: weekAss });
@@ -1181,6 +1181,7 @@ function App() {
                             <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-amber-200 border border-amber-300"></div><span className="text-slate-700">Auslastung ≥ 80% — Achtung, fast voll</span></div>
                             <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-rose-200 border border-rose-300"></div><span className="text-slate-700">Überlastet — Einsatz &gt; 100%</span></div>
                             <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 diagonal-stripes border border-slate-300"></div><span className="text-slate-700">Abwesenheit (Urlaub, Krank, Gleitzeit …)</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-blue-200 border border-blue-300 bg-hatched"></div><span className="text-slate-700">Einsatz zu 0% — <span className="font-semibold">Unter Vorbehalt</span> (geplant, aber nicht bestätigt)</span></div>
                             <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-gea-200 border border-gea-400"></div><span className="text-slate-700">Aktuelle Woche — farbig hervorgehoben</span></div>
                             <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-slate-300 border border-slate-400"></div><span className="text-slate-700">Vergangene Woche — gedimmt angezeigt</span></div>
                         </div>
@@ -1191,7 +1192,9 @@ function App() {
                             <p><span className="font-semibold">Klick auf Zelle</span> → Einsatz anlegen oder bearbeiten (Prozent oder Stunden, Projekt oder Abwesenheit)</p>
                             <p><span className="font-semibold">Drag &amp; Drop</span> (Projekt-Zeitstrahl) → Mitarbeiter aus der linken Liste in eine Projektwoche ziehen</p>
                             <p><span className="font-semibold">Löschmodus</span> → roten Button oben rechts aktivieren, dann Einsätze anklicken um sie zu löschen</p>
+                            <p><span className="font-semibold">Kompaktansicht</span> → Button oben rechts reduziert die Zellhöhe; Kopiersymbol bleibt per Hover erreichbar</p>
                             <p><span className="font-semibold">Heute-Button</span> (Zeitstrahl) → springt zur aktuellen Kalenderwoche</p>
+                            <p><span className="font-semibold">Klick in der Heatmap</span> → Klick auf einen Mitarbeiter oder Monat öffnet die Ressourcenplanung mit dem Mitarbeiter vorausgewählt</p>
                         </div>
                     </div>
                     <div>

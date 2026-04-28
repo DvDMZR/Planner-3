@@ -112,9 +112,9 @@ const UtilizationView = ({ s, h }) => {
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr>
-                                <th className="p-2 border-b border-slate-200 text-left w-48 text-slate-500 font-medium">Mitarbeiter</th>
-                                <th className="p-2 border-b border-slate-200 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium">Ø Zeitraum</th>
-                                {months.map(m => <th key={m} className="p-2 border-b border-slate-200 text-center text-slate-500 font-medium">{m}</th>)}
+                                <th className="p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white">Mitarbeiter</th>
+                                <th className="p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium sticky top-0 z-20">Ø Zeitraum</th>
+                                {months.map(m => <th key={m} className="p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white">{m}</th>)}
                             </tr>
                         </thead>
                         <tbody>
@@ -145,12 +145,27 @@ const UtilizationView = ({ s, h }) => {
                                             const avgAll = empUtil?.avgAll ?? 0;
                                             const monthAvgs = empUtil?.monthAvgs ?? {};
 
+                                            const jumpToEmp = (weekId) => {
+                                                if (weekId) {
+                                                    const yr = parseInt(weekId.split('-W')[0], 10);
+                                                    if (!Number.isNaN(yr)) setTimelineYear(yr);
+                                                }
+                                                h.setScrollTarget({ weekId, empName: emp.name });
+                                                setActiveTab('resource');
+                                            };
+
                                             return (
                                                 <tr key={emp.id} className="border-b border-slate-300 hover:bg-slate-50 transition-colors">
-                                                    <td className="p-2 text-slate-900 font-medium pl-6">{emp.name}</td>
+                                                    <td onClick={() => jumpToEmp(null)}
+                                                        title={`In Ressourcenplanung nach „${emp.name}" filtern`}
+                                                        className="p-2 text-slate-900 font-medium pl-6 cursor-pointer hover:text-gea-700">
+                                                        {emp.name}
+                                                    </td>
 
-                                                    <td className="p-2 border-r border-slate-300">
-                                                        <div className="w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium">
+                                                    <td onClick={() => jumpToEmp(null)}
+                                                        title={`In Ressourcenplanung nach „${emp.name}" filtern`}
+                                                        className="p-2 border-r border-slate-300 cursor-pointer">
+                                                        <div className="w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all">
                                                             {avgAll}%
                                                         </div>
                                                     </td>
@@ -172,17 +187,14 @@ const UtilizationView = ({ s, h }) => {
                                                         const firstWeek = weeksByMonth[m]?.[0];
                                                         const jump = () => {
                                                             if (!firstWeek) return;
-                                                            const yr = parseInt(firstWeek.split('-W')[0], 10);
-                                                            if (!Number.isNaN(yr)) setTimelineYear(yr);
-                                                            h.setScrollTarget({ weekId: firstWeek });
-                                                            setActiveTab('resource');
+                                                            jumpToEmp(firstWeek);
                                                         };
 
                                                         return (
                                                             <td key={m} className="p-1 border-r border-slate-300 last:border-0">
                                                                 <div
                                                                     onClick={jump}
-                                                                    title={firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined}
+                                                                    title={firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined}
                                                                     className={`w-full h-8 rounded flex items-center justify-center text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`}>
                                                                     {label}
                                                                 </div>

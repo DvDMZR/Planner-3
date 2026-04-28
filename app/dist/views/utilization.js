@@ -230,12 +230,12 @@ const UtilizationView = ({
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full border-collapse text-sm"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
-    className: "p-2 border-b border-slate-200 text-left w-48 text-slate-500 font-medium"
+    className: "p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white"
   }, "Mitarbeiter"), /*#__PURE__*/React.createElement("th", {
-    className: "p-2 border-b border-slate-200 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium"
+    className: "p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 rounded-t-lg font-medium sticky top-0 z-20"
   }, "\xD8 Zeitraum"), months.map(m => /*#__PURE__*/React.createElement("th", {
     key: m,
-    className: "p-2 border-b border-slate-200 text-center text-slate-500 font-medium"
+    className: "p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white"
   }, m)))), /*#__PURE__*/React.createElement("tbody", null, activeCategories.map(category => {
     const isCollapsed = collapsedCategories[category];
     const catEmps = activeEmpsByCategory.get(category) || [];
@@ -265,15 +265,30 @@ const UtilizationView = ({
       const empUtil = utilByEmp.get(emp.id);
       const avgAll = empUtil?.avgAll ?? 0;
       const monthAvgs = empUtil?.monthAvgs ?? {};
+      const jumpToEmp = weekId => {
+        if (weekId) {
+          const yr = parseInt(weekId.split('-W')[0], 10);
+          if (!Number.isNaN(yr)) setTimelineYear(yr);
+        }
+        h.setScrollTarget({
+          weekId,
+          empName: emp.name
+        });
+        setActiveTab('resource');
+      };
       return /*#__PURE__*/React.createElement("tr", {
         key: emp.id,
         className: "border-b border-slate-300 hover:bg-slate-50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
-        className: "p-2 text-slate-900 font-medium pl-6"
+        onClick: () => jumpToEmp(null),
+        title: `In Ressourcenplanung nach „${emp.name}" filtern`,
+        className: "p-2 text-slate-900 font-medium pl-6 cursor-pointer hover:text-gea-700"
       }, emp.name), /*#__PURE__*/React.createElement("td", {
-        className: "p-2 border-r border-slate-300"
+        onClick: () => jumpToEmp(null),
+        title: `In Ressourcenplanung nach „${emp.name}" filtern`,
+        className: "p-2 border-r border-slate-300 cursor-pointer"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium"
+        className: "w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all"
       }, avgAll, "%")), months.map(m => {
         const cell = monthAvgs[m];
         const avgMonth = cell?.avg ?? 0;
@@ -297,19 +312,14 @@ const UtilizationView = ({
         const firstWeek = weeksByMonth[m]?.[0];
         const jump = () => {
           if (!firstWeek) return;
-          const yr = parseInt(firstWeek.split('-W')[0], 10);
-          if (!Number.isNaN(yr)) setTimelineYear(yr);
-          h.setScrollTarget({
-            weekId: firstWeek
-          });
-          setActiveTab('resource');
+          jumpToEmp(firstWeek);
         };
         return /*#__PURE__*/React.createElement("td", {
           key: m,
           className: "p-1 border-r border-slate-300 last:border-0"
         }, /*#__PURE__*/React.createElement("div", {
           onClick: jump,
-          title: firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined,
+          title: firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined,
           className: `w-full h-8 rounded flex items-center justify-center text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`
         }, label));
       }));
