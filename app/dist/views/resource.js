@@ -580,7 +580,7 @@ const ResourceView = ({
           return /*#__PURE__*/React.createElement("div", {
             key: a.id,
             draggable: !isDeleteMode,
-            title: a.comment || undefined,
+            title: pct === 0 ? a.comment ? a.comment + ' · Unter Vorbehalt (0 %)' : 'Unter Vorbehalt (0 %)' : a.comment || undefined,
             onDragStart: e => {
               e.stopPropagation();
               e.dataTransfer.setData('assignmentId', a.id);
@@ -598,7 +598,7 @@ const ResourceView = ({
                 setIsAssignModalOpen(true);
               }
             },
-            className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''}`
+            className: `text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${isOverbooked ? 'ring-1 ring-rose-500 ring-inset' : ''} ${pct === 0 ? 'bg-hatched' : ''}`
           }, /*#__PURE__*/React.createElement("div", {
             className: "flex items-center gap-1.5 min-w-0"
           }, /*#__PURE__*/React.createElement("div", {
@@ -611,11 +611,11 @@ const ResourceView = ({
           }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
             size: 9,
             className: "flex-shrink-0 opacity-60"
-          })), !compact && /*#__PURE__*/React.createElement("div", {
+          })), /*#__PURE__*/React.createElement("div", {
             className: "flex items-center gap-1 ml-1 flex-shrink-0"
-          }, /*#__PURE__*/React.createElement("span", {
+          }, !compact && /*#__PURE__*/React.createElement("span", {
             className: "opacity-70 bg-slate-100/50 px-1 rounded font-medium"
-          }, pct, "%"), /*#__PURE__*/React.createElement("button", {
+          }, pct, "%"), !isDeleteMode && /*#__PURE__*/React.createElement("button", {
             onClick: e => {
               e.stopPropagation();
               setCopyContext({

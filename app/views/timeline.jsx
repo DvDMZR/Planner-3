@@ -316,15 +316,18 @@ const TimelineView = ({ s, h }) => {
                                                                 <div className="flex flex-col gap-1 min-h-[60px]">
                                                                     {projAss.map(a => {
                                                                         const emp = employeeById.get(a.empId);
+                                                                        const chipHours = a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK);
+                                                                        const isTentative = chipHours === 0;
                                                                         return (
                                                                             <div key={a.id}
                                                                                 draggable={!isDeleteMode}
+                                                                                title={isTentative ? (a.comment ? a.comment + ' · Unter Vorbehalt (0 h)' : 'Unter Vorbehalt (0 h)') : (a.comment || undefined)}
                                                                                 onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                                 onClick={(e) => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
-                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip}`}>
+                                                                                className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`}>
                                                                                 <span className="truncate font-medium">{emp?.name || 'Unbekannt'}</span>
                                                                                 <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                                                                                    <span className="opacity-90 font-medium">{a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK)}h</span>
+                                                                                    <span className="opacity-90 font-medium">{chipHours}h</span>
                                                                                     {!isDeleteMode && (
                                                                                         <button
                                                                                             onClick={(e) => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}

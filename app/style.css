@@ -27,9 +27,21 @@ body {
     top: 0;
     right: 0;
     bottom: 0;
-    width: 3px;
-    background-color: #94a3b8; /* slate-400 */
-    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.18);
+    width: 1px;
+    background-color: #cbd5e1; /* slate-300 */
     pointer-events: none;
     z-index: 1;
+}
+
+/* "Tentative" assignment hatch — chip color stays visible underneath
+   (background-color from Tailwind), the hatch is a translucent overlay
+   on background-image. Used for 0% blocked entries (Vorbehalt). */
+.bg-hatched {
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0) 0,
+        rgba(0, 0, 0, 0) 4px,
+        rgba(0, 0, 0, 0.18) 4px,
+        rgba(0, 0, 0, 0.18) 7px
+    );
 }
