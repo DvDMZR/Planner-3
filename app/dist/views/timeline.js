@@ -462,9 +462,12 @@ const TimelineView = ({
           className: "flex flex-col gap-1 min-h-[60px]"
         }, projAss.map(a => {
           const emp = employeeById.get(a.empId);
+          const chipHours = a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK);
+          const isTentative = chipHours === 0;
           return /*#__PURE__*/React.createElement("div", {
             key: a.id,
             draggable: !isDeleteMode,
+            title: isTentative ? a.comment ? a.comment + ' · Unter Vorbehalt (0 h)' : 'Unter Vorbehalt (0 h)' : a.comment || undefined,
             onDragStart: e => {
               e.stopPropagation();
               e.dataTransfer.setData('assignmentId', a.id);
@@ -482,14 +485,14 @@ const TimelineView = ({
                 setIsAssignModalOpen(true);
               }
             },
-            className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip}`
+            className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`
           }, /*#__PURE__*/React.createElement("span", {
             className: "truncate font-medium"
           }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("div", {
             className: "flex items-center gap-1 ml-1 flex-shrink-0"
           }, /*#__PURE__*/React.createElement("span", {
             className: "opacity-90 font-medium"
-          }, a.hours ?? Math.round((a.percent ?? 100) / 100 * HOURS_PER_WEEK), "h"), !isDeleteMode && /*#__PURE__*/React.createElement("button", {
+          }, chipHours, "h"), !isDeleteMode && /*#__PURE__*/React.createElement("button", {
             onClick: e => {
               e.stopPropagation();
               setCopyContext({

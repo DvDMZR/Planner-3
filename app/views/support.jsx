@@ -322,27 +322,27 @@ const SupportView = ({ s, h }) => {
                                                                 return (
                                                                     <div key={a.id}
                                                                         draggable={!isDeleteMode}
-                                                                        title={a.comment || undefined}
+                                                                        title={pct === 0 ? (a.comment ? a.comment + ' · Unter Vorbehalt (0 %)' : 'Unter Vorbehalt (0 %)') : (a.comment || undefined)}
                                                                         onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                         onClick={e => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
-                                                                        className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color}`}>
+                                                                        className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} ${color} ${pct === 0 ? 'bg-hatched' : ''}`}>
                                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                                             <div className={`w-1 flex-shrink-0 self-stretch ${dotColor}`}></div>
                                                                             <span className={`truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`}>{a.reference}</span>
                                                                             {!compact && a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
                                                                             {!compact && a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
                                                                         </div>
-                                                                        {!compact && (
-                                                                            <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                                                                                <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>
+                                                                        <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                                                                            {!compact && <span className="opacity-70 bg-slate-100/50 px-1 rounded font-medium">{pct}%</span>}
+                                                                            {!isDeleteMode && (
                                                                                 <button
                                                                                     onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
                                                                                     className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
                                                                                     title="Kopieren">
                                                                                     <IconCopy size={10}/>
                                                                                 </button>
-                                                                            </div>
-                                                                        )}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 );
                                                             })}
