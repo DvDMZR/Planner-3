@@ -890,7 +890,7 @@ function App() {
       let isOfftime = false;
       for (let i = 0; i < weekAss.length; i++) {
         const a = weekAss[i];
-        total += (a.hours ?? a.percent / 100 * weeklyHours) / weeklyHours * 100;
+        total += (a.hours ?? (a.percent ?? 100) / 100 * weeklyHours) / weeklyHours * 100;
         if (a.type === 'offtime') isOfftime = true;
       }
       m.set(key, {
@@ -1412,6 +1412,14 @@ function App() {
   }, "Abwesenheit (Urlaub, Krank, Gleitzeit \u2026)")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-6 rounded flex-shrink-0 bg-blue-200 border border-blue-300 bg-hatched"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-700"
+  }, "Einsatz zu 0% \u2014 ", /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Unter Vorbehalt"), " (geplant, aber nicht best\xE4tigt)")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-gea-200 border border-gea-400"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
@@ -1433,7 +1441,11 @@ function App() {
     className: "font-semibold"
   }, "L\xF6schmodus"), " \u2192 roten Button oben rechts aktivieren, dann Eins\xE4tze anklicken um sie zu l\xF6schen"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
     className: "font-semibold"
-  }, "Heute-Button"), " (Zeitstrahl) \u2192 springt zur aktuellen Kalenderwoche"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+  }, "Kompaktansicht"), " \u2192 Button oben rechts reduziert die Zellh\xF6he; Kopiersymbol bleibt per Hover erreichbar"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Heute-Button"), " (Zeitstrahl) \u2192 springt zur aktuellen Kalenderwoche"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
+    className: "font-semibold"
+  }, "Klick in der Heatmap"), " \u2192 Klick auf einen Mitarbeiter oder Monat \xF6ffnet die Ressourcenplanung mit dem Mitarbeiter vorausgew\xE4hlt"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2"
   }, "Projekt-Status"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"

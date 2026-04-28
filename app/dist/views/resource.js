@@ -190,22 +190,30 @@ const ResourceView = ({
   const resourceWeeks = timelineWeeks;
   const compact = s.compactView;
   const setCompact = next => h.setCompactView(typeof next === 'function' ? next(s.compactView) : next);
+  const [empSearch, setEmpSearch] = React.useState('');
+  const [empSearchRaw, setEmpSearchRaw] = React.useState('');
 
   // Honour scrollTarget set by the Auslastung-cell jump.
+  // Optional fields: weekId (scroll to that week) and/or empName
+  // (pre-populate the Mitarbeiter-search filter).
   React.useEffect(() => {
     const target = s.scrollTarget;
-    if (!target?.weekId) return;
+    if (!target) return;
+    if (target.empName) {
+      setEmpSearchRaw(target.empName);
+      setEmpSearch(target.empName);
+    }
     const timer = setTimeout(() => {
-      const idx = resourceWeeks.findIndex(w => w.id === target.weekId);
-      if (idx >= 0 && resourceScrollRef.current) {
-        resourceScrollRef.current.scrollLeft = idx * WEEK_W;
+      if (target.weekId) {
+        const idx = resourceWeeks.findIndex(w => w.id === target.weekId);
+        if (idx >= 0 && resourceScrollRef.current) {
+          resourceScrollRef.current.scrollLeft = idx * WEEK_W;
+        }
       }
       h.setScrollTarget(null);
     }, 80);
     return () => clearTimeout(timer);
   }, [s.scrollTarget, resourceWeeks]);
-  const [empSearch, setEmpSearch] = React.useState('');
-  const [empSearchRaw, setEmpSearchRaw] = React.useState('');
   const empDebounceRef = React.useRef(null);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef(null);
