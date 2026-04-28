@@ -17,10 +17,10 @@ body {
 
 /* Cross-browser sticky-column divider.
    border-r + box-shadow on position:sticky cells inside border-collapse
-   tables are clipped in Chromium. An ::after pseudo-element is reliable. */
-.sticky-col-divider {
-    position: relative;
-}
+   tables are clipped in Chromium. An ::after pseudo-element is reliable.
+   Note: do NOT set `position: relative` here — the cells already have
+   `position: sticky` (which establishes a positioning context), and
+   relative would override sticky since style.css loads after tailwind.css. */
 .sticky-col-divider::after {
     content: '';
     position: absolute;
