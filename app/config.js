@@ -32,6 +32,70 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7.4 (2026-04-28)
+
+### Heatmap (Auslastung)
+- Monats-Kopfzeile bleibt jetzt zuverlässig sticky beim Scrollen — kein
+  durchscheinender Spalt mehr zwischen Tabellenkopf und Inhalt.
+- Klick auf einen Mitarbeiter oder eine Monatszelle öffnet die
+  Ressourcenplanung mit dem Mitarbeiter im Suchfeld vorausgewählt
+  (springt zusätzlich zur passenden Woche, wenn ein Monat angeklickt
+  wurde — passt das Jahr automatisch an).
+- NaN-Fix in der Auslastungsberechnung für ältere Einträge ohne
+  explizite hours/percent-Werte.
+
+### Planungsdialog
+- "Wochenbereich (bis KW)" wurde durch ein einfaches Zahlenfeld
+  **Planen für X Wochen** (Standard 1) ersetzt — schneller und
+  intuitiver. Die End-KW wird zur Kontrolle direkt eingeblendet.
+- Neue Checkbox **Per Email + Outlook-Termin benachrichtigen**
+  (nur aktiv, wenn beim Mitarbeiter eine Email hinterlegt ist):
+  öffnet einen vorgefertigten englischen Email-Entwurf mit den
+  Planungsdetails UND lädt eine .ics-Datei als Outlook-Termin
+  (METHOD:REQUEST, Mitarbeiter als Teilnehmer) herunter. Die
+  .ics kann an die Email angehängt oder per Doppelklick in
+  Outlook als Termineinladung versendet werden.
+
+### Mitarbeiter-Verwaltung
+- Bearbeiten/Hinzufügen läuft jetzt in einem **Popup** statt als
+  Inline-Formular oben in der Liste.
+- Neue Felder: **Email** (mit Validierung, Pflicht für Outlook-/Email-
+  Benachrichtigungen), **Rolle/Funktion**, **Notizen**.
+- Email wird in der Mitarbeiterliste als anklickbarer Mailto-Link
+  angezeigt.
+
+### Kategorien
+- **Trainings** lassen sich jetzt benutzerdefiniert erweitern
+  (Hinzufügen/Löschen). Die hartkodierten Standard-Trainings bleiben
+  als "Permanent" bestehen.
+
+### Kopier-Dialog
+- Klare Fehlermeldung im Footer, wenn Mitarbeiter und/oder Wochen
+  fehlen — verschwindet automatisch beim ersten Klick.
+
+### Help & Legende
+- Neue Legenden-Einträge: **Schraffierter Chip** (Einsatz zu 0% =
+  "Unter Vorbehalt"), **Kompaktansicht** und **Klick in der Heatmap**.
+
+## v0.7.3.1 (2026-04-28) – PR #91 / #92
+
+### Ressourcen / Support
+- Kopier-Button bleibt auch im Kompaktmodus per Hover erreichbar
+  (vorher nur im Vollmodus sichtbar).
+- Einsätze, die zu 0% geblockt sind, werden mit einer **Schraffur**
+  gekennzeichnet ("Unter Vorbehalt") — der Chip bleibt farbig.
+- Sehr feine Trennlinie an der ersten Spalte (1 px slate-300), die in
+  allen Browsern (Chrome/Edge/Brave/Firefox) gleich gerendert wird —
+  Workaround für Chromium-Bug mit border-r auf sticky cells in
+  border-collapse-Tabellen via ::after-Pseudo-Element.
+
+### Bug Fixes
+- DST-Bug in addWeeks behoben: an der Sommer-/Winterzeit-Umstellung
+  (Oktober) drifteten wiederkehrende Wochenintervalle um −1 Stunde,
+  sodass mal 4, mal 5 Wochen entstanden. Jetzt durchgängig UTC-Math.
+- Mitarbeiterspalte verschwand bei aktiviertem .sticky-col-divider —
+  position:relative überschrieb position:sticky. CSS bereinigt.
+
 ## v0.7.3 (2026-04-27)
 
 ### Land als eigene Spalte
