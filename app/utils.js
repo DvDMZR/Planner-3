@@ -17,6 +17,15 @@ const addWeeks = (weekId, n) => {
     return getWeekString(new Date(monday.getTime() + n * 7 * 86400000));
 };
 
+// Returns the UTC Date for the Monday of the given ISO week id (YYYY-Www).
+const weekIdToMonday = (weekId) => {
+    const [yearStr, wStr] = weekId.split('-W');
+    const year = parseInt(yearStr), week = parseInt(wStr);
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const dow = jan4.getUTCDay() || 7;
+    return new Date(Date.UTC(year, 0, 4 - dow + 1 + (week - 1) * 7));
+};
+
 // Gaußsche Osterformel
 const getEasterDate = (year) => {
     const a = year % 19, b = Math.floor(year/100), c = year % 100;

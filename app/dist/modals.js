@@ -79,35 +79,82 @@ const AssignmentModal = ({
     });
     setNewTaskName('');
   };
-  const buildEmailDraft = (data, lastWeek) => {
+  const refLabelFor = data => data.type === 'project' ? projects.find(p => p.id === data.reference)?.name || data.reference : data.reference;
+  const typeLabelFor = data => ({
+    project: 'Project',
+    basic: 'Task',
+    other: 'Task',
+    support: 'Support',
+    training: 'Training',
+    offtime: 'Time off'
+  })[data.type] || 'Assignment';
+  const buildEmailDraft = (data, lastWeek, attachmentNote) => {
     const empName = emp?.name || '';
-    const refLabel = data.type === 'project' ? projects.find(p => p.id === data.reference)?.name || data.reference : data.reference;
-    const typeLabel = {
-      project: 'Project',
-      basic: 'Task',
-      other: 'Task',
-      support: 'Support',
-      training: 'Training',
-      offtime: 'Time off'
-    }[data.type] || 'Assignment';
-    const hrs = data.hours ?? empWeeklyHours;
-    const pctVal = Math.round(hrs / empWeeklyHours * 100);
+    const refLabel = refLabelFor(data);
+    const typeLabel = typeLabelFor(data);
     const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
     const subject = `New assignment: ${refLabel} (${weekRange})`;
-    const lines = [`Hi ${empName.split(' ')[0] || empName},`, ``, `You have been scheduled for the following work:`, ``, `  ${typeLabel}: ${refLabel}`, `  Calendar week: ${weekRange}`, `  Workload: ${pctVal}% (${hrs} h/week)`];
+    const lines = [`Hi ${empName.split(' ')[0] || empName},`, ``, `You have been scheduled for the following work:`, ``, `  ${typeLabel}: ${refLabel}`, `  Calendar week: ${weekRange}`];
     if (data.comment) lines.push(`  Note: ${data.comment}`);
+    if (attachmentNote) {
+      lines.push(``, attachmentNote);
+    }
     lines.push(``, `Please review the entry in the planner and let me know if there are any conflicts or questions.`, ``, `Best regards`);
     return {
       subject,
       body: lines.join('\n')
     };
   };
-  const openEmailDraft = (data, lastWeek) => {
+
+  // Build a minimal RFC-5545 calendar invite. METHOD:REQUEST + ATTENDEE makes
+  // Outlook open this as a meeting that can be sent as an invite.
+  const buildIcsContent = (data, lastWeek) => {
+    const refLabel = refLabelFor(data);
+    const typeLabel = typeLabelFor(data);
+    const start = weekIdToMonday(data.week);
+    const endWeek = lastWeek || data.week;
+    const endMonday = weekIdToMonday(endWeek);
+    // DTEND for all-day events is exclusive → Saturday of the last week
+    // (Mon + 5 days = Sat) gives a Mon-Fri block.
+    const endExclusive = new Date(endMonday.getTime() + 5 * 86400000);
+    const fmtDate = d => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    const now = new Date();
+    const fmtStamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}T${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`;
+    const escape = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    const summary = escape(`${typeLabel}: ${refLabel}`);
+    const description = escape(data.comment ? `${refLabel}\n${data.comment}` : refLabel);
+    const uid = `${makeId('cal')}@planner-3`;
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Planner-3//Assignment//EN', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST', 'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${fmtStamp}`, `DTSTART;VALUE=DATE:${fmtDate(start)}`, `DTEND;VALUE=DATE:${fmtDate(endExclusive)}`, `SUMMARY:${summary}`, `DESCRIPTION:${description}`, 'TRANSP:OPAQUE', `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${empEmail}`, 'END:VEVENT', 'END:VCALENDAR'];
+    // RFC 5545 mandates CRLF line endings.
+    return lines.join('\r\n');
+  };
+  const downloadIcs = (data, lastWeek) => {
+    if (!empEmail) return null;
+    const ics = buildIcsContent(data, lastWeek);
+    const blob = new Blob([ics], {
+      type: 'text/calendar;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const refLabel = refLabelFor(data);
+    const safeRef = refLabel.replace(/[^a-z0-9-_ ]/gi, '_').slice(0, 40);
+    const filename = `Termin_${safeRef}_${data.week}.ics`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return filename;
+  };
+  const sendNotification = (data, lastWeek) => {
     if (!empEmail) return;
+    const filename = downloadIcs(data, lastWeek);
+    const note = filename ? `An Outlook calendar entry (${filename}) has been generated — please attach it to this email or open it directly in Outlook to send the invite.` : null;
     const {
       subject,
       body
-    } = buildEmailDraft(data, lastWeek);
+    } = buildEmailDraft(data, lastWeek, note);
     const url = `mailto:${encodeURIComponent(empEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(url, '_blank');
   };
@@ -158,7 +205,7 @@ const AssignmentModal = ({
         cur = addWeeks(cur, 1);
       }
       const lastWeek = series[series.length - 1].week;
-      if (canNotify && notifyByEmail) openEmailDraft(data, lastWeek);
+      if (canNotify && notifyByEmail) sendNotification(data, lastWeek);
       onSave(series);
       return;
     }
@@ -175,11 +222,11 @@ const AssignmentModal = ({
         });
         cur = addWeeks(cur, recurRule.everyXWeeks);
       }
-      if (canNotify && notifyByEmail) openEmailDraft(data, recurRule.endWeek);
+      if (canNotify && notifyByEmail) sendNotification(data, recurRule.endWeek);
       onSave(series);
       return;
     }
-    if (canNotify && notifyByEmail) openEmailDraft(data, null);
+    if (canNotify && notifyByEmail) sendNotification(data, null);
     onSave(data);
   };
   const TYPE_BUTTONS = [{
@@ -407,9 +454,9 @@ const AssignmentModal = ({
     className: "text-xs"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-medium uppercase tracking-wide text-slate-500"
-  }, "Per Email benachrichtigen"), /*#__PURE__*/React.createElement("span", {
+  }, "Per Email + Outlook-Termin benachrichtigen"), /*#__PURE__*/React.createElement("span", {
     className: "block text-slate-400 mt-0.5"
-  }, empEmail ? `Öffnet einen Email-Entwurf an ${empEmail} mit den Planungsdetails.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'))))), /*#__PURE__*/React.createElement("div", {
+  }, empEmail ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'))))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between"
   }, formData.id ? /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1"

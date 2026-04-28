@@ -90,7 +90,7 @@ function App() {
     }, []);
 
     // Forms
-    const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK, email: '', phone: '', role: '', hourlyRate: '', notes: '' });
+    const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK, email: '', role: '', notes: '' });
     const [editingEmpId, setEditingEmpId] = useState(null);
     const [isEmpFormOpen, setIsEmpFormOpen] = useState(false);
     const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', address: '', country: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });

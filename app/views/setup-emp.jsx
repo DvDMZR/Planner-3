@@ -36,7 +36,7 @@ const SetupEmpView = ({ s, h }) => {
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
 
-        const emptyForm = { name: '', category: empCategories[0] || '', weeklyHours: HOURS_PER_WEEK, email: '', phone: '', role: '', hourlyRate: '', notes: '' };
+        const emptyForm = { name: '', category: empCategories[0] || '', weeklyHours: HOURS_PER_WEEK, email: '', role: '', notes: '' };
         const isValidEmail = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
         const openCreateForm = () => {
@@ -49,17 +49,12 @@ const SetupEmpView = ({ s, h }) => {
             if (!empForm.name.trim()) return;
             if (!isValidEmail(empForm.email)) return;
             const wh = Math.max(1, parseInt(empForm.weeklyHours) || HOURS_PER_WEEK);
-            const rate = empForm.hourlyRate === '' || empForm.hourlyRate == null
-                ? null
-                : Math.max(0, parseFloat(empForm.hourlyRate) || 0);
             const payload = {
                 name: empForm.name.trim(),
                 category: empForm.category,
                 weeklyHours: wh,
                 email: (empForm.email || '').trim() || null,
-                phone: (empForm.phone || '').trim() || null,
                 role: (empForm.role || '').trim() || null,
-                hourlyRate: rate,
                 notes: (empForm.notes || '').trim() || null,
             };
             if (editingEmpId) {
@@ -78,9 +73,7 @@ const SetupEmpView = ({ s, h }) => {
                 category: e.category || empCategories[0] || '',
                 weeklyHours: e.weeklyHours ?? HOURS_PER_WEEK,
                 email: e.email || '',
-                phone: e.phone || '',
                 role: e.role || '',
-                hourlyRate: e.hourlyRate != null ? String(e.hourlyRate) : '',
                 notes: e.notes || '',
             });
             setEditingEmpId(e.id);
@@ -211,24 +204,11 @@ const SetupEmpView = ({ s, h }) => {
                                         {!emailValid && <p className="text-xs text-rose-600 mt-1">Bitte eine gültige Email-Adresse eingeben.</p>}
                                         <p className="text-xs text-slate-400 mt-1">Wird für automatische Benachrichtigungen bei neuen Planungen verwendet.</p>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Telefon</label>
-                                        <input type="tel" value={empForm.phone} onChange={e=>setEmpForm({...empForm, phone: e.target.value})}
-                                            placeholder="+49 …"
-                                            className="w-full p-2 border border-slate-300 rounded text-sm"/>
-                                    </div>
-                                    <div>
+                                    <div className="col-span-2">
                                         <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Rolle / Funktion</label>
                                         <input type="text" value={empForm.role} onChange={e=>setEmpForm({...empForm, role: e.target.value})}
                                             placeholder="z.B. Projektleiter"
                                             className="w-full p-2 border border-slate-300 rounded text-sm"/>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Stundensatz (€/h, optional)</label>
-                                        <input type="number" min="0" step="1" value={empForm.hourlyRate} onChange={e=>setEmpForm({...empForm, hourlyRate: e.target.value})}
-                                            placeholder={`Standard: ${DEFAULT_HOURLY_RATE} €/h`}
-                                            className="w-full p-2 border border-slate-300 rounded text-sm"/>
-                                        <p className="text-xs text-slate-400 mt-1">Überschreibt den Standardsatz, falls gesetzt.</p>
                                     </div>
                                     <div className="col-span-2">
                                         <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Notizen</label>

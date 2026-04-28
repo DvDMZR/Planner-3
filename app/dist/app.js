@@ -99,9 +99,7 @@ function App() {
     category: '',
     weeklyHours: HOURS_PER_WEEK,
     email: '',
-    phone: '',
     role: '',
-    hourlyRate: '',
     notes: ''
   });
   const [editingEmpId, setEditingEmpId] = useState(null);

@@ -141,9 +141,7 @@ const SetupEmpView = ({
     category: empCategories[0] || '',
     weeklyHours: HOURS_PER_WEEK,
     email: '',
-    phone: '',
     role: '',
-    hourlyRate: '',
     notes: ''
   };
   const isValidEmail = v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -156,15 +154,12 @@ const SetupEmpView = ({
     if (!empForm.name.trim()) return;
     if (!isValidEmail(empForm.email)) return;
     const wh = Math.max(1, parseInt(empForm.weeklyHours) || HOURS_PER_WEEK);
-    const rate = empForm.hourlyRate === '' || empForm.hourlyRate == null ? null : Math.max(0, parseFloat(empForm.hourlyRate) || 0);
     const payload = {
       name: empForm.name.trim(),
       category: empForm.category,
       weeklyHours: wh,
       email: (empForm.email || '').trim() || null,
-      phone: (empForm.phone || '').trim() || null,
       role: (empForm.role || '').trim() || null,
-      hourlyRate: rate,
       notes: (empForm.notes || '').trim() || null
     };
     if (editingEmpId) {
@@ -189,9 +184,7 @@ const SetupEmpView = ({
       category: e.category || empCategories[0] || '',
       weeklyHours: e.weeklyHours ?? HOURS_PER_WEEK,
       email: e.email || '',
-      phone: e.phone || '',
       role: e.role || '',
-      hourlyRate: e.hourlyRate != null ? String(e.hourlyRate) : '',
       notes: e.notes || ''
     });
     setEditingEmpId(e.id);
@@ -363,18 +356,9 @@ const SetupEmpView = ({
     className: "text-xs text-rose-600 mt-1"
   }, "Bitte eine g\xFCltige Email-Adresse eingeben."), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "Wird f\xFCr automatische Benachrichtigungen bei neuen Planungen verwendet.")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Telefon"), /*#__PURE__*/React.createElement("input", {
-    type: "tel",
-    value: empForm.phone,
-    onChange: e => setEmpForm({
-      ...empForm,
-      phone: e.target.value
-    }),
-    placeholder: "+49 \u2026",
-    className: "w-full p-2 border border-slate-300 rounded text-sm"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, "Wird f\xFCr automatische Benachrichtigungen bei neuen Planungen verwendet.")), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2"
+  }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
   }, "Rolle / Funktion"), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -386,23 +370,6 @@ const SetupEmpView = ({
     placeholder: "z.B. Projektleiter",
     className: "w-full p-2 border border-slate-300 rounded text-sm"
   })), /*#__PURE__*/React.createElement("div", {
-    className: "col-span-2"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Stundensatz (\u20AC/h, optional)"), /*#__PURE__*/React.createElement("input", {
-    type: "number",
-    min: "0",
-    step: "1",
-    value: empForm.hourlyRate,
-    onChange: e => setEmpForm({
-      ...empForm,
-      hourlyRate: e.target.value
-    }),
-    placeholder: `Standard: ${DEFAULT_HOURLY_RATE} €/h`,
-    className: "w-full p-2 border border-slate-300 rounded text-sm"
-  }), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-400 mt-1"
-  }, "\xDCberschreibt den Standardsatz, falls gesetzt.")), /*#__PURE__*/React.createElement("div", {
     className: "col-span-2"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
