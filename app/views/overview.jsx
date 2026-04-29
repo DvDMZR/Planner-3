@@ -70,6 +70,18 @@ const OverviewView = ({ s, h }) => {
             return (a.p.startWeek || '').localeCompare(b.p.startWeek || '');
         }), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
 
+        const groupedRows = React.useMemo(() => {
+            const catOrder = projCategoriesFromProjects.length > 0 ? projCategoriesFromProjects : [...new Set(rows.map(r => r.p.category || ''))];
+            const map = new Map();
+            catOrder.forEach(c => map.set(c, []));
+            rows.forEach(r => {
+                const cat = r.p.category || '';
+                if (!map.has(cat)) map.set(cat, []);
+                map.get(cat).push(r);
+            });
+            return [...map.entries()].filter(([, rs]) => rs.length > 0);
+        }, [rows, projCategoriesFromProjects]);
+
         const totalGesamtkosten = rows.reduce((acc, r) => acc + r.gesamtkosten, 0);
         const totalHoursAll = rows.reduce((acc, r) => acc + r.totalHours, 0);
 
@@ -127,38 +139,48 @@ const OverviewView = ({ s, h }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
-                                {rows.map(({ p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten }) => {
-                                    const cc = resolveCountryCode(p.country);
-                                    return (
-                                    <tr key={p.id} className="hover:bg-slate-50 cursor-pointer transition-colors"
-                                        onClick={() => { setSelectedProjectDetails(p.id); setActiveTab('setup_proj'); }}>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-slate-900 truncate">{p.name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono">{p.projectNumber || '–'} · {p.category}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
-                                        </td>
-                                        <td className="p-4"><StatusBadge status={computeAutoStatus(p)}/></td>
-                                        <td className="p-4 text-slate-500 text-xs font-mono">{p.ibnWeek || '–'}</td>
-                                        <td className="p-4 text-right text-slate-700 tabular-nums">{fmt(totalHours)} h</td>
-                                        <td className="p-4 text-right text-slate-700 tabular-nums">
-                                            {p.billable !== false ? `${fmt(totalLaborCost)} €` : <span className="text-slate-400 text-xs">–</span>}
-                                        </td>
-                                        <td className="p-4 text-right text-slate-700 tabular-nums">
-                                            {zusatzkosten > 0 ? `${fmt(zusatzkosten)} €` : <span className="text-slate-400">–</span>}
-                                        </td>
-                                        <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">
-                                            {gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : <span className="text-slate-400 font-normal">–</span>}
-                                        </td>
-                                    </tr>
-                                    );
-                                })}
+                                {groupedRows.map(([cat, catRows]) => (
+                                    <React.Fragment key={cat}>
+                                        <tr className="bg-slate-50 border-y border-slate-200">
+                                            <td colSpan={8} className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{cat || '(Ohne Kategorie)'}</td>
+                                        </tr>
+                                        {catRows.map(({ p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten }) => {
+                                            const cc = resolveCountryCode(p.country);
+                                            return (
+                                            <tr key={p.id} className="hover:bg-slate-50 cursor-pointer transition-colors"
+                                                onClick={() => { setSelectedProjectDetails(p.id); setActiveTab('setup_proj'); }}>
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-medium text-slate-900 truncate">{p.name}</div>
+                                                            <div className="text-xs text-slate-400 font-mono">{p.projectNumber || '–'}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
+                                                </td>
+                                                <td className="p-4"><StatusBadge status={computeAutoStatus(p)}/></td>
+                                                <td className="p-4 text-slate-500 text-xs font-mono">{p.ibnWeek || '–'}</td>
+                                                <td className="p-4 text-right text-slate-700 tabular-nums">{fmt(totalHours)} h</td>
+                                                <td className="p-4 text-right text-slate-700 tabular-nums">
+                                                    {p.billable !== false ? `${fmt(totalLaborCost)} €` : <span className="text-slate-400 text-xs">–</span>}
+                                                </td>
+                                                <td className="p-4 text-right text-slate-700 tabular-nums">
+                                                    {zusatzkosten > 0 ? `${fmt(zusatzkosten)} €` : <span className="text-slate-400">–</span>}
+                                                </td>
+                                                <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">
+                                                    {gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : <span className="text-slate-400 font-normal">–</span>}
+                                                </td>
+                                            </tr>
+                                            );
+                                        })}
+                                    </React.Fragment>
+                                ))}
+                                {rows.length === 0 && (
+                                    <tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr>
+                                )}
                             </tbody>
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-gea-200 bg-gea-50">
@@ -170,9 +192,6 @@ const OverviewView = ({ s, h }) => {
                                         <td className="p-4 text-right font-bold text-gea-700 tabular-nums">{fmt(totalGesamtkosten)} €</td>
                                     </tr>
                                 </tfoot>
-                            )}
-                            {rows.length === 0 && (
-                                <tbody><tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr></tbody>
                             )}
                         </table>
                     </div>

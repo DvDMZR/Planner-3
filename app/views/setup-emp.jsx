@@ -177,7 +177,7 @@ const SetupEmpView = ({ s, h }) => {
 
                 {isEmpFormOpen && (
                     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden" style={{maxHeight:'90vh'}}>
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden" style={{maxHeight:'90vh'}}>
                             <ModalHeader title={editingEmpId ? 'Mitarbeiter bearbeiten' : 'Mitarbeiter hinzufügen'} onClose={closeForm}/>
                             <div className="p-6 space-y-4 overflow-y-auto" style={{maxHeight:'calc(90vh - 130px)'}}>
                                 <div className="grid grid-cols-2 gap-4">
