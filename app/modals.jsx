@@ -99,13 +99,15 @@ const AssignmentModal = ({
     })[data.type] || 'Assignment';
 
     const buildEmailDraft = (data, lastWeek, attachmentNote) => {
-        const empName = emp?.name || '';
+        const firstName = empEmail
+            ? (() => { const p = empEmail.split('@')[0].split('.')[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); })()
+            : (emp?.name?.split(' ')[0] || emp?.name || '');
         const refLabel = refLabelFor(data);
         const typeLabel = typeLabelFor(data);
         const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
         const subject = `New assignment: ${refLabel} (${weekRange})`;
         const lines = [
-            `Hi ${empName.split(' ')[0] || empName},`,
+            `Hi ${firstName},`,
             ``,
             `You have been scheduled for the following work:`,
             ``,
@@ -401,18 +403,21 @@ const AssignmentModal = ({
                                     )}
                                 </>
                             )}
-                            <label className={`flex items-start gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
+                            <label className={`flex items-center gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
                                 <input type="checkbox"
                                     checked={notifyByEmail && canNotify}
                                     disabled={!canNotify}
                                     onChange={e => setNotifyByEmail(e.target.checked)}
-                                    className="rounded accent-gea-600 mt-0.5"/>
-                                <span className="text-xs">
+                                    className="rounded accent-gea-600"/>
+                                <span className="text-xs flex items-center gap-1.5">
                                     <span className="font-medium uppercase tracking-wide text-slate-500">Per Email + Outlook-Termin benachrichtigen</span>
-                                    <span className="block text-slate-400 mt-0.5">
-                                        {empEmail
-                                            ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.`
-                                            : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'}
+                                    <span className="relative group/tip cursor-help" onClick={e => e.preventDefault()}>
+                                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-xs font-bold leading-none">?</span>
+                                        <span className="pointer-events-none absolute bottom-5 left-0 z-50 w-64 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg" style={{whiteSpace:'normal'}}>
+                                            {empEmail
+                                                ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.`
+                                                : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'}
+                                        </span>
                                     </span>
                                 </span>
                             </label>
