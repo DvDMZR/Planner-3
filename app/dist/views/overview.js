@@ -185,6 +185,17 @@ const OverviewView = ({
     if (so !== 0) return so;
     return (a.p.startWeek || '').localeCompare(b.p.startWeek || '');
   }), [projects, computeAutoStatus, assignmentsByProject, costItemsByProject]);
+  const groupedRows = React.useMemo(() => {
+    const catOrder = projCategoriesFromProjects.length > 0 ? projCategoriesFromProjects : [...new Set(rows.map(r => r.p.category || ''))];
+    const map = new Map();
+    catOrder.forEach(c => map.set(c, []));
+    rows.forEach(r => {
+      const cat = r.p.category || '';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat).push(r);
+    });
+    return [...map.entries()].filter(([, rs]) => rs.length > 0);
+  }, [rows, projCategoriesFromProjects]);
   const totalGesamtkosten = rows.reduce((acc, r) => acc + r.gesamtkosten, 0);
   const totalHoursAll = rows.reduce((acc, r) => acc + r.totalHours, 0);
   return /*#__PURE__*/React.createElement("div", {
@@ -271,7 +282,14 @@ const OverviewView = ({
     className: "p-4 text-gea-800 font-semibold text-right"
   }, "Gesamt"))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200"
-  }, rows.map(({
+  }, groupedRows.map(([cat, catRows]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: cat
+  }, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-slate-50 border-y border-slate-200"
+  }, /*#__PURE__*/React.createElement("td", {
+    colSpan: 8,
+    className: "px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider"
+  }, cat || '(Ohne Kategorie)')), catRows.map(({
     p,
     totalHours,
     totalLaborCost,
@@ -298,7 +316,7 @@ const OverviewView = ({
       className: "font-medium text-slate-900 truncate"
     }, p.name), /*#__PURE__*/React.createElement("div", {
       className: "text-xs text-slate-400 font-mono"
-    }, p.projectNumber || '–', " \xB7 ", p.category)))), /*#__PURE__*/React.createElement("td", {
+    }, p.projectNumber || '–')))), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
@@ -324,7 +342,10 @@ const OverviewView = ({
     }, gesamtkosten > 0 ? `${fmt(gesamtkosten)} €` : /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 font-normal"
     }, "\u2013")));
-  })), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
+  }))), rows.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: 8,
+    className: "text-center text-slate-400 text-sm py-12"
+  }, "Keine Projekte vorhanden."))), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
     className: "border-t-2 border-gea-200 bg-gea-50"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-gea-800 font-semibold text-sm",
@@ -337,8 +358,5 @@ const OverviewView = ({
     className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
   }, fmt(rows.reduce((a, r) => a + r.zusatzkosten, 0)), " \u20AC"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-bold text-gea-700 tabular-nums"
-  }, fmt(totalGesamtkosten), " \u20AC"))), rows.length === 0 && /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
-    colSpan: 8,
-    className: "text-center text-slate-400 text-sm py-12"
-  }, "Keine Projekte vorhanden.")))))));
+  }, fmt(totalGesamtkosten), " \u20AC")))))));
 };

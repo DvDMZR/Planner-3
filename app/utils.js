@@ -83,7 +83,7 @@ const generateWeeksForYear = (year) => {
             w.push({
                 id: `${weekYear}-W${kw.toString().padStart(2, '0')}`,
                 label: `KW ${kw}`,
-                sub: `${d.getDate()}.${d.getMonth() + 1}.`,
+                sub: `${d.getDate()}.${d.getMonth() + 1}.–${new Date(d.getFullYear(), d.getMonth(), d.getDate() + 4).getDate()}.${new Date(d.getFullYear(), d.getMonth(), d.getDate() + 4).getMonth() + 1}.`,
                 month: `${MONTH_NAMES[d.getMonth()]} ${weekYear}`,
                 holidays: weekHolidays
             });

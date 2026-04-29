@@ -89,12 +89,15 @@ const AssignmentModal = ({
     offtime: 'Time off'
   })[data.type] || 'Assignment';
   const buildEmailDraft = (data, lastWeek, attachmentNote) => {
-    const empName = emp?.name || '';
+    const firstName = empEmail ? (() => {
+      const p = empEmail.split('@')[0].split('.')[0];
+      return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+    })() : emp?.name?.split(' ')[0] || emp?.name || '';
     const refLabel = refLabelFor(data);
     const typeLabel = typeLabelFor(data);
     const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
     const subject = `New assignment: ${refLabel} (${weekRange})`;
-    const lines = [`Hi ${empName.split(' ')[0] || empName},`, ``, `You have been scheduled for the following work:`, ``, `  ${typeLabel}: ${refLabel}`, `  Calendar week: ${weekRange}`];
+    const lines = [`Hi ${firstName},`, ``, `You have been scheduled for the following work:`, ``, `  ${typeLabel}: ${refLabel}`, `  Calendar week: ${weekRange}`];
     if (data.comment) lines.push(`  Note: ${data.comment}`);
     if (attachmentNote) {
       lines.push(``, attachmentNote);
@@ -443,20 +446,28 @@ const AssignmentModal = ({
     })),
     className: "w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"
   }))))), /*#__PURE__*/React.createElement("label", {
-    className: `flex items-start gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`
+    className: `flex items-center gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
     checked: notifyByEmail && canNotify,
     disabled: !canNotify,
     onChange: e => setNotifyByEmail(e.target.checked),
-    className: "rounded accent-gea-600 mt-0.5"
+    className: "rounded accent-gea-600"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs"
+    className: "text-xs flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-medium uppercase tracking-wide text-slate-500"
   }, "Per Email + Outlook-Termin benachrichtigen"), /*#__PURE__*/React.createElement("span", {
-    className: "block text-slate-400 mt-0.5"
-  }, empEmail ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'))))), /*#__PURE__*/React.createElement("div", {
+    className: "relative group/tip cursor-help",
+    onClick: e => e.preventDefault()
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-xs font-bold leading-none"
+  }, "?"), /*#__PURE__*/React.createElement("span", {
+    className: "pointer-events-none absolute bottom-5 left-0 z-50 w-64 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg",
+    style: {
+      whiteSpace: 'normal'
+    }
+  }, empEmail ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.')))))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between"
   }, formData.id ? /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1"
