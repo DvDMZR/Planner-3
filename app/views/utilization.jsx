@@ -114,7 +114,24 @@ const UtilizationView = ({ s, h }) => {
                             <tr>
                                 <th className="p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white">Mitarbeiter</th>
                                 <th className="p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 font-medium sticky top-0 z-20">Ø Zeitraum</th>
-                                {months.map(m => <th key={m} className="p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white">{m}</th>)}
+                                {months.map(m => {
+                                    const firstWeek = weeksByMonth[m]?.[0];
+                                    const jumpToMonth = () => {
+                                        if (!firstWeek) return;
+                                        const yr = parseInt(firstWeek.split('-W')[0], 10);
+                                        if (!Number.isNaN(yr)) setTimelineYear(yr);
+                                        h.setScrollTarget({ weekId: firstWeek, clearEmpFilter: true });
+                                        setActiveTab('resource');
+                                    };
+                                    return (
+                                        <th key={m}
+                                            onClick={firstWeek ? jumpToMonth : undefined}
+                                            title={firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined}
+                                            className={`p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white ${firstWeek ? 'cursor-pointer hover:text-gea-700 hover:bg-slate-50' : ''}`}>
+                                            {m}
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
                         <tbody>

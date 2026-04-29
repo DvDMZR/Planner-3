@@ -202,6 +202,9 @@ const ResourceView = ({
     if (target.empName) {
       setEmpSearchRaw(target.empName);
       setEmpSearch(target.empName);
+    } else if (target.clearEmpFilter) {
+      setEmpSearchRaw('');
+      setEmpSearch('');
     }
     const timer = setTimeout(() => {
       if (target.weekId) {
