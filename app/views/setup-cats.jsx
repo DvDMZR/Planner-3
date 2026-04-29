@@ -16,11 +16,13 @@ const SetupCatsView = ({ s, h }) => {
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+    const { customTrainingTasks } = s;
+    const [newTrainingTask, setNewTrainingTask] = React.useState('');
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
         setOfftimeTasks, setInactiveOfftimeTasks, setInactiveSupportTasks,
-        setInactiveTrainingTasks, setIsChangelogOpen, setSelectedProject,
+        setInactiveTrainingTasks, setCustomTrainingTasks, setIsChangelogOpen, setSelectedProject,
         setCollapsedCategories, setCollapsedProjCategories, setCollapsedEmpSetup,
         setSelectedProjectDetails, setWeeksAhead, setIsAssignModalOpen,
         setAssignContext, setIsCostItemModalOpen, setEditingCostItem,
@@ -188,27 +190,55 @@ const SetupCatsView = ({ s, h }) => {
                             <span className="text-slate-500">{expandedSetupCats.training ? <IconChevronDown size={20}/> : <IconChevronRight size={20}/>}</span>
                         </button>
                         {expandedSetupCats.training && (
-                            <ul className="divide-y divide-slate-200">
-                                {TRAINING_TASKS.map(task => {
-                                    const isInactive = inactiveTrainingTasks.includes(task);
-                                    return (
-                                        <li key={task} className="p-4 flex justify-between items-center text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full bg-sky-500"></span>
-                                                <span className={`font-medium ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
-                                                <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {isInactive ? (
-                                                    <button onClick={() => setInactiveTrainingTasks(prev => prev.filter(t => t !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
-                                                ) : (
-                                                    <button onClick={() => setInactiveTrainingTasks(prev => [...prev, task])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
-                                                )}
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
+                            <div>
+                                <div className="p-4 flex gap-2 border-b border-slate-200">
+                                    <input type="text" value={newTrainingTask} onChange={e=>setNewTrainingTask(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') { const t = newTrainingTask.trim(); if (t && !TRAINING_TASKS.includes(t) && !(customTrainingTasks||[]).includes(t)) { setCustomTrainingTasks(prev => [...(prev||[]), t]); setNewTrainingTask(''); } } }}
+                                        placeholder="Neues Training" className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                                    <button onClick={() => { const t = newTrainingTask.trim(); if (t && !TRAINING_TASKS.includes(t) && !(customTrainingTasks||[]).includes(t)) { setCustomTrainingTasks(prev => [...(prev||[]), t]); setNewTrainingTask(''); } }}
+                                        className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">Hinzufügen</button>
+                                </div>
+                                <ul className="divide-y divide-slate-200">
+                                    {TRAINING_TASKS.map(task => {
+                                        const isInactive = inactiveTrainingTasks.includes(task);
+                                        return (
+                                            <li key={task} className="p-4 flex justify-between items-center text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-3 h-3 rounded-full bg-sky-500"></span>
+                                                    <span className={`font-medium ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
+                                                    <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {isInactive ? (
+                                                        <button onClick={() => setInactiveTrainingTasks(prev => prev.filter(t => t !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                    ) : (
+                                                        <button onClick={() => setInactiveTrainingTasks(prev => [...prev, task])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                    )}
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                    {(customTrainingTasks || []).map(task => {
+                                        const isInactive = inactiveTrainingTasks.includes(task);
+                                        return (
+                                            <li key={`custom-${task}`} className="p-4 flex justify-between items-center text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-3 h-3 rounded-full bg-sky-500"></span>
+                                                    <span className={`font-medium ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {isInactive ? (
+                                                        <button onClick={() => setInactiveTrainingTasks(prev => prev.filter(t => t !== task))} className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100">Reaktivieren</button>
+                                                    ) : (
+                                                        <button onClick={() => setInactiveTrainingTasks(prev => [...prev, task])} className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">Set Inactive</button>
+                                                    )}
+                                                    <button onClick={() => setCustomTrainingTasks(prev => (prev || []).filter(t => t !== task))} className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                                                </div>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
                         )}
                     </div>
 

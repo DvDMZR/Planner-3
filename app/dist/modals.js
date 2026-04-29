@@ -16,6 +16,7 @@ const AssignmentModal = ({
   inactiveOfftimeTasks,
   inactiveSupportTasks,
   inactiveTrainingTasks,
+  customTrainingTasks,
   projects,
   computeAutoStatus,
   getUtilization,
@@ -29,7 +30,7 @@ const AssignmentModal = ({
 }) => {
   const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
   const activeSupportTasks = useMemo(() => SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)), [inactiveSupportTasks]);
-  const activeTrainingTasks = useMemo(() => TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t)), [inactiveTrainingTasks]);
+  const activeTrainingTasks = useMemo(() => [...TRAINING_TASKS, ...(customTrainingTasks || [])].filter(t => !(inactiveTrainingTasks || []).includes(t)), [inactiveTrainingTasks, customTrainingTasks]);
   const activeOfftimeTasks = useMemo(() => offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t)), [offtimeTasks, inactiveOfftimeTasks]);
   const otherTasks = useMemo(() => basicTasks.filter(t => basicTasksMeta && basicTasksMeta[t]), [basicTasks, basicTasksMeta]);
   const getInitialType = () => {
@@ -62,12 +63,12 @@ const AssignmentModal = ({
     everyXWeeks: 1,
     endWeek: addWeeks(assignContext.week || formData.week, 4)
   });
-  const [rangeEnd, setRangeEnd] = useState({
-    enabled: false,
-    week: addWeeks(assignContext.week || formData.week, 1)
-  });
+  const [planWeeks, setPlanWeeks] = useState(1);
+  const [notifyByEmail, setNotifyByEmail] = useState(false);
   const emp = employeeById.get(formData.empId);
   const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
+  const empEmail = emp?.email || '';
+  const canNotify = !!empEmail && !formData.id;
   const handleTypeChange = type => {
     let ref = '';
     if (type === 'project') ref = projects.find(p => ['active', 'planned'].includes(computeAutoStatus(p)))?.id || '';else if (type === 'basic') ref = basicTasks.filter(t => !basicTasksMeta?.[t])[0] || basicTasks[0] || '';else if (type === 'support') ref = activeSupportTasks[0] || '';else if (type === 'training') ref = activeTrainingTasks[0] || '';else if (type === 'other') ref = otherTasks[0] || '';else if (type === 'offtime') ref = activeOfftimeTasks[0] || '';
@@ -77,6 +78,85 @@ const AssignmentModal = ({
       reference: ref
     });
     setNewTaskName('');
+  };
+  const refLabelFor = data => data.type === 'project' ? projects.find(p => p.id === data.reference)?.name || data.reference : data.reference;
+  const typeLabelFor = data => ({
+    project: 'Project',
+    basic: 'Task',
+    other: 'Task',
+    support: 'Support',
+    training: 'Training',
+    offtime: 'Time off'
+  })[data.type] || 'Assignment';
+  const buildEmailDraft = (data, lastWeek, attachmentNote) => {
+    const empName = emp?.name || '';
+    const refLabel = refLabelFor(data);
+    const typeLabel = typeLabelFor(data);
+    const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
+    const subject = `New assignment: ${refLabel} (${weekRange})`;
+    const lines = [`Hi ${empName.split(' ')[0] || empName},`, ``, `You have been scheduled for the following work:`, ``, `  ${typeLabel}: ${refLabel}`, `  Calendar week: ${weekRange}`];
+    if (data.comment) lines.push(`  Note: ${data.comment}`);
+    if (attachmentNote) {
+      lines.push(``, attachmentNote);
+    }
+    lines.push(``, `Please review the entry in the planner and let me know if there are any conflicts or questions.`, ``, `Best regards`);
+    return {
+      subject,
+      body: lines.join('\n')
+    };
+  };
+
+  // Build a minimal RFC-5545 calendar invite. METHOD:REQUEST + ATTENDEE makes
+  // Outlook open this as a meeting that can be sent as an invite.
+  const buildIcsContent = (data, lastWeek) => {
+    const refLabel = refLabelFor(data);
+    const typeLabel = typeLabelFor(data);
+    const start = weekIdToMonday(data.week);
+    const endWeek = lastWeek || data.week;
+    const endMonday = weekIdToMonday(endWeek);
+    // DTEND for all-day events is exclusive → Saturday of the last week
+    // (Mon + 5 days = Sat) gives a Mon-Fri block.
+    const endExclusive = new Date(endMonday.getTime() + 5 * 86400000);
+    const fmtDate = d => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    const now = new Date();
+    const fmtStamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}T${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`;
+    const escape = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    const summary = escape(`${typeLabel}: ${refLabel}`);
+    const description = escape(data.comment ? `${refLabel}\n${data.comment}` : refLabel);
+    const uid = `${makeId('cal')}@planner-3`;
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Planner-3//Assignment//EN', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST', 'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${fmtStamp}`, `DTSTART;VALUE=DATE:${fmtDate(start)}`, `DTEND;VALUE=DATE:${fmtDate(endExclusive)}`, `SUMMARY:${summary}`, `DESCRIPTION:${description}`, 'TRANSP:OPAQUE', `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${empEmail}`, 'END:VEVENT', 'END:VCALENDAR'];
+    // RFC 5545 mandates CRLF line endings.
+    return lines.join('\r\n');
+  };
+  const downloadIcs = (data, lastWeek) => {
+    if (!empEmail) return null;
+    const ics = buildIcsContent(data, lastWeek);
+    const blob = new Blob([ics], {
+      type: 'text/calendar;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const refLabel = refLabelFor(data);
+    const safeRef = refLabel.replace(/[^a-z0-9-_ ]/gi, '_').slice(0, 40);
+    const filename = `Termin_${safeRef}_${data.week}.ics`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return filename;
+  };
+  const sendNotification = (data, lastWeek) => {
+    if (!empEmail) return;
+    const filename = downloadIcs(data, lastWeek);
+    const note = filename ? `An Outlook calendar entry (${filename}) has been generated — please attach it to this email or open it directly in Outlook to send the invite.` : null;
+    const {
+      subject,
+      body
+    } = buildEmailDraft(data, lastWeek, note);
+    const url = `mailto:${encodeURIComponent(empEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
   };
   const handleSave = () => {
     let data = {
@@ -112,10 +192,11 @@ const AssignmentModal = ({
       const empName = employeeById.get(formData.empId)?.name || '';
       if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
     }
-    if (rangeEnd.enabled && !data.id && rangeEnd.week > formData.week) {
+    const numWeeks = Math.max(1, parseInt(planWeeks) || 1);
+    if (numWeeks > 1 && !data.id) {
       const series = [];
       let cur = formData.week;
-      while (cur <= rangeEnd.week) {
+      for (let i = 0; i < numWeeks; i++) {
         series.push({
           ...data,
           week: cur,
@@ -123,6 +204,8 @@ const AssignmentModal = ({
         });
         cur = addWeeks(cur, 1);
       }
+      const lastWeek = series[series.length - 1].week;
+      if (canNotify && notifyByEmail) sendNotification(data, lastWeek);
       onSave(series);
       return;
     }
@@ -139,9 +222,11 @@ const AssignmentModal = ({
         });
         cur = addWeeks(cur, recurRule.everyXWeeks);
       }
+      if (canNotify && notifyByEmail) sendNotification(data, recurRule.endWeek);
       onSave(series);
       return;
     }
+    if (canNotify && notifyByEmail) sendNotification(data, null);
     onSave(data);
   };
   const TYPE_BUTTONS = [{
@@ -297,34 +382,24 @@ const AssignmentModal = ({
     placeholder: "Notiz zu dieser Planung\u2026",
     rows: 2,
     className: "w-full p-2 border border-slate-300 rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-gea-400"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "border-t border-slate-100 pt-3 space-y-2"
-  }, !formData.id && !recurRule.enabled && /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 cursor-pointer select-none"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: rangeEnd.enabled,
-    onChange: e => setRangeEnd(r => ({
-      ...r,
-      enabled: e.target.checked
-    })),
-    className: "rounded accent-gea-600"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-medium uppercase tracking-wide text-slate-500"
-  }, "Wochenbereich (bis KW)")), rangeEnd.enabled && !formData.id && /*#__PURE__*/React.createElement("div", {
-    className: "mt-1"
+  })), !formData.id && /*#__PURE__*/React.createElement("div", {
+    className: "border-t border-slate-100 pt-3 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-400 mb-1"
-  }, "Bis Woche (jede KW dazwischen wird eingetragen)"), /*#__PURE__*/React.createElement("input", {
-    type: "week",
-    value: rangeEnd.week,
-    min: addWeeks(formData.week, 1),
-    onChange: e => setRangeEnd(r => ({
-      ...r,
-      week: e.target.value
-    })),
-    className: "w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"
-  })), !formData.id && !rangeEnd.enabled && /*#__PURE__*/React.createElement("label", {
+    className: "text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap"
+  }, "Planen f\xFCr"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "1",
+    max: "52",
+    value: planWeeks,
+    onChange: e => setPlanWeeks(Math.max(1, parseInt(e.target.value) || 1)),
+    className: "w-20 p-2 border border-slate-300 rounded-md text-sm text-center"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm text-slate-600"
+  }, "Woche", planWeeks > 1 ? 'n' : ''), planWeeks > 1 && /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-slate-400 ml-auto"
+  }, "bis ", addWeeks(formData.week, planWeeks - 1))), planWeeks === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer select-none"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -338,8 +413,8 @@ const AssignmentModal = ({
     className: "text-xs font-medium uppercase tracking-wide text-slate-500 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconRepeat, {
     size: 12
-  }), " Wiederkehrend (Regel)")), recurRule.enabled && !formData.id && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 space-y-2"
+  }), " Wiederkehrend (Regel)")), recurRule.enabled && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -367,7 +442,21 @@ const AssignmentModal = ({
       endWeek: e.target.value
     })),
     className: "w-full p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"
-  })))))), /*#__PURE__*/React.createElement("div", {
+  }))))), /*#__PURE__*/React.createElement("label", {
+    className: `flex items-start gap-2 select-none ${canNotify ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: notifyByEmail && canNotify,
+    disabled: !canNotify,
+    onChange: e => setNotifyByEmail(e.target.checked),
+    className: "rounded accent-gea-600 mt-0.5"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium uppercase tracking-wide text-slate-500"
+  }, "Per Email + Outlook-Termin benachrichtigen"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-slate-400 mt-0.5"
+  }, empEmail ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'))))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between"
   }, formData.id ? /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1"
@@ -406,6 +495,7 @@ const CopyModal = ({
   } = copyContext;
   const [selWeeks, setSelWeeks] = useState({});
   const [selEmps, setSelEmps] = useState({});
+  const [error, setError] = useState('');
   const [collapsedTeams, setCollapsedTeams] = useState(() => {
     const init = {};
     (empCategories || []).forEach(cat => {
@@ -413,14 +503,20 @@ const CopyModal = ({
     });
     return init;
   });
-  const toggleWeek = wId => setSelWeeks(prev => ({
-    ...prev,
-    [wId]: !prev[wId]
-  }));
-  const toggleEmp = eId => setSelEmps(prev => ({
-    ...prev,
-    [eId]: !prev[eId]
-  }));
+  const toggleWeek = wId => {
+    setError('');
+    setSelWeeks(prev => ({
+      ...prev,
+      [wId]: !prev[wId]
+    }));
+  };
+  const toggleEmp = eId => {
+    setError('');
+    setSelEmps(prev => ({
+      ...prev,
+      [eId]: !prev[eId]
+    }));
+  };
   const toggleTeam = cat => setCollapsedTeams(prev => ({
     ...prev,
     [cat]: !prev[cat]
@@ -454,7 +550,19 @@ const CopyModal = ({
   const handleCopy = () => {
     const targetWeeks = weeks.filter(w => selWeeks[w.id]).map(w => w.id);
     const targetEmps = activeEmps.filter(e => selEmps[e.id]).map(e => e.id);
-    if (targetWeeks.length === 0 || targetEmps.length === 0) return;
+    if (targetEmps.length === 0 && targetWeeks.length === 0) {
+      setError('Bitte mindestens einen Mitarbeiter und eine Woche auswählen.');
+      return;
+    }
+    if (targetEmps.length === 0) {
+      setError('Bitte mindestens einen Mitarbeiter auswählen.');
+      return;
+    }
+    if (targetWeeks.length === 0) {
+      setError('Bitte mindestens eine Woche auswählen.');
+      return;
+    }
+    setError('');
     const newAssignments = [];
     targetEmps.forEach(empId => {
       targetWeeks.forEach(week => {
@@ -557,11 +665,36 @@ const CopyModal = ({
       className: `px-2.5 py-1 rounded text-xs border font-medium transition-colors ${selWeeks[w.id] ? 'bg-gea-600 text-white border-gea-600' : isSource ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-gea-400' : 'bg-white text-slate-600 border-slate-200 hover:border-gea-300'}`
     }, w.label, isSource ? ' ★' : '');
   })))), /*#__PURE__*/React.createElement("div", {
-    className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center"
-  }, /*#__PURE__*/React.createElement("span", {
+    className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-3"
+  }, error ? /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-rose-600 font-medium flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.5",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "8",
+    x2: "12",
+    y2: "12"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "16",
+    x2: "12.01",
+    y2: "16"
+  })), error) : /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
   }, selEmpCount, " MA \xD7 ", selWeekCount, " KW = ", selEmpCount * selWeekCount, " Eintr\xE4ge"), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
+    className: "flex gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"

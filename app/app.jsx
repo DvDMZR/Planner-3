@@ -24,6 +24,7 @@ function App() {
     const [inactiveOfftimeTasks, setInactiveOfftimeTasks] = useState([]); // [{ name }]
     const [inactiveSupportTasks, setInactiveSupportTasks] = useState([]); // string[]
     const [inactiveTrainingTasks, setInactiveTrainingTasks] = useState([]); // string[]
+    const [customTrainingTasks, setCustomTrainingTasks] = useState([]); // user-added training tasks
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
     const [weeks, setWeeks] = useState([]);
@@ -89,8 +90,9 @@ function App() {
     }, []);
 
     // Forms
-    const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK });
+    const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK, email: '', role: '', notes: '' });
     const [editingEmpId, setEditingEmpId] = useState(null);
+    const [isEmpFormOpen, setIsEmpFormOpen] = useState(false);
     const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', address: '', country: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
@@ -243,6 +245,7 @@ function App() {
                 if (parsedData.inactiveOfftimeTasks) setInactiveOfftimeTasks(parsedData.inactiveOfftimeTasks);
                 if (parsedData.inactiveSupportTasks) setInactiveSupportTasks(parsedData.inactiveSupportTasks);
                 if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
+                if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -311,7 +314,7 @@ function App() {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
             offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
-            invoiceRecipient
+            customTrainingTasks, invoiceRecipient
         };
 
         if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
@@ -370,7 +373,7 @@ function App() {
                 }
             }, 1500);
         }
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient]);
 
     // Keep latestStateRef current so the beforeunload flush always sees the
     // latest data without re-registering the event listener on every change.
@@ -379,9 +382,9 @@ function App() {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
             offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
-            invoiceRecipient
+            customTrainingTasks, invoiceRecipient
         };
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, invoiceRecipient]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient]);
 
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
@@ -412,6 +415,7 @@ function App() {
         if (data.basicTasksMeta !== undefined) setBasicTasksMeta(data.basicTasksMeta);
         if (data.inactiveBasicTasks) setInactiveBasicTasks(data.inactiveBasicTasks);
         if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+        if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
         // Also re-seed the snapshots so the save cascade triggered by these
         // setStates doesn't rewrite identical data back to the server.
@@ -879,7 +883,7 @@ function App() {
         const data = JSON.stringify({
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-            offtimeTasks, invoiceRecipient,
+            offtimeTasks, customTrainingTasks, invoiceRecipient,
             schemaVersion: SCHEMA_VERSION
         }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -889,7 +893,7 @@ function App() {
         a.download = `Einsatzplanung3.0_Backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories,
-        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, invoiceRecipient]);
+        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, customTrainingTasks, invoiceRecipient]);
 
     const importData = useCallback((e) => {
         const file = e.target.files[0];
@@ -913,6 +917,7 @@ function App() {
                 if (parsed.basicTasksMeta) setBasicTasksMeta(parsed.basicTasksMeta);
                 if (parsed.inactiveBasicTasks) setInactiveBasicTasks(parsed.inactiveBasicTasks);
                 if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
+                if (parsed.customTrainingTasks) setCustomTrainingTasks(parsed.customTrainingTasks);
             } catch (err) {
                 alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
             }
@@ -1355,13 +1360,13 @@ function App() {
         activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
         inactiveBasicTasks, basicTasksSubTab, offtimeTasks, inactiveOfftimeTasks,
-        inactiveSupportTasks, inactiveTrainingTasks, isChangelogOpen,
+        inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, isChangelogOpen,
         weeks, selectedProject, collapsedCategories, collapsedProjCategories,
         collapsedEmpSetup, selectedProjectDetails, weeksAhead,
         isAssignModalOpen, assignContext, isCostItemModalOpen, editingCostItem,
         isCopyModalOpen, copyContext, isDeleteMode, pastProjectsExpanded,
         isInvoiceModalOpen, invoiceSelection, invoiceRecipient, isProjFormOpen,
-        isHelpModalOpen, timelineYear, empForm, editingEmpId, projForm,
+        isHelpModalOpen, timelineYear, empForm, editingEmpId, isEmpFormOpen, projForm,
         editingProjectId, newEmpCat, newProjCat, newBasicTask, newOfftimeTask,
         expandedSetupCats, syncStatus, fsStatus,
         employeeById, projectById, assignmentsByEmpWeek, assignmentsByProject,
@@ -1377,14 +1382,14 @@ function App() {
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
         setOfftimeTasks, setInactiveOfftimeTasks, setInactiveSupportTasks,
-        setInactiveTrainingTasks, setIsChangelogOpen, setSelectedProject,
+        setInactiveTrainingTasks, setCustomTrainingTasks, setIsChangelogOpen, setSelectedProject,
         setCollapsedCategories, setCollapsedProjCategories, setCollapsedEmpSetup,
         setSelectedProjectDetails, setWeeksAhead, setIsAssignModalOpen,
         setAssignContext, setIsCostItemModalOpen, setEditingCostItem,
         setIsCopyModalOpen, setCopyContext, setIsDeleteMode, setPastProjectsExpanded,
         setIsInvoiceModalOpen, setInvoiceSelection, setInvoiceRecipient,
         setIsProjFormOpen, setIsHelpModalOpen, setTimelineYear, setEmpForm,
-        setEditingEmpId, setProjForm, setEditingProjectId, setNewEmpCat,
+        setEditingEmpId, setIsEmpFormOpen, setProjForm, setEditingProjectId, setNewEmpCat,
         setNewProjCat, setNewBasicTask, setNewOfftimeTask, setExpandedSetupCats,
         setSyncStatus, setFsStatus,
         setCompactView, setScrollTarget,
@@ -1426,6 +1431,7 @@ function App() {
                     inactiveOfftimeTasks={inactiveOfftimeTasks}
                     inactiveSupportTasks={inactiveSupportTasks}
                     inactiveTrainingTasks={inactiveTrainingTasks}
+                    customTrainingTasks={customTrainingTasks}
                     projects={projects}
                     computeAutoStatus={computeAutoStatus}
                     getUtilization={getUtilization}
