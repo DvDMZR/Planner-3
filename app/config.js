@@ -32,6 +32,26 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.7.5 (2026-04-29)
+
+### Mitarbeiter-Verwaltung
+- Popup zur Mitarbeiterbearbeitung schmäler (max-w-md statt max-w-xl).
+
+### Planungsdialog
+- Email-Anrede verwendet jetzt den Vornamen aus dem Email-Präfix statt
+  dem Planner-Namen (z.B. hans.mueller@firma.de → "Hans").
+- Erläuterungstext unter der Email-Benachrichtigungs-Checkbox wurde in
+  einen **Tooltip** hinter einem ?-Icon verschoben.
+
+### Übersicht
+- Projekte werden nach Kategorie gruppiert (wie im Reiter Projektverwaltung),
+  mit Kategorietrennern zwischen den Gruppen.
+
+### Ressourcenplanung
+- Mitarbeiter-Suchfeld unterstützt jetzt **mehrere kommagetrennte Suchbegriffe**
+  (z.B. "Müller, Schmidt") — nur Mitarbeiter, die einen der Begriffe
+  enthalten, werden angezeigt.
+
 ## v0.7.4 (2026-04-28)
 
 ### Heatmap (Auslastung)
