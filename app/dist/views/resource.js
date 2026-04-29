@@ -242,21 +242,27 @@ const ResourceView = ({
       return prev.slice(0, -1);
     });
   }, [setAssignments]);
+  const searchTerms = React.useMemo(() => {
+    return empSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  }, [empSearch]);
   const displayCategories = React.useMemo(() => {
-    if (!empSearch.trim()) return activeCategories;
-    const q = empSearch.toLowerCase();
+    if (searchTerms.length === 0) return activeCategories;
     return activeCategories.filter(cat => {
       const emps = activeEmpsByCategory.get(cat) || [];
-      return cat.toLowerCase().includes(q) || emps.some(e => e.name.toLowerCase().includes(q));
+      const catLower = cat.toLowerCase();
+      return searchTerms.some(q => catLower.includes(q) || emps.some(e => e.name.toLowerCase().includes(q)));
     });
-  }, [empSearch, activeCategories, activeEmpsByCategory]);
+  }, [searchTerms, activeCategories, activeEmpsByCategory]);
   const getFilteredEmps = React.useCallback(cat => {
     const emps = activeEmpsByCategory.get(cat) || [];
-    if (!empSearch.trim()) return emps;
-    const q = empSearch.toLowerCase();
-    if (cat.toLowerCase().includes(q)) return emps;
-    return emps.filter(e => e.name.toLowerCase().includes(q));
-  }, [empSearch, activeEmpsByCategory]);
+    if (searchTerms.length === 0) return emps;
+    const catLower = cat.toLowerCase();
+    if (searchTerms.some(q => catLower.includes(q))) return emps;
+    return emps.filter(e => {
+      const nameLower = e.name.toLowerCase();
+      return searchTerms.some(q => nameLower.includes(q));
+    });
+  }, [searchTerms, activeEmpsByCategory]);
   const monthGroups = React.useMemo(() => {
     const groups = [];
     let cur = null;
@@ -357,7 +363,8 @@ const ResourceView = ({
       if (empDebounceRef.current) clearTimeout(empDebounceRef.current);
       empDebounceRef.current = setTimeout(() => setEmpSearch(v), 250);
     },
-    placeholder: "Mitarbeiter suchen\u2026",
+    placeholder: "Mitarbeiter suchen (mehrere mit Komma)\u2026",
+    title: "Mehrere Namen k\xF6nnen durch Komma getrennt eingegeben werden \u2013 es werden alle Mitarbeiter angezeigt, deren Name einen der Begriffe enth\xE4lt.",
     className: "pl-7 pr-7 py-1.5 border border-slate-300 rounded text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400 w-44"
   }), empSearchRaw && /*#__PURE__*/React.createElement("button", {
     onClick: () => {

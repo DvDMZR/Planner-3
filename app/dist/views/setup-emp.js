@@ -288,7 +288,7 @@ const SetupEmpView = ({
   }))), isEmpFormOpen && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden",
+    className: "bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden",
     style: {
       maxHeight: '90vh'
     }
