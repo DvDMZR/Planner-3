@@ -967,4 +967,118 @@ const DepsSection = () => {
     );
 };
 
+// ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
+const LoginModal = ({ appUsers, onLogin, onClose, onSetupAdmin }) => {
+    const { useState, useEffect, useRef } = React;
+    const [selectedUserId, setSelectedUserId] = useState(appUsers[0]?.id || '');
+    const [pin, setPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [error, setError] = useState('');
+    const pinRef = useRef(null);
+
+    useEffect(() => { pinRef.current?.focus(); }, []);
+
+    const isFirstRun = appUsers.length === 0;
+
+    const handleLogin = () => {
+        const user = appUsers.find(u => u.id === selectedUserId);
+        if (!user) { setError('Bitte einen Nutzer auswählen.'); return; }
+        if (user.pin !== pin) { setError('Falscher PIN.'); setPin(''); return; }
+        onLogin(user);
+    };
+
+    const handleSetup = () => {
+        if (pin.length < 4) { setError('PIN muss mindestens 4 Zeichen haben.'); return; }
+        if (pin !== confirmPin) { setError('PINs stimmen nicht überein.'); return; }
+        onSetupAdmin(pin);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+                <ModalHeader
+                    title={isFirstRun ? 'Admin-Zugang einrichten' : 'Anmelden'}
+                    subtitle={isFirstRun ? 'Legen Sie einen PIN für den ersten Administrator fest.' : undefined}
+                    onClose={onClose}
+                />
+                <div className="p-6 space-y-4">
+                    {isFirstRun ? (
+                        <>
+                            <div>
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">Admin-Name</label>
+                                <input type="text" disabled value="Admin" className="w-full p-2 border border-slate-200 rounded text-sm bg-slate-50 text-slate-500"/>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN festlegen</label>
+                                <input
+                                    ref={pinRef}
+                                    type="password"
+                                    value={pin}
+                                    onChange={e => { setPin(e.target.value); setError(''); }}
+                                    onKeyDown={e => e.key === 'Enter' && document.getElementById('confirm-pin')?.focus()}
+                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                    placeholder="Mindestens 4 Zeichen"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN bestätigen</label>
+                                <input
+                                    id="confirm-pin"
+                                    type="password"
+                                    value={confirmPin}
+                                    onChange={e => { setConfirmPin(e.target.value); setError(''); }}
+                                    onKeyDown={e => e.key === 'Enter' && handleSetup()}
+                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                    placeholder="PIN wiederholen"
+                                />
+                            </div>
+                            {error && <p className="text-rose-600 text-sm">{error}</p>}
+                            <button
+                                onClick={handleSetup}
+                                className="w-full bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
+                            >
+                                Admin einrichten & anmelden
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">Nutzer</label>
+                                <select
+                                    value={selectedUserId}
+                                    onChange={e => { setSelectedUserId(e.target.value); setError(''); setPin(''); }}
+                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                >
+                                    {appUsers.map(u => (
+                                        <option key={u.id} value={u.id}>
+                                            {u.name}{u.role === 'admin' ? ' (Admin)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN</label>
+                                <input
+                                    ref={pinRef}
+                                    type="password"
+                                    value={pin}
+                                    onChange={e => { setPin(e.target.value); setError(''); }}
+                                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                    placeholder="PIN eingeben"
+                                />
+                            </div>
+                            {error && <p className="text-rose-600 text-sm">{error}</p>}
+                            <div className="flex gap-2 pt-1">
+                                <button onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">Abbrechen</button>
+                                <button onClick={handleLogin} className="flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors">Anmelden</button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- MAIN APP ---
