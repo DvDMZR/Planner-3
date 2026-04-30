@@ -47,16 +47,32 @@ function App() {
     // ResourceView mounts. Cleared after the scroll runs.
     const [scrollTarget, setScrollTarget] = useState(null);
 
-    // Modals
-    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-    const [assignContext, setAssignContext] = useState(null); 
-    
-    const [isCostItemModalOpen, setIsCostItemModalOpen] = useState(false);
-    const [editingCostItem, setEditingCostItem] = useState(null);
+    // Modals – wrapped to block passive users and show a toast hint
+    const [isAssignModalOpen, _setIsAssignModalOpen] = useState(false);
+    const [assignContext, setAssignContext] = useState(null);
+    const setIsAssignModalOpen = useCallback((val) => {
+        if (val && !currentUserRef.current) { showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen'); return; }
+        _setIsAssignModalOpen(val);
+    }, []);
 
-    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+    const [isCostItemModalOpen, _setIsCostItemModalOpen] = useState(false);
+    const [editingCostItem, setEditingCostItem] = useState(null);
+    const setIsCostItemModalOpen = useCallback((val) => {
+        if (val && !currentUserRef.current) { showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen'); return; }
+        _setIsCostItemModalOpen(val);
+    }, []);
+
+    const [isCopyModalOpen, _setIsCopyModalOpen] = useState(false);
     const [copyContext, setCopyContext] = useState(null);
-    const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const setIsCopyModalOpen = useCallback((val) => {
+        if (val && !currentUserRef.current) { showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen'); return; }
+        _setIsCopyModalOpen(val);
+    }, []);
+    const [isDeleteMode, _setIsDeleteMode] = useState(false);
+    const setIsDeleteMode = useCallback((val) => {
+        if (val && !currentUserRef.current) { showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen'); return; }
+        _setIsDeleteMode(val);
+    }, []);
     const [pastProjectsExpanded, setPastProjectsExpanded] = useState(false);
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -134,6 +150,18 @@ function App() {
             return restricted.includes(prev) ? 'resource' : prev;
         });
     }, []);
+
+    // ── TOAST ─────────────────────────────────────────────────────────────────
+    const [toastMessage, setToastMessage] = useState('');
+    const toastTimerRef = useRef(null);
+    const showToastRef = useRef(null);
+    const showToast = useCallback((msg) => {
+        setToastMessage(msg);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToastMessage(''), 3000);
+    }, []);
+    // Wire the ref so wrapped setters (defined earlier) can call showToast
+    showToastRef.current = showToast;
 
     const handleSetupAdmin = useCallback((pin) => {
         const admin = { id: makeId('usr'), name: 'Admin', pin, role: 'admin' };
@@ -301,7 +329,8 @@ function App() {
                 if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
                 if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-                if (parsedData.appUsers) setAppUsers(parsedData.appUsers);
+                if (parsedData.appUsers && parsedData.appUsers.length > 0) setAppUsers(parsedData.appUsers);
+                else setAppUsers([{ id: 'default-admin', name: 'Admin', pin: '1234', role: 'admin' }]);
                 if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -316,6 +345,7 @@ function App() {
                 setProjects(init.projects);
                 setAssignments(init.assignments);
                 setExpenses(init.expenses);
+                setAppUsers([{ id: 'default-admin', name: 'Admin', pin: '1234', role: 'admin' }]);
             }
 
             const w = [];
@@ -1640,6 +1670,14 @@ function App() {
                     onClose={() => setIsLoginModalOpen(false)}
                     onSetupAdmin={handleSetupAdmin}
                 />
+            )}
+
+            {/* Toast notification for passive users */}
+            {toastMessage && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 pointer-events-none select-none">
+                    <IconLock size={14} className="shrink-0"/>
+                    {toastMessage}
+                </div>
             )}
         </div>
     );

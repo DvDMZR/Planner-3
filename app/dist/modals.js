@@ -1132,6 +1132,7 @@ const LoginModal = ({
     pinRef.current?.focus();
   }, []);
   const isFirstRun = appUsers.length === 0;
+  const hasDefaultAdmin = appUsers.some(u => u.id === 'default-admin');
   const handleLogin = () => {
     const user = appUsers.find(u => u.id === selectedUserId);
     if (!user) {
@@ -1230,7 +1231,9 @@ const LoginModal = ({
     onKeyDown: e => e.key === 'Enter' && handleLogin(),
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
     placeholder: "PIN eingeben"
-  })), error && /*#__PURE__*/React.createElement("p", {
+  })), hasDefaultAdmin && /*#__PURE__*/React.createElement("div", {
+    className: "bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2 text-xs"
+  }, "Standard-PIN: ", /*#__PURE__*/React.createElement("strong", null, "1234"), " \u2014 bitte nach der Anmeldung unter Verwaltung \u2192 Benutzer \xE4ndern."), error && /*#__PURE__*/React.createElement("p", {
     className: "text-rose-600 text-sm"
   }, error), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
