@@ -719,6 +719,114 @@ const IconLifebuoy = ({
   x2: "9.17",
   y2: "14.83"
 }));
+const IconLock = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("rect", {
+  x: "3",
+  y: "11",
+  width: "18",
+  height: "11",
+  rx: "2",
+  ry: "2"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M7 11V7a5 5 0 0 1 10 0v4"
+}));
+const IconLogIn = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "10 17 15 12 10 7"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "15",
+  y1: "12",
+  x2: "3",
+  y2: "12"
+}));
+const IconLogOut = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "16 17 21 12 16 7"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "21",
+  y1: "12",
+  x2: "9",
+  y2: "12"
+}));
+const IconShield = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+}));
+const IconUndo = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("polyline", {
+  points: "1 4 1 10 7 10"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M3.51 15a9 9 0 1 0 .49-4.5"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across

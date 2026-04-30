@@ -133,6 +133,77 @@ function App() {
     projCats: false
   });
 
+  // ── USER ROLES & SESSION ───────────────────────────────────────────────────
+  const [appUsers, setAppUsers] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('plannerSession'));
+    } catch {
+      return null;
+    }
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const currentUserRef = useRef(null);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // Stable ref so audit handlers see current assignments without deps
+  const assignmentsRef = useRef([]);
+  useEffect(() => {
+    assignmentsRef.current = assignments;
+  }, [assignments]);
+  const loginUser = useCallback(user => {
+    const session = {
+      id: user.id,
+      name: user.name,
+      role: user.role
+    };
+    try {
+      sessionStorage.setItem('plannerSession', JSON.stringify(session));
+    } catch (e) {}
+    setCurrentUser(session);
+    setIsLoginModalOpen(false);
+  }, []);
+  const logoutUser = useCallback(() => {
+    try {
+      sessionStorage.removeItem('plannerSession');
+    } catch (e) {}
+    setCurrentUser(null);
+    // Redirect away from restricted tabs
+    setActiveTab(prev => {
+      const restricted = ['utilization', 'setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+      return restricted.includes(prev) ? 'resource' : prev;
+    });
+  }, []);
+  const handleSetupAdmin = useCallback(pin => {
+    const admin = {
+      id: makeId('usr'),
+      name: 'Admin',
+      pin,
+      role: 'admin'
+    };
+    setAppUsers([admin]);
+    loginUser(admin);
+  }, [loginUser]);
+
+  // Central audit-log writer – uses refs to avoid stale closures
+  const logAudit = useCallback((action, description, undoData = null) => {
+    const user = currentUserRef.current;
+    if (!user) return;
+    const entry = {
+      id: makeId('aud'),
+      timestamp: new Date().toISOString(),
+      userId: user.id,
+      userName: user.name,
+      action,
+      description,
+      undoData
+    };
+    setAuditLog(prev => [entry, ...prev].slice(0, 500));
+  }, []);
+
   // SharePoint / FS sync
   const syncStatusRef = useRef(SP_CONTEXT ? 'connecting' : 'local');
   const isRemoteUpdateRef = useRef(false);
@@ -304,6 +375,8 @@ function App() {
         if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
         if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
         if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
+        if (parsedData.appUsers) setAppUsers(parsedData.appUsers);
+        if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
         // Seed diff snapshots so the first save cycle is a no-op for
         // files that are already in sync.
@@ -364,6 +437,86 @@ function App() {
     empCategoriesRef.current = empCategories;
   }, [empCategories]);
 
+  // ── AUDIT WATCH: employees ─────────────────────────────────────────────────
+  // Must run BEFORE the save effect so isRemoteUpdateRef is still true for
+  // remote-sync updates when this effect checks it.
+  const prevEmployeesRef = useRef(null);
+  useEffect(() => {
+    if (prevEmployeesRef.current === null) {
+      prevEmployeesRef.current = employees;
+      return;
+    }
+    const prev = prevEmployeesRef.current;
+    prevEmployeesRef.current = employees;
+    if (prev === employees || isRemoteUpdateRef.current) return;
+    const user = currentUserRef.current;
+    if (!user) return;
+    if (employees.length > prev.length) {
+      const added = employees.find(e => !prev.some(p => p.id === e.id));
+      if (added) logAudit('employee_create', `Mitarbeiter angelegt: ${added.name}`, {
+        type: 'del_employee',
+        id: added.id
+      });
+    } else if (employees.length < prev.length) {
+      const removed = prev.find(e => !employees.some(p => p.id === e.id));
+      if (removed) logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, {
+        type: 'restore_employee',
+        prev: removed
+      });
+    } else {
+      const changed = employees.find(e => {
+        const p = prev.find(p => p.id === e.id);
+        return p && JSON.stringify(e) !== JSON.stringify(p);
+      });
+      if (changed) {
+        const prevEmp = prev.find(p => p.id === changed.id);
+        logAudit('employee_update', `Mitarbeiter bearbeitet: ${changed.name}`, {
+          type: 'restore_employee',
+          prev: prevEmp
+        });
+      }
+    }
+  }, [employees, logAudit]);
+
+  // ── AUDIT WATCH: projects ──────────────────────────────────────────────────
+  const prevProjectsRef = useRef(null);
+  useEffect(() => {
+    if (prevProjectsRef.current === null) {
+      prevProjectsRef.current = projects;
+      return;
+    }
+    const prev = prevProjectsRef.current;
+    prevProjectsRef.current = projects;
+    if (prev === projects || isRemoteUpdateRef.current) return;
+    const user = currentUserRef.current;
+    if (!user) return;
+    if (projects.length > prev.length) {
+      const added = projects.find(p => !prev.some(q => q.id === p.id));
+      if (added) logAudit('project_create', `Projekt angelegt: ${added.name}`, {
+        type: 'del_project',
+        id: added.id
+      });
+    } else if (projects.length < prev.length) {
+      const removed = prev.find(p => !projects.some(q => q.id === p.id));
+      if (removed) logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, {
+        type: 'restore_project',
+        prev: removed
+      });
+    } else {
+      const changed = projects.find(p => {
+        const q = prev.find(q => q.id === p.id);
+        return q && JSON.stringify(p) !== JSON.stringify(q);
+      });
+      if (changed) {
+        const prevProj = prev.find(q => q.id === changed.id);
+        logAudit('project_update', `Projekt bearbeitet: ${changed.name}`, {
+          type: 'restore_project',
+          prev: prevProj
+        });
+      }
+    }
+  }, [projects, logAudit]);
+
   // Save on change. localStorage runs at ~400 ms, SharePoint at 1.5 s. The
   // SharePoint write is split per entity / team; saveSplitState() only
   // writes files whose content actually changed (diff against the last
@@ -394,7 +547,9 @@ function App() {
       inactiveSupportTasks,
       inactiveTrainingTasks,
       customTrainingTasks,
-      invoiceRecipient
+      invoiceRecipient,
+      appUsers,
+      auditLog
     };
     if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
     localSaveTimer.current = setTimeout(() => {
@@ -454,7 +609,7 @@ function App() {
         }
       }, 1500);
     }
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
 
   // Keep latestStateRef current so the beforeunload flush always sees the
   // latest data without re-registering the event listener on every change.
@@ -475,9 +630,11 @@ function App() {
       inactiveSupportTasks,
       inactiveTrainingTasks,
       customTrainingTasks,
-      invoiceRecipient
+      invoiceRecipient,
+      appUsers,
+      auditLog
     };
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
 
   // Flush pending local save before the page unloads so a fast tab close
   // doesn't drop the most recent edits.
@@ -510,6 +667,8 @@ function App() {
     if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
     if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
     if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+    if (data.appUsers) setAppUsers(data.appUsers);
+    if (data.auditLog) setAuditLog(data.auditLog);
     // Also re-seed the snapshots so the save cascade triggered by these
     // setStates doesn't rewrite identical data back to the server.
     try {
@@ -936,34 +1095,66 @@ function App() {
   const handleSaveAssignment = useCallback(data => {
     if (Array.isArray(data)) {
       setAssignments(prev => [...prev, ...data]);
+      logAudit('assignment_copy', `${data.length} Zuweisung(en) kopiert`, {
+        type: 'del_assignments',
+        ids: data.map(a => a.id)
+      });
     } else if (data.id) {
+      const oldAss = assignmentsRef.current.find(a => a.id === data.id);
       setAssignments(prev => prev.map(a => a.id === data.id ? data : a));
+      const emp = employeesRef.current.find(e => e.id === data.empId);
+      logAudit('assignment_update', `Zuweisung bearbeitet (${emp?.name || '?'}, ${data.week})`, {
+        type: 'restore_assignment',
+        prev: oldAss
+      });
     } else {
+      const newId = makeId('ass');
       setAssignments(prev => [...prev, {
         ...data,
-        id: makeId('ass')
+        id: newId
       }]);
+      const emp = employeesRef.current.find(e => e.id === data.empId);
+      logAudit('assignment_create', `Neue Zuweisung (${emp?.name || '?'}, ${data.week})`, {
+        type: 'del_assignment',
+        ids: [newId]
+      });
     }
     setIsAssignModalOpen(false);
-  }, []);
+  }, [logAudit]);
   const handleDeleteAssignment = useCallback(id => {
+    const deleted = assignmentsRef.current.find(a => a.id === id);
     setAssignments(prev => prev.filter(a => a.id !== id));
+    if (deleted) {
+      const emp = employeesRef.current.find(e => e.id === deleted.empId);
+      logAudit('assignment_delete', `Zuweisung gelöscht (${emp?.name || '?'}, ${deleted.week})`, {
+        type: 'restore_assignment',
+        prev: deleted
+      });
+    }
     setIsAssignModalOpen(false);
-  }, []);
+  }, [logAudit]);
   const handleDeleteAssignmentSeries = useCallback(id => {
-    setAssignments(prev => {
-      const ass = prev.find(a => a.id === id);
-      if (!ass) return prev;
-      return prev.filter(a => !(a.ruleId === ass.ruleId && a.week >= ass.week));
+    const ass = assignmentsRef.current.find(a => a.id === id);
+    if (!ass) {
+      setIsAssignModalOpen(false);
+      return;
+    }
+    const toDelete = assignmentsRef.current.filter(a => a.ruleId === ass.ruleId && a.week >= ass.week);
+    setAssignments(prev => prev.filter(a => !(a.ruleId === ass.ruleId && a.week >= ass.week)));
+    logAudit('assignment_delete_series', `Terminserie gelöscht (${toDelete.length} Einträge)`, {
+      type: 'restore_assignments',
+      prevItems: toDelete
     });
     setIsAssignModalOpen(false);
-  }, []);
+  }, [logAudit]);
   const handleDrop = useCallback((e, targetWeek, targetEmpIdOrProjId, isResourceView = false) => {
     e.preventDefault();
+    if (!currentUserRef.current) return; // passive users cannot drag-drop
     const assignmentId = e.dataTransfer.getData('assignmentId');
     if (assignmentId) {
       // Move existing assignment chip. In resource view: reassign to target employee.
       // In project view: reassign to target project (only for project-type chips).
+      const origAss = assignmentsRef.current.find(a => a.id === assignmentId);
       setAssignments(prev => prev.map(a => {
         if (a.id !== assignmentId) return a;
         const updated = {
@@ -981,6 +1172,13 @@ function App() {
         }
         return updated;
       }));
+      if (origAss) {
+        const emp = employeesRef.current.find(e => e.id === origAss.empId);
+        logAudit('assignment_drop', `Zuweisung verschoben (${emp?.name || '?'}, → ${targetWeek})`, {
+          type: 'restore_assignment',
+          prev: origAss
+        });
+      }
       return;
     }
     const empId = e.dataTransfer.getData('empId');
@@ -1002,7 +1200,7 @@ function App() {
       });
       setIsAssignModalOpen(true);
     }
-  }, []);
+  }, [logAudit]);
   const exportData = useCallback(() => {
     const data = JSON.stringify({
       employees,
@@ -1712,7 +1910,11 @@ function App() {
     resourceScrollRef,
     timelineScrollRef,
     compactView,
-    scrollTarget
+    scrollTarget,
+    currentUser,
+    appUsers,
+    auditLog,
+    isLoginModalOpen
   };
   const h = useMemo(() => ({
     setActiveTab,
@@ -1766,6 +1968,12 @@ function App() {
     setFsStatus,
     setCompactView,
     setScrollTarget,
+    setAppUsers,
+    setAuditLog,
+    setIsLoginModalOpen,
+    loginUser,
+    logoutUser,
+    handleSetupAdmin,
     getEmpWeeklyHours,
     computeAutoStatus,
     getWeeksForYear,
@@ -1787,7 +1995,7 @@ function App() {
   }), [
   // useState setters are stable – no deps needed for those.
   // Only useCallback refs with real deps need listing:
-  getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById]);
+  loginUser, logoutUser, handleSetupAdmin, getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById, handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries, handleDrop]);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex h-screen w-full font-sans text-slate-800 bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement(SidebarView, {
@@ -1802,25 +2010,31 @@ function App() {
   }), activeTab === 'support' && hasSupportEmployees && /*#__PURE__*/React.createElement(SupportView, {
     s: s,
     h: h
-  }), activeTab === 'utilization' && /*#__PURE__*/React.createElement(UtilizationView, {
+  }), activeTab === 'utilization' && currentUser && /*#__PURE__*/React.createElement(UtilizationView, {
     s: s,
     h: h
   }), activeTab === 'overview' && /*#__PURE__*/React.createElement(OverviewView, {
     s: s,
     h: h
-  }), activeTab === 'setup_emp' && /*#__PURE__*/React.createElement(SetupEmpView, {
+  }), activeTab === 'setup_emp' && currentUser && /*#__PURE__*/React.createElement(SetupEmpView, {
     s: s,
     h: h
-  }), activeTab === 'setup_proj' && /*#__PURE__*/React.createElement(SetupProjView, {
+  }), activeTab === 'setup_proj' && currentUser && /*#__PURE__*/React.createElement(SetupProjView, {
     s: s,
     h: h
-  }), activeTab === 'setup_cats' && /*#__PURE__*/React.createElement(SetupCatsView, {
+  }), activeTab === 'setup_cats' && currentUser && /*#__PURE__*/React.createElement(SetupCatsView, {
     s: s,
     h: h
-  }), activeTab === 'data' && /*#__PURE__*/React.createElement(DataView, {
+  }), activeTab === 'data' && currentUser && /*#__PURE__*/React.createElement(DataView, {
     s: s,
     h: h
-  }), isAssignModalOpen && assignContext && /*#__PURE__*/React.createElement(AssignmentModal, {
+  }), activeTab === 'audit' && currentUser && /*#__PURE__*/React.createElement(AuditView, {
+    s: s,
+    h: h
+  }), activeTab === 'setup_users' && currentUser?.role === 'admin' && /*#__PURE__*/React.createElement(SetupUsersView, {
+    s: s,
+    h: h
+  }), isAssignModalOpen && assignContext && currentUser && /*#__PURE__*/React.createElement(AssignmentModal, {
     assignContext: assignContext,
     employeeById: employeeById,
     basicTasks: basicTasks,
@@ -1840,7 +2054,7 @@ function App() {
     onSave: handleSaveAssignment,
     onDelete: handleDeleteAssignment,
     onDeleteSeries: handleDeleteAssignmentSeries
-  }), isCopyModalOpen && copyContext && /*#__PURE__*/React.createElement(CopyModal, {
+  }), isCopyModalOpen && copyContext && currentUser && /*#__PURE__*/React.createElement(CopyModal, {
     copyContext: copyContext,
     activeEmps: activeEmployees,
     empsByCategory: activeEmpsByCategory,
@@ -1913,7 +2127,12 @@ function App() {
   }, "Aktivieren")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setFsStatus('off'),
     className: "w-full text-slate-400 hover:text-slate-600 text-sm py-2 transition-colors"
-  }, "Ohne Sync starten"))), isHelpModalOpen && HelpModal());
+  }, "Ohne Sync starten"))), isHelpModalOpen && HelpModal(), isLoginModalOpen && /*#__PURE__*/React.createElement(LoginModal, {
+    appUsers: appUsers,
+    onLogin: loginUser,
+    onClose: () => setIsLoginModalOpen(false),
+    onSetupAdmin: handleSetupAdmin
+  }));
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(/*#__PURE__*/React.createElement(App, null));

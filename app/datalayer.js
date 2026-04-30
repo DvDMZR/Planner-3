@@ -83,6 +83,8 @@ function buildSplitFiles(state) {
     const inactiveTrainingTasks = state.inactiveTrainingTasks || [];
     const customTrainingTasks   = state.customTrainingTasks   || [];
     const invoiceRecipient      = state.invoiceRecipient      || '';
+    const appUsers              = state.appUsers              || [];
+    const auditLog              = state.auditLog              || [];
 
     const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
     const assGroups = groupByTeam(assignments, employees, teams);
@@ -91,7 +93,7 @@ function buildSplitFiles(state) {
     const files = {
         'employees.json': { employees },
         'projects.json':  { projects },
-        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient }
+        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog }
     };
     for (const team of teams) {
         files[teamAssignmentsFile(team)] = { assignments: assGroups[team] || [] };
@@ -122,7 +124,9 @@ function mergeSplitFiles({ employees, projects, settings, assignmentsByTeam, cos
         inactiveSupportTasks: settings?.inactiveSupportTasks || [],
         inactiveTrainingTasks:settings?.inactiveTrainingTasks|| [],
         customTrainingTasks:  settings?.customTrainingTasks  || [],
-        invoiceRecipient:     settings?.invoiceRecipient     || ''
+        invoiceRecipient:     settings?.invoiceRecipient     || '',
+        appUsers:             settings?.appUsers             || [],
+        auditLog:             settings?.auditLog             || []
     };
 }
 

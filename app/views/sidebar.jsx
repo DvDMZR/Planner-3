@@ -16,7 +16,8 @@ const _SidebarBase = ({ s, h }) => {
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         supportEmpsByCategory, supportEmpCategories, hasSupportEmployees,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        currentUser, appUsers } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -35,7 +36,30 @@ const _SidebarBase = ({ s, h }) => {
         toggleCategory, toggleProjCategory, toggleEmpSetup,
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
-        scrollToCurrentWeek, reconnectSharePoint } = h;
+        scrollToCurrentWeek, reconnectSharePoint,
+        loginUser, logoutUser, setIsLoginModalOpen } = h;
+
+    const isActive = !!currentUser;
+    const isAdmin = currentUser?.role === 'admin';
+
+    // Helper: locked tab button for passive users
+    const lockedTabBtn = (label, icon) => (
+        <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-600 opacity-50 cursor-not-allowed select-none">
+            {icon} {label}
+            <IconLock size={13} className="ml-auto shrink-0"/>
+        </div>
+    );
+
+    // Helper: normal tab button
+    const tabBtn = (tab, label, icon, onClick) => (
+        <button
+            onClick={onClick || (() => { setActiveTab(tab); setSelectedProjectDetails(null); })}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === tab ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}
+        >
+            {icon} {label}
+        </button>
+    );
+
     return (
         <aside className="w-60 bg-gea-900 text-gea-100 flex flex-col h-full shrink-0 shadow-xl">
             <div className="px-6 py-5 flex items-center gap-3 border-b border-gea-700">
@@ -50,22 +74,67 @@ const _SidebarBase = ({ s, h }) => {
                     </div>
                 </div>
             </div>
-            <nav className="flex-1 py-4 space-y-0.5 px-3">
+            <nav className="flex-1 py-4 space-y-0.5 px-3 overflow-y-auto">
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">Planung</div>
-                <button onClick={() => { setActiveTab('resource'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'resource' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconUsers size={18}/> Ressourcen</button>
-                <button onClick={() => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'project' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconGanttChart size={18}/> Projekte</button>
-                {hasSupportEmployees && (
-                    <button onClick={() => { setActiveTab('support'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'support' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconLifebuoy size={18}/> Support</button>
-                )}
-                <button onClick={() => { setActiveTab('utilization'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'utilization' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconBarChart size={18}/> Auslastung</button>
-                <button onClick={() => { setActiveTab('overview'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'overview' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconTable size={18}/> Übersicht</button>
+                {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
+                {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
+                {hasSupportEmployees && tabBtn('support', 'Support', <IconLifebuoy size={18}/>)}
+                {isActive
+                    ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
+                    : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
+                }
+                {tabBtn('overview', 'Übersicht', <IconTable size={18}/>)}
 
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold">Verwaltung</div>
-                <button onClick={() => { setActiveTab('setup_emp'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_emp' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconUser size={18}/> Mitarbeiter</button>
-                <button onClick={() => { setActiveTab('setup_proj'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_proj' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconBriefcase size={18}/> Projekte</button>
-                <button onClick={() => { setActiveTab('setup_cats'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'setup_cats' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconTag size={18}/> Kategorien</button>
-                <button onClick={() => { setActiveTab('data'); setSelectedProjectDetails(null); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors font-medium ${activeTab === 'data' ? 'bg-gea-600 text-white shadow-sm' : 'text-gea-300 hover:bg-gea-800 hover:text-white'}`}><IconSettings size={18}/> System & Export</button>
+                {isActive ? (
+                    <>
+                        {tabBtn('setup_emp',  'Mitarbeiter',    <IconUser size={18}/>)}
+                        {tabBtn('setup_proj', 'Projekte',       <IconBriefcase size={18}/>)}
+                        {tabBtn('setup_cats', 'Kategorien',     <IconTag size={18}/>)}
+                        {tabBtn('data',       'System & Export',<IconSettings size={18}/>)}
+                        {tabBtn('audit',      'Verlauf',        <IconHistory size={18}/>)}
+                        {isAdmin && tabBtn('setup_users', 'Benutzer', <IconShield size={18}/>)}
+                    </>
+                ) : (
+                    <>
+                        {lockedTabBtn('Mitarbeiter',     <IconUser size={18}/>)}
+                        {lockedTabBtn('Projekte',        <IconBriefcase size={18}/>)}
+                        {lockedTabBtn('Kategorien',      <IconTag size={18}/>)}
+                        {lockedTabBtn('System & Export', <IconSettings size={18}/>)}
+                        {lockedTabBtn('Verlauf',         <IconHistory size={18}/>)}
+                    </>
+                )}
             </nav>
+
+            {/* Login / Logout area */}
+            <div className="px-4 py-3 border-t border-gea-700 shrink-0">
+                {isActive ? (
+                    <div className="flex items-center gap-2">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isAdmin ? 'bg-gea-500 text-white' : 'bg-gea-700 text-gea-200'}`}>
+                            {currentUser.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <span className="text-gea-200 text-xs font-medium truncate block">{currentUser.name}</span>
+                            <span className="text-gea-500 text-xs">{isAdmin ? 'Administrator' : 'Aktiver Nutzer'}</span>
+                        </div>
+                        <button
+                            onClick={logoutUser}
+                            title="Abmelden"
+                            className="text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
+                        >
+                            <IconLogOut size={15}/>
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => setIsLoginModalOpen(true)}
+                        className="w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
+                    >
+                        <IconLogIn size={15}/> Anmelden
+                    </button>
+                )}
+            </div>
+
             {(SP_CONTEXT || fsStatus === 'connected') && (
                 <div className="px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
@@ -109,5 +178,6 @@ const SidebarView = React.memo(_SidebarBase, (prev, next) =>
     prev.s.syncStatus           === next.s.syncStatus         &&
     prev.s.fsStatus             === next.s.fsStatus           &&
     prev.s.projects             === next.s.projects           && // needed for onClick: setSelectedProject(projects[0])
-    prev.s.hasSupportEmployees  === next.s.hasSupportEmployees   // toggles the Support tab
+    prev.s.hasSupportEmployees  === next.s.hasSupportEmployees &&
+    prev.s.currentUser          === next.s.currentUser           // login/logout
 );
