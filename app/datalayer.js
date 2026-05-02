@@ -195,8 +195,11 @@ async function loadSplitStateSp(ctx) {
         assignmentsByTeam,
         costItemsByTeam
     });
-    const timestamps = await spGetFolderTimestamps(ctx).catch(() => ({}));
-    return { state, timestamps };
+    const fileMeta = await spGetFolderMeta(ctx).catch(() => ({}));
+    const timestamps = {};
+    const etags = {};
+    Object.entries(fileMeta).forEach(([f, v]) => { timestamps[f] = v.ts; etags[f] = v.etag; });
+    return { state, timestamps, etags };
 }
 
 async function loadSplitStateFs(dirHandle) {
@@ -234,6 +237,8 @@ async function loadSplitStateFs(dirHandle) {
 // Save split files, writing ONLY those whose serialised payload differs from
 // the entry in `lastSaved`. `lastSaved` is mutated to reflect the new state.
 // `writeFile(filename, payload)` is the actual write callback (SP or FS).
+// meta.json is always written LAST as an atomic commit marker so that polling
+// clients can wait for meta.json before reacting to mid-write states.
 async function saveSplitState(state, lastSaved, writeFile) {
     const files = buildSplitFiles(state);
 
@@ -246,11 +251,19 @@ async function saveSplitState(state, lastSaved, writeFile) {
         }
     });
 
+    let wroteAny = false;
     for (const [filename, payload] of Object.entries(files)) {
         const serialised = JSON.stringify(payload);
         if (lastSaved[filename] === serialised) continue;
         await writeFile(filename, serialised);
         lastSaved[filename] = serialised;
+        wroteAny = true;
+    }
+
+    // Commit marker: written last so polling clients only react once all
+    // data files are consistent.
+    if (wroteAny) {
+        await writeFile('meta.json', JSON.stringify({ schemaVersion: SCHEMA_VERSION, lastSaveAt: new Date().toISOString() }));
     }
 }
 
