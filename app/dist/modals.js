@@ -66,7 +66,9 @@ const AssignmentModal = ({
   const [planWeeks, setPlanWeeks] = useState(1);
   const [notifyByEmail, setNotifyByEmail] = useState(false);
   const emp = employeeById.get(formData.empId);
-  const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
+  const exactPct = (formData.hours ?? empWeeklyHours) / empWeeklyHours * 100;
+  const pct = Math.round(exactPct);
+  const hoursDisp = Math.round((formData.hours ?? empWeeklyHours) * 10) / 10;
   const empEmail = emp?.email || '';
   const canNotify = !!empEmail && !formData.id;
   const handleTypeChange = type => {
@@ -361,15 +363,15 @@ const AssignmentModal = ({
     className: "text-gea-600 font-medium"
   }, pct, "%"), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 ml-2"
-  }, "(", formData.hours ?? HOURS_PER_WEEK, "h)")), /*#__PURE__*/React.createElement("input", {
+  }, "(", hoursDisp, "h)")), /*#__PURE__*/React.createElement("input", {
     type: "range",
     min: "0",
     max: "200",
-    step: "10",
-    value: pct,
+    step: "5",
+    value: exactPct,
     onChange: e => setFormData({
       ...formData,
-      hours: Math.round(parseInt(e.target.value) / 100 * empWeeklyHours)
+      hours: parseFloat(e.target.value) / 100 * empWeeklyHours
     }),
     className: "w-full accent-gea-600"
   }), /*#__PURE__*/React.createElement("div", {

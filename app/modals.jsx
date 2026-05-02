@@ -73,7 +73,9 @@ const AssignmentModal = ({
     const [notifyByEmail, setNotifyByEmail] = useState(false);
 
     const emp = employeeById.get(formData.empId);
-    const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
+    const exactPct  = (formData.hours ?? empWeeklyHours) / empWeeklyHours * 100;
+    const pct       = Math.round(exactPct);
+    const hoursDisp = Math.round((formData.hours ?? empWeeklyHours) * 10) / 10;
     const empEmail = emp?.email || '';
     const canNotify = !!empEmail && !formData.id;
 
@@ -334,11 +336,14 @@ const AssignmentModal = ({
                     <div>
                         <label className="block text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">
                             Auslastung: <span className="text-gea-600 font-medium">{pct}%</span>
-                            <span className="text-slate-400 ml-2">({formData.hours ?? HOURS_PER_WEEK}h)</span>
+                            <span className="text-slate-400 ml-2">({hoursDisp}h)</span>
                         </label>
-                        <input type="range" min="0" max="200" step="10"
-                            value={pct}
-                            onChange={e => setFormData({...formData, hours: Math.round(parseInt(e.target.value) / 100 * empWeeklyHours)})}
+                        {/* step=5 lets the user hit 25 / 50 / 75 % exactly; we no longer
+                            round hours so that round %-values are reachable regardless of
+                            the employee's weeklyHours (e.g. 50% of 35h → 17.5h). */}
+                        <input type="range" min="0" max="200" step="5"
+                            value={exactPct}
+                            onChange={e => setFormData({...formData, hours: parseFloat(e.target.value) / 100 * empWeeklyHours})}
                             className="w-full accent-gea-600"/>
                         <div className="flex justify-between text-xs text-slate-400 mt-1">
                             <span>0%</span><span>50%</span><span>100%</span><span>150%</span><span>200%</span>
