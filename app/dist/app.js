@@ -1,4 +1,11 @@
 // --- MAIN APP ---
+const DEFAULT_ADMIN_USER = {
+  id: 'default-admin',
+  name: 'Admin',
+  pin: '1234',
+  role: 'admin'
+};
+const AUTH_TOAST_MSG = 'Bitte anmelden, um Änderungen vorzunehmen';
 function App() {
   // Local aliases for React hooks; avoids duplicate top-level `const` clash
   // when multiple pre-compiled scripts share the same browser global scope.
@@ -51,42 +58,39 @@ function App() {
   // ResourceView mounts. Cleared after the scroll runs.
   const [scrollTarget, setScrollTarget] = useState(null);
 
-  // Modals – wrapped to block passive users and show a toast hint
+  // ── TOAST ──────────────────────────────────────────────────────────────────
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback(msg => {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(''), 3000);
+  }, []);
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
+  // Factory: wraps a modal setter to block passive users with a toast hint
+  const guardedSetter = useCallback(setter => val => {
+    if (val && !currentUserRef.current) {
+      showToast(AUTH_TOAST_MSG);
+      return;
+    }
+    setter(val);
+  }, [showToast]);
+
+  // Modals
   const [isAssignModalOpen, _setIsAssignModalOpen] = useState(false);
   const [assignContext, setAssignContext] = useState(null);
-  const setIsAssignModalOpen = useCallback(val => {
-    if (val && !currentUserRef.current) {
-      showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen');
-      return;
-    }
-    _setIsAssignModalOpen(val);
-  }, []);
+  const setIsAssignModalOpen = useMemo(() => guardedSetter(_setIsAssignModalOpen), [guardedSetter]);
   const [isCostItemModalOpen, _setIsCostItemModalOpen] = useState(false);
   const [editingCostItem, setEditingCostItem] = useState(null);
-  const setIsCostItemModalOpen = useCallback(val => {
-    if (val && !currentUserRef.current) {
-      showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen');
-      return;
-    }
-    _setIsCostItemModalOpen(val);
-  }, []);
+  const setIsCostItemModalOpen = useMemo(() => guardedSetter(_setIsCostItemModalOpen), [guardedSetter]);
   const [isCopyModalOpen, _setIsCopyModalOpen] = useState(false);
   const [copyContext, setCopyContext] = useState(null);
-  const setIsCopyModalOpen = useCallback(val => {
-    if (val && !currentUserRef.current) {
-      showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen');
-      return;
-    }
-    _setIsCopyModalOpen(val);
-  }, []);
+  const setIsCopyModalOpen = useMemo(() => guardedSetter(_setIsCopyModalOpen), [guardedSetter]);
   const [isDeleteMode, _setIsDeleteMode] = useState(false);
-  const setIsDeleteMode = useCallback(val => {
-    if (val && !currentUserRef.current) {
-      showToastRef.current?.('Bitte anmelden, um Änderungen vorzunehmen');
-      return;
-    }
-    _setIsDeleteMode(val);
-  }, []);
+  const setIsDeleteMode = useMemo(() => guardedSetter(_setIsDeleteMode), [guardedSetter]);
   const [pastProjectsExpanded, setPastProjectsExpanded] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [invoiceSelection, setInvoiceSelection] = useState({
@@ -205,18 +209,6 @@ function App() {
       return restricted.includes(prev) ? 'resource' : prev;
     });
   }, []);
-
-  // ── TOAST ─────────────────────────────────────────────────────────────────
-  const [toastMessage, setToastMessage] = useState('');
-  const toastTimerRef = useRef(null);
-  const showToastRef = useRef(null);
-  const showToast = useCallback(msg => {
-    setToastMessage(msg);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToastMessage(''), 3000);
-  }, []);
-  // Wire the ref so wrapped setters (defined earlier) can call showToast
-  showToastRef.current = showToast;
   const handleSetupAdmin = useCallback(pin => {
     const admin = {
       id: makeId('usr'),
@@ -415,12 +407,7 @@ function App() {
         if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
         if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
         if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-        if (parsedData.appUsers && parsedData.appUsers.length > 0) setAppUsers(parsedData.appUsers);else setAppUsers([{
-          id: 'default-admin',
-          name: 'Admin',
-          pin: '1234',
-          role: 'admin'
-        }]);
+        if (parsedData.appUsers && parsedData.appUsers.length > 0) setAppUsers(parsedData.appUsers);else setAppUsers([DEFAULT_ADMIN_USER]);
         if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
         // Seed diff snapshots so the first save cycle is a no-op for
@@ -437,12 +424,7 @@ function App() {
         setProjects(init.projects);
         setAssignments(init.assignments);
         setExpenses(init.expenses);
-        setAppUsers([{
-          id: 'default-admin',
-          name: 'Admin',
-          pin: '1234',
-          role: 'admin'
-        }]);
+        setAppUsers([DEFAULT_ADMIN_USER]);
       }
       const w = [];
       const today = new Date();
