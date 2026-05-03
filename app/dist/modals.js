@@ -28,7 +28,10 @@ const AssignmentModal = ({
   onDelete,
   onDeleteSeries
 }) => {
-  const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
+  // Guard against weeklyHours = 0 / negative – would otherwise produce
+  // NaN / Infinity in the percent calculations and freeze the slider.
+  const rawWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours;
+  const empWeeklyHours = rawWeeklyHours > 0 ? rawWeeklyHours : HOURS_PER_WEEK;
   const activeSupportTasks = useMemo(() => SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)), [inactiveSupportTasks]);
   const activeTrainingTasks = useMemo(() => [...TRAINING_TASKS, ...(customTrainingTasks || [])].filter(t => !(inactiveTrainingTasks || []).includes(t)), [inactiveTrainingTasks, customTrainingTasks]);
   const activeOfftimeTasks = useMemo(() => offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t)), [offtimeTasks, inactiveOfftimeTasks]);
@@ -494,6 +497,7 @@ const AssignmentModal = ({
 };
 const CopyModal = ({
   copyContext,
+  employees,
   activeEmps,
   empsByCategory,
   empCategories,
@@ -507,19 +511,17 @@ const CopyModal = ({
     assignment
   } = copyContext;
 
-  // Lookup of active employees so we can read each one's weeklyHours.  This
-  // lets the copy preserve the *percentage* (Auslastung) of the source rather
-  // than the absolute hours – a 100 % task on a 35h employee becomes 100 %
-  // on a 40h target (= 40h), not 35h (= 87.5 %).
+  // Lookup of ALL employees (not just active) so the source weeklyHours is
+  // correct even when copying off an inactive MA. The copy preserves the
+  // *percentage* (Auslastung) – 100 % on 35h → 100 % on 40h (= 40h), not 35h.
   const empById = useMemo(() => {
     const m = new Map();
-    (activeEmps || []).forEach(e => m.set(e.id, e));
+    (employees || []).forEach(e => m.set(e.id, e));
     return m;
-  }, [activeEmps]);
+  }, [employees]);
   const sourceEmp = empById.get(assignment.empId);
-  const sourceWeeklyHours = sourceEmp?.weeklyHours ?? HOURS_PER_WEEK;
-  const sourceHours = assignment.hours ?? (assignment.percent ?? 100) / 100 * sourceWeeklyHours;
-  const sourcePctFraction = sourceWeeklyHours > 0 ? sourceHours / sourceWeeklyHours : 1;
+  const sourceWeeklyHours = sourceEmp?.weeklyHours > 0 ? sourceEmp.weeklyHours : HOURS_PER_WEEK;
+  const sourcePctFraction = getAssignmentHours(assignment, sourceWeeklyHours) / sourceWeeklyHours;
   const [selWeeks, setSelWeeks] = useState({});
   const [selEmps, setSelEmps] = useState({});
   const [error, setError] = useState('');
@@ -595,7 +597,7 @@ const CopyModal = ({
       // Recompute hours per target employee so the *percentage* is preserved
       // when the target's weeklyHours differs from the source's.
       const targetEmp = empById.get(empId);
-      const targetWeeklyHours = targetEmp?.weeklyHours ?? sourceWeeklyHours;
+      const targetWeeklyHours = targetEmp?.weeklyHours > 0 ? targetEmp.weeklyHours : sourceWeeklyHours;
       const targetHours = sourcePctFraction * targetWeeklyHours;
       targetWeeks.forEach(week => {
         if (empId === assignment.empId && week === assignment.week) return;

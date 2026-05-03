@@ -169,6 +169,14 @@ function App() {
     const [fsStatus, setFsStatus] = useState(FS_MODE ? 'checking' : 'off');
     // fsStatus: 'checking' | 'needs-setup' | 'needs-permission' | 'connected' | 'off'
 
+    // meta.json is a commit-marker, never a target for If-Match conditional
+    // writes – strip it so we don't store an ETag we'd never use.
+    const stripMetaEtag = (etags) => {
+        if (!etags) return {};
+        const { 'meta.json': _meta, ...rest } = etags;
+        return rest;
+    };
+
     // Team-split sync state
     const spFileTimestampsRef = useRef({}); // { 'file.json': 'ISO', ... } for SP polling
     const spFileEtagsRef = useRef({});      // { 'file.json': etag } for conditional writes
@@ -177,7 +185,6 @@ function App() {
     const lastSavedFsRef = useRef({});      // same for FS
     const employeesRef = useRef([]);
     const empCategoriesRef = useRef(DEFAULT_TEAMS);
-    const settingsRef = useRef({});         // latest empCategories for polling guards
     const latestStateRef = useRef({});
 
     // --- INIT ---
@@ -220,15 +227,11 @@ function App() {
                     if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                         parsedData = state;
                         spFileTimestampsRef.current = timestamps;
-                        const loadedEtags = etags || {};
-                        delete loadedEtags['meta.json'];
-                        spFileEtagsRef.current = loadedEtags;
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                         isRemoteUpdateRef.current = true; // Loaded from SP – don't write back
                     } else {
                         spFileTimestampsRef.current = timestamps || {};
-                        const loadedEtags = etags || {};
-                        delete loadedEtags['meta.json'];
-                        spFileEtagsRef.current = loadedEtags;
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                     }
                 };
                 try {
@@ -277,7 +280,6 @@ function App() {
                     const migratedCats = parsedData.empCategories.map(c => c === 'ME' ? 'CSS' : c);
                     if (!migratedCats.includes('I&C')) migratedCats.splice(migratedCats.indexOf('Other'), 0, 'I&C');
                     setEmpCategories(migratedCats);
-                    settingsRef.current = { empCategories: migratedCats };
                     currentEmpCats = migratedCats;
                     // Also migrate employees
                     if (parsedData.employees) {
@@ -463,12 +465,12 @@ function App() {
                     );
                     // Refresh timestamps AND etags in one request after a successful save.
                     const meta = await spGetFolderMeta(SP_CONTEXT);
+                    const refreshedEtags = {};
                     Object.entries(meta).forEach(([f, v]) => {
                         spFileTimestampsRef.current[f] = v.ts;
-                        // Never store meta.json's ETag – it's a commit marker and
-                        // always written with overwrite=true, not via If-Match.
-                        if (f !== 'meta.json') spFileEtagsRef.current[f] = v.etag;
+                        refreshedEtags[f] = v.etag;
                     });
+                    Object.assign(spFileEtagsRef.current, stripMetaEtag(refreshedEtags));
                 };
                 setSyncStatus('syncing');
                 try {
@@ -482,14 +484,15 @@ function App() {
                         try {
                             const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
                             spFileTimestampsRef.current = timestamps;
-                            const conflictEtags = etags || {};
-                            delete conflictEtags['meta.json'];
-                            spFileEtagsRef.current = conflictEtags;
+                            spFileEtagsRef.current = stripMetaEtag(etags);
                             applyRemoteSnapshot(state, { notify: false });
                             setSyncStatus('conflict-reload');
                             setTimeout(() => { if (syncStatusRef.current === 'conflict-reload') setSyncStatus('idle'); }, 3000);
                         } catch(e2) {
                             console.warn('[SP] conflict reload failed', e2);
+                            // Drop ETags so the next save uses overwrite=true
+                            // and can't loop on a stale 412.
+                            spFileEtagsRef.current = {};
                             setSyncStatus('offline');
                         }
                     } else if (e instanceof SpAuthError) {
@@ -558,8 +561,6 @@ function App() {
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
         if (data.appUsers) setAppUsers(data.appUsers);
         if (data.auditLog) setAuditLog(data.auditLog);
-        // Keep settingsRef current for polling guards (team membership checks).
-        if (data.empCategories) settingsRef.current = { empCategories: data.empCategories };
         // Also re-seed the snapshots so the save cascade triggered by these
         // setStates doesn't rewrite identical data back to the server.
         try {
@@ -578,8 +579,8 @@ function App() {
     // reload). A full reload is triggered when employees/projects/settings change.
     const pollFailuresRef = useRef(0);
     const pollInFlightRef = useRef(false);
-    // Fix 3: true when we saw changes without meta.json (possible mid-write);
-    // forces a full reload on the next cycle regardless.
+    // True when we saw changes without meta.json (possible mid-write); forces
+    // a full reload on the next cycle as a safety net.
     const pendingReloadRef = useRef(false);
     useEffect(() => {
         if (!SP_CONTEXT) return;
@@ -593,14 +594,13 @@ function App() {
                 const newMeta = await spGetFolderMeta(SP_CONTEXT);
                 const changedFiles = Object.keys(newMeta).filter(f => newMeta[f].ts !== spFileTimestampsRef.current[f]);
                 if (changedFiles.length > 0) {
-                    // Fix 2, Guard 1: A local save is debounced and about to fire.
-                    // Skip this cycle to avoid overwriting our own pending state with
-                    // a stale remote snapshot.
+                    // A local save is debounced and about to fire – skip this cycle so
+                    // we don't overwrite our pending state with a stale remote snapshot.
                     if (spSaveTimer.current !== null) return;
 
-                    // Fix 3: If files changed but meta.json is not among them we may
-                    // be reading a mid-write state.  Defer one cycle; on the next
-                    // tick pendingReloadRef forces a full reload as a safety net.
+                    // Files changed but meta.json (the commit marker) is not among
+                    // them: probably a mid-write.  Defer; on the next cycle
+                    // pendingReloadRef forces a full reload regardless.
                     if (!changedFiles.includes('meta.json') && !pendingReloadRef.current) {
                         pendingReloadRef.current = true;
                         return;
@@ -611,10 +611,9 @@ function App() {
                         f === 'employees.json' || f === 'projects.json' || f === 'settings.json'
                     );
 
-                    // Fix 2, Guard 2: If a changed team file belongs to a team we
-                    // don't know about, fall back to full reload so we stay consistent
-                    // (this can happen when an employee's team was changed mid-air).
-                    const knownTeams = new Set(settingsRef.current?.empCategories || DEFAULT_TEAMS);
+                    // A changed team file referring to an unknown team can happen when
+                    // an employee's team was renamed mid-air – fall back to full reload.
+                    const knownTeams = new Set(empCategoriesRef.current || DEFAULT_TEAMS);
                     const hasUnknownTeam = !needsFullReload && changedFiles.some(f => {
                         if (f.startsWith('assignments-')) {
                             return !knownTeams.has(f.slice('assignments-'.length, -'.json'.length));
@@ -625,9 +624,7 @@ function App() {
                     if (needsFullReload || hasUnknownTeam) {
                         const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
                         spFileTimestampsRef.current = timestamps;
-                        const reloadEtags = etags || {};
-                        delete reloadEtags['meta.json'];
-                        spFileEtagsRef.current = reloadEtags;
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                         applyRemoteSnapshot(state);
                     } else {
                         const { assignmentsByTeam, costItemsByTeam } =
@@ -737,9 +734,7 @@ function App() {
         try {
             const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
             spFileTimestampsRef.current = timestamps;
-            const freshEtags = etags || {};
-            delete freshEtags['meta.json'];
-            spFileEtagsRef.current = freshEtags;
+            spFileEtagsRef.current = stripMetaEtag(etags);
             if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                 applyRemoteSnapshot(state, { notify: false });
             }
@@ -1068,8 +1063,7 @@ function App() {
                         const sourceWH = sourceEmp?.weeklyHours ?? HOURS_PER_WEEK;
                         const targetWH = targetEmp?.weeklyHours ?? HOURS_PER_WEEK;
                         if (sourceWH > 0 && targetWH !== sourceWH) {
-                            const sourceHours = a.hours ?? ((a.percent ?? 100) / 100 * sourceWH);
-                            updated.hours = (sourceHours / sourceWH) * targetWH;
+                            updated.hours = (getAssignmentHours(a, sourceWH) / sourceWH) * targetWH;
                             delete updated.percent;
                         }
                     }
@@ -1682,6 +1676,7 @@ function App() {
             {isCopyModalOpen && copyContext && currentUser && (
                 <CopyModal
                     copyContext={copyContext}
+                    employees={employees}
                     activeEmps={activeEmployees}
                     empsByCategory={activeEmpsByCategory}
                     empCategories={activeEmpCategories}

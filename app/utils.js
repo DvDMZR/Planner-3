@@ -203,6 +203,14 @@ const resolveCountryCode = (input) => {
     return '??';
 };
 
+// Resolve an assignment's hours, falling back to its legacy `percent` field
+// against the employee's weeklyHours. Use anywhere the raw `a.hours` would
+// otherwise need a `?? ((a.percent ?? 100) / 100 * weeklyHours)` chain.
+const getAssignmentHours = (assignment, weeklyHours) => {
+    const wh = weeklyHours > 0 ? weeklyHours : HOURS_PER_WEEK;
+    return assignment.hours ?? ((assignment.percent ?? 100) / 100 * wh);
+};
+
 const generateInitialData = (empCats) => {
     const emps = Array.from({ length: 5 }, (_, i) => ({
         id: `emp-${i}`,
