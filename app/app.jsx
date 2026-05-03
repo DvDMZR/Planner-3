@@ -1060,6 +1060,18 @@ function App() {
                     if (newEmpId !== a.empId) {
                         updated.empId = newEmpId;
                         delete updated.comment;
+                        // Preserve the *percentage*, not the absolute hours, when
+                        // the target employee has different weeklyHours than the
+                        // source – e.g. 100 % on 35h → 100 % on 40h (= 40h).
+                        const sourceEmp = employeesRef.current.find(e => e.id === a.empId);
+                        const targetEmp = employeesRef.current.find(e => e.id === newEmpId);
+                        const sourceWH = sourceEmp?.weeklyHours ?? HOURS_PER_WEEK;
+                        const targetWH = targetEmp?.weeklyHours ?? HOURS_PER_WEEK;
+                        if (sourceWH > 0 && targetWH !== sourceWH) {
+                            const sourceHours = a.hours ?? ((a.percent ?? 100) / 100 * sourceWH);
+                            updated.hours = (sourceHours / sourceWH) * targetWH;
+                            delete updated.percent;
+                        }
                     }
                 } else if (a.type === 'project' && targetEmpIdOrProjId !== a.reference) {
                     updated.reference = targetEmpIdOrProjId;
@@ -1076,13 +1088,17 @@ function App() {
         const empId = e.dataTransfer.getData('empId');
         if (!empId) return;
         if (!isResourceView) {
+            // Default a fresh drag-create to 100 % of the dragged employee's
+            // weekly hours so a 35h employee gets a 35h chip (not 40h).
+            const droppedEmp = employeesRef.current.find(x => x.id === empId);
+            const droppedHours = droppedEmp?.weeklyHours ?? HOURS_PER_WEEK;
             setAssignments(prev => [...prev, {
                 id: makeId('ass'),
                 empId,
                 week: targetWeek,
                 type: 'project',
                 reference: targetEmpIdOrProjId,
-                hours: HOURS_PER_WEEK
+                hours: droppedHours
             }]);
         } else {
             // In resource view: open modal to pick type/reference

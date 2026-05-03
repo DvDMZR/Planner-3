@@ -464,6 +464,20 @@ const CopyModal = ({
 }) => {
     const { assignment } = copyContext;
 
+    // Lookup of active employees so we can read each one's weeklyHours.  This
+    // lets the copy preserve the *percentage* (Auslastung) of the source rather
+    // than the absolute hours – a 100 % task on a 35h employee becomes 100 %
+    // on a 40h target (= 40h), not 35h (= 87.5 %).
+    const empById = useMemo(() => {
+        const m = new Map();
+        (activeEmps || []).forEach(e => m.set(e.id, e));
+        return m;
+    }, [activeEmps]);
+    const sourceEmp = empById.get(assignment.empId);
+    const sourceWeeklyHours = sourceEmp?.weeklyHours ?? HOURS_PER_WEEK;
+    const sourceHours = assignment.hours ?? ((assignment.percent ?? 100) / 100 * sourceWeeklyHours);
+    const sourcePctFraction = sourceWeeklyHours > 0 ? sourceHours / sourceWeeklyHours : 1;
+
     const [selWeeks, setSelWeeks] = useState({});
     const [selEmps, setSelEmps] = useState({});
     const [error, setError] = useState('');
@@ -516,11 +530,19 @@ const CopyModal = ({
         setError('');
         const newAssignments = [];
         targetEmps.forEach(empId => {
+            // Recompute hours per target employee so the *percentage* is preserved
+            // when the target's weeklyHours differs from the source's.
+            const targetEmp = empById.get(empId);
+            const targetWeeklyHours = targetEmp?.weeklyHours ?? sourceWeeklyHours;
+            const targetHours = sourcePctFraction * targetWeeklyHours;
             targetWeeks.forEach(week => {
                 if (empId === assignment.empId && week === assignment.week) return;
                 const exists = assignments.some(a => a.empId === empId && a.week === week && a.reference === assignment.reference && a.type === assignment.type);
                 if (!exists) {
-                    newAssignments.push({ ...assignment, id: makeId('ass'), empId, week });
+                    // Drop legacy `percent` so the new assignment is unambiguously
+                    // hours-based on the target side.
+                    const { percent: _legacy, ...rest } = assignment;
+                    newAssignments.push({ ...rest, id: makeId('ass'), empId, week, hours: targetHours });
                 }
             });
         });
@@ -528,7 +550,7 @@ const CopyModal = ({
         onClose();
     };
 
-    const pct = Math.round((assignment.hours ?? HOURS_PER_WEEK) / HOURS_PER_WEEK * 100);
+    const pct = Math.round(sourcePctFraction * 100);
     const selEmpCount = Object.values(selEmps).filter(Boolean).length;
     const selWeekCount = Object.values(selWeeks).filter(Boolean).length;
 
