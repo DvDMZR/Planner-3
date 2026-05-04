@@ -347,9 +347,25 @@ const AssignmentModal = ({
                         <input type="range" min="0" max="200" step="5"
                             value={exactPct}
                             onChange={e => setFormData({...formData, hours: parseFloat(e.target.value) / 100 * empWeeklyHours})}
-                            className="w-full accent-gea-600"/>
-                        <div className="flex justify-between text-xs text-slate-400 mt-1">
-                            <span>0%</span><span>50%</span><span>100%</span><span>150%</span><span>200%</span>
+                            className="w-full accent-gea-600 block"/>
+                        <div className="relative h-2 mt-0.5">
+                            {[0, 25, 50, 75, 100, 125, 150, 175, 200].map(v => {
+                                const major = v % 50 === 0;
+                                return (
+                                    <div key={v}
+                                        className={`absolute top-0 w-px ${major ? 'h-2 bg-slate-400' : 'h-1 bg-slate-300'}`}
+                                        style={{ left: `${v / 2}%` }}/>
+                                );
+                            })}
+                        </div>
+                        <div className="relative h-4 mt-0.5 text-xs text-slate-400">
+                            {[0, 50, 100, 150, 200].map(v => (
+                                <span key={v}
+                                    className="absolute"
+                                    style={{ left: `${v / 2}%`, transform: 'translateX(-50%)' }}>
+                                    {v}%
+                                </span>
+                            ))}
                         </div>
                     </div>
 
