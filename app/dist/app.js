@@ -154,6 +154,34 @@ function App() {
   useEffect(() => {
     assignmentsRef.current = assignments;
   }, [assignments]);
+  const projectsRef = useRef([]);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  // Audit-log helpers
+  const formatKW = weekId => {
+    if (!weekId || typeof weekId !== 'string') return weekId || '?';
+    const [y, w] = weekId.split('-W');
+    if (!y || !w) return weekId;
+    return `KW ${parseInt(w)}/${y.slice(-2)}`;
+  };
+  const describeAssignment = ass => {
+    if (!ass) return '?';
+    if (ass.type === 'project') {
+      const p = projectsRef.current.find(x => x.id === ass.reference);
+      return p ? `Projekt „${p.name}"` : `Projekt ${ass.reference || '?'}`;
+    }
+    const typeLabels = {
+      basic: 'Task',
+      other: 'Task',
+      support: 'Support',
+      training: 'Training',
+      offtime: 'Abwesenheit'
+    };
+    const label = typeLabels[ass.type] || 'Eintrag';
+    return ass.reference ? `${label} „${ass.reference}"` : label;
+  };
   const loginUser = useCallback(user => {
     const session = {
       id: user.id,
@@ -1174,7 +1202,11 @@ function App() {
   const handleSaveAssignment = useCallback(data => {
     if (Array.isArray(data)) {
       setAssignments(prev => [...prev, ...data]);
-      logAudit('assignment_copy', `${data.length} Zuweisung(en) kopiert`, {
+      const first = data[0];
+      const weeks = data.map(a => a.week).filter(Boolean).sort();
+      const weekRange = weeks.length > 1 && weeks[0] !== weeks[weeks.length - 1] ? `${formatKW(weeks[0])} – ${formatKW(weeks[weeks.length - 1])}` : formatKW(weeks[0]);
+      const emp = employeesRef.current.find(e => e.id === first?.empId);
+      logAudit('assignment_copy', `${data.length}× ${describeAssignment(first)} für ${emp?.name || '?'} (${weekRange})`, {
         type: 'del_assignments',
         ids: data.map(a => a.id)
       });
@@ -1182,7 +1214,9 @@ function App() {
       const oldAss = assignmentsRef.current.find(a => a.id === data.id);
       setAssignments(prev => prev.map(a => a.id === data.id ? data : a));
       const emp = employeesRef.current.find(e => e.id === data.empId);
-      logAudit('assignment_update', `Zuweisung bearbeitet (${emp?.name || '?'}, ${data.week})`, {
+      const weekChanged = oldAss && oldAss.week !== data.week;
+      const weekPart = weekChanged ? `${formatKW(oldAss.week)} → ${formatKW(data.week)}` : formatKW(data.week);
+      logAudit('assignment_update', `${describeAssignment(data)} – ${emp?.name || '?'} (${weekPart})`, {
         type: 'restore_assignment',
         prev: oldAss
       });
@@ -1193,7 +1227,7 @@ function App() {
         id: newId
       }]);
       const emp = employeesRef.current.find(e => e.id === data.empId);
-      logAudit('assignment_create', `Neue Zuweisung (${emp?.name || '?'}, ${data.week})`, {
+      logAudit('assignment_create', `${describeAssignment(data)} – ${emp?.name || '?'} (${formatKW(data.week)})`, {
         type: 'del_assignment',
         ids: [newId]
       });
@@ -1205,7 +1239,7 @@ function App() {
     setAssignments(prev => prev.filter(a => a.id !== id));
     if (deleted) {
       const emp = employeesRef.current.find(e => e.id === deleted.empId);
-      logAudit('assignment_delete', `Zuweisung gelöscht (${emp?.name || '?'}, ${deleted.week})`, {
+      logAudit('assignment_delete', `${describeAssignment(deleted)} – ${emp?.name || '?'} (${formatKW(deleted.week)})`, {
         type: 'restore_assignment',
         prev: deleted
       });
@@ -1220,7 +1254,10 @@ function App() {
     }
     const toDelete = assignmentsRef.current.filter(a => a.ruleId === ass.ruleId && a.week >= ass.week);
     setAssignments(prev => prev.filter(a => !(a.ruleId === ass.ruleId && a.week >= ass.week)));
-    logAudit('assignment_delete_series', `Terminserie gelöscht (${toDelete.length} Einträge)`, {
+    const emp = employeesRef.current.find(e => e.id === ass.empId);
+    const weeks = toDelete.map(a => a.week).sort();
+    const weekRange = weeks.length > 1 && weeks[0] !== weeks[weeks.length - 1] ? `${formatKW(weeks[0])} – ${formatKW(weeks[weeks.length - 1])}` : formatKW(weeks[0]);
+    logAudit('assignment_delete_series', `Terminserie ${describeAssignment(ass)} – ${emp?.name || '?'} (${toDelete.length}× ${weekRange})`, {
       type: 'restore_assignments',
       prevItems: toDelete
     });
@@ -1263,8 +1300,17 @@ function App() {
         return updated;
       }));
       if (origAss) {
-        const emp = employeesRef.current.find(e => e.id === origAss.empId);
-        logAudit('assignment_drop', `Zuweisung verschoben (${emp?.name || '?'}, → ${targetWeek})`, {
+        const newEmpId = isResourceView ? targetEmpIdOrProjId : origAss.empId;
+        const fromEmp = employeesRef.current.find(e => e.id === origAss.empId);
+        const toEmp = employeesRef.current.find(e => e.id === newEmpId);
+        const empPart = fromEmp?.id !== toEmp?.id ? `${fromEmp?.name || '?'} → ${toEmp?.name || '?'}` : toEmp?.name || '?';
+        const weekPart = origAss.week !== targetWeek ? `${formatKW(origAss.week)} → ${formatKW(targetWeek)}` : formatKW(targetWeek);
+        // For project drops, also describe the new project if it changed
+        const draggedTask = !isResourceView && origAss.type === 'project' && targetEmpIdOrProjId !== origAss.reference ? `${describeAssignment(origAss)} → ${describeAssignment({
+          ...origAss,
+          reference: targetEmpIdOrProjId
+        })}` : describeAssignment(origAss);
+        logAudit('assignment_drop', `${draggedTask} – ${empPart} (${weekPart})`, {
           type: 'restore_assignment',
           prev: origAss
         });

@@ -155,7 +155,7 @@ const AuditView = ({ s, h }) => {
                                                 {actionLabels[entry.action] || entry.action}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-slate-700 max-w-xs truncate" title={entry.description}>
+                                        <td className="px-4 py-3 text-xs text-slate-700" title={entry.description}>
                                             {entry.description}
                                         </td>
                                         <td className="px-4 py-3 text-right">
