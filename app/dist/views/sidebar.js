@@ -217,7 +217,7 @@ const _SidebarBase = ({
     size: 18
   })), tabBtn('audit', 'Verlauf', /*#__PURE__*/React.createElement(IconHistory, {
     size: 18
-  })), isAdmin && tabBtn('setup_users', 'Benutzer', /*#__PURE__*/React.createElement(IconShield, {
+  })), tabBtn('setup_users', 'Benutzer', /*#__PURE__*/React.createElement(IconShield, {
     size: 18
   }))) : /*#__PURE__*/React.createElement(React.Fragment, null, lockedTabBtn('Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
     size: 18
