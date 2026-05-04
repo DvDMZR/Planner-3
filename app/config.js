@@ -32,6 +32,37 @@ const makeId = (prefix = 'id') =>
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.8 (2026-05-04)
+
+### Synchronisation & Datenintegrität
+- **ETag-basierte Konflikterkennung** bei SharePoint-Saves: bearbeiten zwei
+  Kollegen dieselbe Datei gleichzeitig, erhält der spätere Save eine 412-Antwort,
+  lädt den Remote-Stand und zeigt im Sidebar-Status "Änderung eines Kollegen
+  übernommen" für 3 Sekunden — keine stillen Überschreibungen mehr.
+- **\`meta.json\` als atomarer Commit-Marker**: wird beim Speichern immer als
+  letzte Datei geschrieben. Polling-Clients warten auf \`meta.json\`, bevor sie
+  auf Änderungen reagieren — keine Reaktionen auf halb-geschriebene Stände.
+- **Polling-Race-Guards**: kein selektiver Reload, wenn lokal noch ein Save
+  gequeued ist; bei unbekanntem Team in einer Datei → Full-Reload-Fallback.
+
+### Planungsdialog
+- **Smootherer Auslastungs-Schieber**: Step jetzt 5 % statt 10 %, exakte
+  25 / 50 / 75 % unabhängig von der Wochenarbeitszeit erreichbar (z. B.
+  50 % von 35 h → 17,5 h gespeichert).
+- Tick-Marker bei jedem 25 %-Schritt unter dem Schieber, längere Striche bei
+  0 / 50 / 100 / 150 / 200 %.
+- Beschriftungen mit absoluter Positionierung exakt über ihrem Wert
+  zentriert — kein Versatz mehr zwischen Text und Position.
+
+### Tasks kopieren
+- Beim Kopieren zwischen Mitarbeitern mit unterschiedlicher Wochenarbeitszeit
+  bleibt die **prozentuale Auslastung** erhalten, nicht die absoluten Stunden:
+  100 % von einer 35-h-Person zu einer 40-h-Person ergibt jetzt 40 h, nicht 35 h.
+
+### Anmeldung
+- Nutzerauswahl beim Login erfolgt jetzt über **Pill-Buttons** statt Dropdown.
+  Klick auf eine Pille blendet das PIN-Feld ein und fokussiert es.
+
 ## v0.7.5 (2026-04-29)
 
 ### Mitarbeiter-Verwaltung
