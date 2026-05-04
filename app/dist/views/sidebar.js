@@ -203,7 +203,9 @@ const _SidebarBase = ({
     size: 18
   })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
-  })), tabBtn('overview', 'Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+  })), isActive ? tabBtn('overview', 'Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+    size: 18
+  })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
     size: 18
   })), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold"

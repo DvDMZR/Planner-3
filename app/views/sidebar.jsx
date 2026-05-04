@@ -83,7 +83,10 @@ const _SidebarBase = ({ s, h }) => {
                     ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
                     : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
                 }
-                {tabBtn('overview', 'Übersicht', <IconTable size={18}/>)}
+                {isActive
+                    ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
+                    : lockedTabBtn('Übersicht', <IconTable size={18}/>)
+                }
 
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold">Verwaltung</div>
                 {isActive ? (
