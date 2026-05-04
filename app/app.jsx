@@ -1612,7 +1612,7 @@ function App() {
         setSyncStatus, setFsStatus,
         setCompactView, setScrollTarget,
         setAppUsers, setAuditLog, setIsLoginModalOpen,
-        loginUser, logoutUser, handleSetupAdmin,
+        loginUser, logoutUser,
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
         toggleCategory, toggleProjCategory, toggleEmpSetup,
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
@@ -1621,7 +1621,7 @@ function App() {
     }), [
         // useState setters are stable – no deps needed for those.
         // Only useCallback refs with real deps need listing:
-        loginUser, logoutUser, handleSetupAdmin,
+        loginUser, logoutUser,
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
         buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint,
         scrollToWeekById, handleSaveAssignment, handleDeleteAssignment,
