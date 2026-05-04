@@ -197,13 +197,13 @@ const SetupUsersView = ({
     className: "text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0"
   }, "Ich"))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, user.role !== 'admin' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     onClick: () => startEdit(user),
     className: "px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-  }, "Bearbeiten"), user.role !== 'admin' && /*#__PURE__*/React.createElement("button", {
+  }, "Bearbeiten"), /*#__PURE__*/React.createElement("button", {
     onClick: () => handleDelete(user.id),
     className: "px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
-  }, "L\xF6schen"))))))), /*#__PURE__*/React.createElement("div", {
+  }, "L\xF6schen")))))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200"
@@ -254,5 +254,5 @@ const SetupUsersView = ({
     className: "px-4 py-2 bg-gea-600 text-white rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
   }, "Nutzer anlegen"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Neue Nutzer erhalten die Rolle \u201EAktiver Nutzer\". Die Admin-Rolle kann nur einmal vergeben werden.")))));
+  }, "Neue Nutzer erhalten die Rolle \u201EAktiver Nutzer\".")))));
 };

@@ -83,7 +83,7 @@ function buildSplitFiles(state) {
     const inactiveTrainingTasks = state.inactiveTrainingTasks || [];
     const customTrainingTasks   = state.customTrainingTasks   || [];
     const invoiceRecipient      = state.invoiceRecipient      || '';
-    const appUsers              = state.appUsers              || [];
+    const appUsers              = (state.appUsers || []).filter(u => u.role !== 'admin');
     const auditLog              = state.auditLog              || [];
 
     const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
