@@ -2065,7 +2065,6 @@ function App() {
     setIsLoginModalOpen,
     loginUser,
     logoutUser,
-    handleSetupAdmin,
     getEmpWeeklyHours,
     computeAutoStatus,
     getWeeksForYear,
@@ -2087,7 +2086,7 @@ function App() {
   }), [
   // useState setters are stable – no deps needed for those.
   // Only useCallback refs with real deps need listing:
-  loginUser, logoutUser, handleSetupAdmin, getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById, handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries, handleDrop]);
+  loginUser, logoutUser, getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById, handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries, handleDrop]);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex h-screen w-full font-sans text-slate-800 bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement(SidebarView, {
