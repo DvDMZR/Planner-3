@@ -138,13 +138,14 @@ const _SidebarBase = ({ s, h }) => {
             {(SP_CONTEXT || fsStatus === 'connected') && (
                 <div className="px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
-                        syncStatus === 'idle'         ? 'bg-emerald-400' :
-                        syncStatus === 'syncing'      ? 'bg-amber-400 animate-pulse' :
-                        syncStatus === 'updated'      ? 'bg-blue-400' :
-                        syncStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' :
-                        syncStatus === 'needs-auth'   ? 'bg-rose-500' :
-                        syncStatus === 'offline'      ? 'bg-rose-500' :
-                                                       'bg-amber-400 animate-pulse'
+                        syncStatus === 'idle'            ? 'bg-emerald-400' :
+                        syncStatus === 'syncing'         ? 'bg-amber-400 animate-pulse' :
+                        syncStatus === 'updated'         ? 'bg-blue-400' :
+                        syncStatus === 'conflict-reload' ? 'bg-orange-400' :
+                        syncStatus === 'reconnecting'    ? 'bg-amber-400 animate-pulse' :
+                        syncStatus === 'needs-auth'      ? 'bg-rose-500' :
+                        syncStatus === 'offline'         ? 'bg-rose-500' :
+                                                          'bg-amber-400 animate-pulse'
                     }`}/>
                     {syncStatus === 'needs-auth' ? (
                         <button
@@ -157,12 +158,13 @@ const _SidebarBase = ({ s, h }) => {
                         </button>
                     ) : (
                         <span className="text-gea-400 text-xs truncate">
-                            {syncStatus === 'idle'         ? 'Synchronisiert' :
-                             syncStatus === 'syncing'      ? 'Speichert ...' :
-                             syncStatus === 'updated'      ? 'Aktualisiert ✓' :
-                             syncStatus === 'reconnecting' ? 'Sitzung erneuern ...' :
-                             syncStatus === 'offline'      ? 'Offline – lokal' :
-                                                            'Verbindet ...'}
+                            {syncStatus === 'idle'            ? 'Synchronisiert' :
+                             syncStatus === 'syncing'         ? 'Speichert ...' :
+                             syncStatus === 'updated'         ? 'Aktualisiert ✓' :
+                             syncStatus === 'conflict-reload' ? 'Änderung eines Kollegen übernommen' :
+                             syncStatus === 'reconnecting'    ? 'Sitzung erneuern ...' :
+                             syncStatus === 'offline'         ? 'Offline – lokal' :
+                                                               'Verbindet ...'}
                         </span>
                     )}
                 </div>

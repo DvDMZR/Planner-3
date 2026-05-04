@@ -23,7 +23,10 @@ const AssignmentModal = ({
     onDelete,
     onDeleteSeries,
 }) => {
-    const empWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours ?? HOURS_PER_WEEK;
+    // Guard against weeklyHours = 0 / negative – would otherwise produce
+    // NaN / Infinity in the percent calculations and freeze the slider.
+    const rawWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours;
+    const empWeeklyHours = rawWeeklyHours > 0 ? rawWeeklyHours : HOURS_PER_WEEK;
     const activeSupportTasks = useMemo(
         () => SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)),
         [inactiveSupportTasks]
@@ -73,7 +76,9 @@ const AssignmentModal = ({
     const [notifyByEmail, setNotifyByEmail] = useState(false);
 
     const emp = employeeById.get(formData.empId);
-    const pct = Math.round((formData.hours ?? empWeeklyHours) / empWeeklyHours * 100);
+    const exactPct  = (formData.hours ?? empWeeklyHours) / empWeeklyHours * 100;
+    const pct       = Math.round(exactPct);
+    const hoursDisp = Math.round((formData.hours ?? empWeeklyHours) * 10) / 10;
     const empEmail = emp?.email || '';
     const canNotify = !!empEmail && !formData.id;
 
@@ -334,11 +339,14 @@ const AssignmentModal = ({
                     <div>
                         <label className="block text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">
                             Auslastung: <span className="text-gea-600 font-medium">{pct}%</span>
-                            <span className="text-slate-400 ml-2">({formData.hours ?? HOURS_PER_WEEK}h)</span>
+                            <span className="text-slate-400 ml-2">({hoursDisp}h)</span>
                         </label>
-                        <input type="range" min="0" max="200" step="10"
-                            value={pct}
-                            onChange={e => setFormData({...formData, hours: Math.round(parseInt(e.target.value) / 100 * empWeeklyHours)})}
+                        {/* step=5 lets the user hit 25 / 50 / 75 % exactly; we no longer
+                            round hours so that round %-values are reachable regardless of
+                            the employee's weeklyHours (e.g. 50% of 35h → 17.5h). */}
+                        <input type="range" min="0" max="200" step="5"
+                            value={exactPct}
+                            onChange={e => setFormData({...formData, hours: parseFloat(e.target.value) / 100 * empWeeklyHours})}
                             className="w-full accent-gea-600"/>
                         <div className="flex justify-between text-xs text-slate-400 mt-1">
                             <span>0%</span><span>50%</span><span>100%</span><span>150%</span><span>200%</span>
@@ -448,6 +456,7 @@ const AssignmentModal = ({
 
 const CopyModal = ({
     copyContext,
+    employees,
     activeEmps,
     empsByCategory,
     empCategories,
@@ -458,6 +467,18 @@ const CopyModal = ({
     onClose,
 }) => {
     const { assignment } = copyContext;
+
+    // Lookup of ALL employees (not just active) so the source weeklyHours is
+    // correct even when copying off an inactive MA. The copy preserves the
+    // *percentage* (Auslastung) – 100 % on 35h → 100 % on 40h (= 40h), not 35h.
+    const empById = useMemo(() => {
+        const m = new Map();
+        (employees || []).forEach(e => m.set(e.id, e));
+        return m;
+    }, [employees]);
+    const sourceEmp = empById.get(assignment.empId);
+    const sourceWeeklyHours = sourceEmp?.weeklyHours > 0 ? sourceEmp.weeklyHours : HOURS_PER_WEEK;
+    const sourcePctFraction = getAssignmentHours(assignment, sourceWeeklyHours) / sourceWeeklyHours;
 
     const [selWeeks, setSelWeeks] = useState({});
     const [selEmps, setSelEmps] = useState({});
@@ -511,11 +532,19 @@ const CopyModal = ({
         setError('');
         const newAssignments = [];
         targetEmps.forEach(empId => {
+            // Recompute hours per target employee so the *percentage* is preserved
+            // when the target's weeklyHours differs from the source's.
+            const targetEmp = empById.get(empId);
+            const targetWeeklyHours = targetEmp?.weeklyHours > 0 ? targetEmp.weeklyHours : sourceWeeklyHours;
+            const targetHours = sourcePctFraction * targetWeeklyHours;
             targetWeeks.forEach(week => {
                 if (empId === assignment.empId && week === assignment.week) return;
                 const exists = assignments.some(a => a.empId === empId && a.week === week && a.reference === assignment.reference && a.type === assignment.type);
                 if (!exists) {
-                    newAssignments.push({ ...assignment, id: makeId('ass'), empId, week });
+                    // Drop legacy `percent` so the new assignment is unambiguously
+                    // hours-based on the target side.
+                    const { percent: _legacy, ...rest } = assignment;
+                    newAssignments.push({ ...rest, id: makeId('ass'), empId, week, hours: targetHours });
                 }
             });
         });
@@ -523,7 +552,7 @@ const CopyModal = ({
         onClose();
     };
 
-    const pct = Math.round((assignment.hours ?? HOURS_PER_WEEK) / HOURS_PER_WEEK * 100);
+    const pct = Math.round(sourcePctFraction * 100);
     const selEmpCount = Object.values(selEmps).filter(Boolean).length;
     const selWeekCount = Object.values(selWeeks).filter(Boolean).length;
 

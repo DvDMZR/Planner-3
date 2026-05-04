@@ -169,8 +169,17 @@ function App() {
     const [fsStatus, setFsStatus] = useState(FS_MODE ? 'checking' : 'off');
     // fsStatus: 'checking' | 'needs-setup' | 'needs-permission' | 'connected' | 'off'
 
+    // meta.json is a commit-marker, never a target for If-Match conditional
+    // writes – strip it so we don't store an ETag we'd never use.
+    const stripMetaEtag = (etags) => {
+        if (!etags) return {};
+        const { 'meta.json': _meta, ...rest } = etags;
+        return rest;
+    };
+
     // Team-split sync state
     const spFileTimestampsRef = useRef({}); // { 'file.json': 'ISO', ... } for SP polling
+    const spFileEtagsRef = useRef({});      // { 'file.json': etag } for conditional writes
     const fsFileTimestampsRef = useRef({}); // { 'file.json': <ms>, ... } for FS polling
     const lastSavedSpRef = useRef({});      // { filename: JSON string } for diff-based writes
     const lastSavedFsRef = useRef({});      // same for FS
@@ -211,16 +220,18 @@ function App() {
             // 1. Try SharePoint first (wins over local data if available)
             if (SP_CONTEXT) {
                 const runLoad = async () => {
-                    const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+                    const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
                     // Treat "all empty" as fresh install → fall through to
                     // localStorage / generateInitialData so the app has
                     // sensible defaults to seed the new files.
                     if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                         parsedData = state;
                         spFileTimestampsRef.current = timestamps;
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                         isRemoteUpdateRef.current = true; // Loaded from SP – don't write back
                     } else {
                         spFileTimestampsRef.current = timestamps || {};
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                     }
                 };
                 try {
@@ -449,16 +460,42 @@ function App() {
                 const runSave = async () => {
                     await spEnsureFolder(SP_CONTEXT, PLANNER_DATA_DIR);
                     await saveSplitState(stateData, lastSavedSpRef.current,
-                        (filename, payload) => spSaveFile(SP_CONTEXT, filename, payload)
+                        (filename, payload) => spSaveFile(SP_CONTEXT, filename, payload,
+                            filename === 'meta.json' ? null : spFileEtagsRef.current[filename])
                     );
-                    spFileTimestampsRef.current = await spGetFolderTimestamps(SP_CONTEXT);
+                    // Refresh timestamps AND etags in one request after a successful save.
+                    const meta = await spGetFolderMeta(SP_CONTEXT);
+                    const refreshedEtags = {};
+                    Object.entries(meta).forEach(([f, v]) => {
+                        spFileTimestampsRef.current[f] = v.ts;
+                        refreshedEtags[f] = v.etag;
+                    });
+                    Object.assign(spFileEtagsRef.current, stripMetaEtag(refreshedEtags));
                 };
                 setSyncStatus('syncing');
                 try {
                     await runSave();
                     setSyncStatus('idle');
                 } catch(e) {
-                    if (e instanceof SpAuthError) {
+                    if (e instanceof SpConflictError) {
+                        // Another client modified the file while we were editing.
+                        // Reload the remote snapshot and let the user see a toast.
+                        setSyncStatus('reconnecting');
+                        try {
+                            const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
+                            spFileTimestampsRef.current = timestamps;
+                            spFileEtagsRef.current = stripMetaEtag(etags);
+                            applyRemoteSnapshot(state, { notify: false });
+                            setSyncStatus('conflict-reload');
+                            setTimeout(() => { if (syncStatusRef.current === 'conflict-reload') setSyncStatus('idle'); }, 3000);
+                        } catch(e2) {
+                            console.warn('[SP] conflict reload failed', e2);
+                            // Drop ETags so the next save uses overwrite=true
+                            // and can't loop on a stale 412.
+                            spFileEtagsRef.current = {};
+                            setSyncStatus('offline');
+                        }
+                    } else if (e instanceof SpAuthError) {
                         // Session expired while idle – try silent re-auth and
                         // replay the save exactly once. lastSavedSpRef is only
                         // updated per successful file write, so interrupted
@@ -537,11 +574,14 @@ function App() {
     }, []);
 
     // SharePoint polling – pick up changes from other users every 5 seconds.
-    // One folder-list call returns timestamps for all files; if only team
+    // One folder-list call returns timestamps+etags for all files; if only team
     // assignment/cost-item files changed, only those are reloaded (selective
     // reload). A full reload is triggered when employees/projects/settings change.
     const pollFailuresRef = useRef(0);
     const pollInFlightRef = useRef(false);
+    // True when we saw changes without meta.json (possible mid-write); forces
+    // a full reload on the next cycle as a safety net.
+    const pendingReloadRef = useRef(false);
     useEffect(() => {
         if (!SP_CONTEXT) return;
         const poll = async () => {
@@ -551,16 +591,40 @@ function App() {
             if (st === 'syncing' || st === 'connecting' || st === 'reconnecting' || st === 'needs-auth') return;
             pollInFlightRef.current = true;
             try {
-                const newTs = await spGetFolderTimestamps(SP_CONTEXT);
-                const prev = spFileTimestampsRef.current;
-                const changedFiles = Object.keys(newTs).filter(f => newTs[f] !== prev[f]);
+                const newMeta = await spGetFolderMeta(SP_CONTEXT);
+                const changedFiles = Object.keys(newMeta).filter(f => newMeta[f].ts !== spFileTimestampsRef.current[f]);
                 if (changedFiles.length > 0) {
+                    // A local save is debounced and about to fire – skip this cycle so
+                    // we don't overwrite our pending state with a stale remote snapshot.
+                    if (spSaveTimer.current !== null) return;
+
+                    // Files changed but meta.json (the commit marker) is not among
+                    // them: probably a mid-write.  Defer; on the next cycle
+                    // pendingReloadRef forces a full reload regardless.
+                    if (!changedFiles.includes('meta.json') && !pendingReloadRef.current) {
+                        pendingReloadRef.current = true;
+                        return;
+                    }
+                    pendingReloadRef.current = false;
+
                     const needsFullReload = changedFiles.some(f =>
                         f === 'employees.json' || f === 'projects.json' || f === 'settings.json'
                     );
-                    if (needsFullReload) {
-                        const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+
+                    // A changed team file referring to an unknown team can happen when
+                    // an employee's team was renamed mid-air – fall back to full reload.
+                    const knownTeams = new Set(empCategoriesRef.current || DEFAULT_TEAMS);
+                    const hasUnknownTeam = !needsFullReload && changedFiles.some(f => {
+                        if (f.startsWith('assignments-')) {
+                            return !knownTeams.has(f.slice('assignments-'.length, -'.json'.length));
+                        }
+                        return false;
+                    });
+
+                    if (needsFullReload || hasUnknownTeam) {
+                        const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
                         spFileTimestampsRef.current = timestamps;
+                        spFileEtagsRef.current = stripMetaEtag(etags);
                         applyRemoteSnapshot(state);
                     } else {
                         const { assignmentsByTeam, costItemsByTeam } =
@@ -580,7 +644,13 @@ function App() {
                             const kept = prev.filter(c => !teamsUpdated.has(empTeamMap.get(c.empId) || 'Other'));
                             return [...kept, ...migrateCostItems(Object.values(costItemsByTeam).flat())];
                         });
-                        spFileTimestampsRef.current = newTs;
+                        // Update timestamps; invalidate ETags for remotely-changed files so
+                        // our next write for those files uses overwrite=true (safe: we just
+                        // applied the remote state, so there's no local-only version to protect).
+                        changedFiles.forEach(f => {
+                            spFileTimestampsRef.current[f] = newMeta[f].ts;
+                            delete spFileEtagsRef.current[f];
+                        });
                         changedFiles.forEach(f => {
                             if (f.startsWith('assignments-')) {
                                 const team = f.slice('assignments-'.length, -'.json'.length);
@@ -591,6 +661,11 @@ function App() {
                             }
                         });
                     }
+                } else {
+                    // No remote changes – if a mid-write deferral was pending it
+                    // can be cleared safely (the write either completed and our
+                    // save covered it, or never actually happened).
+                    pendingReloadRef.current = false;
                 }
                 pollFailuresRef.current = 0;
                 // Recover from a prior 'offline' as soon as the next poll
@@ -657,8 +732,9 @@ function App() {
     // latest remote snapshot so the UI can't show stale data.
     const refreshSpSnapshot = useCallback(async () => {
         try {
-            const { state, timestamps } = await loadSplitStateSp(SP_CONTEXT);
+            const { state, timestamps, etags } = await loadSplitStateSp(SP_CONTEXT);
             spFileTimestampsRef.current = timestamps;
+            spFileEtagsRef.current = stripMetaEtag(etags);
             if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                 applyRemoteSnapshot(state, { notify: false });
             }
@@ -979,6 +1055,17 @@ function App() {
                     if (newEmpId !== a.empId) {
                         updated.empId = newEmpId;
                         delete updated.comment;
+                        // Preserve the *percentage*, not the absolute hours, when
+                        // the target employee has different weeklyHours than the
+                        // source – e.g. 100 % on 35h → 100 % on 40h (= 40h).
+                        const sourceEmp = employeesRef.current.find(e => e.id === a.empId);
+                        const targetEmp = employeesRef.current.find(e => e.id === newEmpId);
+                        const sourceWH = sourceEmp?.weeklyHours ?? HOURS_PER_WEEK;
+                        const targetWH = targetEmp?.weeklyHours ?? HOURS_PER_WEEK;
+                        if (sourceWH > 0 && targetWH !== sourceWH) {
+                            updated.hours = (getAssignmentHours(a, sourceWH) / sourceWH) * targetWH;
+                            delete updated.percent;
+                        }
                     }
                 } else if (a.type === 'project' && targetEmpIdOrProjId !== a.reference) {
                     updated.reference = targetEmpIdOrProjId;
@@ -995,13 +1082,17 @@ function App() {
         const empId = e.dataTransfer.getData('empId');
         if (!empId) return;
         if (!isResourceView) {
+            // Default a fresh drag-create to 100 % of the dragged employee's
+            // weekly hours so a 35h employee gets a 35h chip (not 40h).
+            const droppedEmp = employeesRef.current.find(x => x.id === empId);
+            const droppedHours = droppedEmp?.weeklyHours ?? HOURS_PER_WEEK;
             setAssignments(prev => [...prev, {
                 id: makeId('ass'),
                 empId,
                 week: targetWeek,
                 type: 'project',
                 reference: targetEmpIdOrProjId,
-                hours: HOURS_PER_WEEK
+                hours: droppedHours
             }]);
         } else {
             // In resource view: open modal to pick type/reference
@@ -1585,6 +1676,7 @@ function App() {
             {isCopyModalOpen && copyContext && currentUser && (
                 <CopyModal
                     copyContext={copyContext}
+                    employees={employees}
                     activeEmps={activeEmployees}
                     empsByCategory={activeEmpsByCategory}
                     empCategories={activeEmpCategories}

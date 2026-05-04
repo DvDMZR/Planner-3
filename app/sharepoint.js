@@ -28,6 +28,16 @@ class SpAuthError extends Error {
     }
 }
 
+// Signals that a conditional write (If-Match) was rejected because the file
+// was modified by another client since our last load.
+class SpConflictError extends Error {
+    constructor(filename) {
+        super('Concurrent edit conflict: ' + filename);
+        this.name = 'SpConflictError';
+        this.filename = filename;
+    }
+}
+
 // Cached form digest. SharePoint digests are usually valid for 1800 s; we
 // refresh one minute before they expire to absorb clock skew.
 const spDigestCache = { value: null, expiresAt: 0 };
@@ -218,37 +228,72 @@ async function spLoadFile(ctx, filename) {
     return JSON.parse(await r.text());
 }
 
-async function spSaveFile(ctx, filename, data) {
+// When `ifMatchEtag` is provided the file must not have changed since that
+// ETag was issued – if it has, SharePoint returns 412 and we throw
+// SpConflictError so the caller can reload the remote state and present
+// a notification to the user.  Without an ETag the call falls back to the
+// original overwrite=true behaviour (used on first save after load).
+async function spSaveFile(ctx, filename, data, ifMatchEtag = null) {
     const digest = await spGetDigest(ctx.siteUrl);
     const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
-    const r = await spFetch(
-        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
-        {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json;odata=verbose',
-                'X-RequestDigest': digest,
-                'Content-Type': 'application/octet-stream'
-            },
-            body: typeof data === 'string' ? data : JSON.stringify(data)
-        }
-    );
-    if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);
+    const body = typeof data === 'string' ? data : JSON.stringify(data);
+
+    if (ifMatchEtag) {
+        // Conditional PUT on the file's $value endpoint – supports If-Match.
+        const path = folder + '/' + filename;
+        const r = await spFetch(
+            `${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(path)}')/$value`,
+            {
+                method: 'PUT',
+                headers: {
+                    'X-RequestDigest': digest,
+                    'Content-Type': 'application/octet-stream',
+                    'If-Match': ifMatchEtag,
+                },
+                body,
+            }
+        );
+        if (r.status === 412) throw new SpConflictError(filename);
+        if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);
+    } else {
+        const r = await spFetch(
+            `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
+            {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json;odata=verbose',
+                    'X-RequestDigest': digest,
+                    'Content-Type': 'application/octet-stream',
+                },
+                body,
+            }
+        );
+        if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);
+    }
 }
 
-// Fetch all timestamps of the planner-data folder in a SINGLE request so
-// polling does not scale linearly with the number of split files.
-async function spGetFolderTimestamps(ctx) {
+// Fetch metadata (timestamp + ETag) for all files in the planner-data folder
+// in a SINGLE request.  Returns { [filename]: { ts, etag } }.
+// ETags are used for optimistic concurrency (If-Match on conditional writes).
+async function spGetFolderMeta(ctx) {
     const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR;
     const r = await spFetch(
-        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files?$select=Name,TimeLastModified`,
+        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files?$select=Name,TimeLastModified,ETag`,
         { headers: { 'Accept': 'application/json;odata=verbose' } }
     );
     if (r.status === 404) return {};
-    if (!r.ok) throw new Error('spGetFolderTimestamps ' + r.status);
+    if (!r.ok) throw new Error('spGetFolderMeta ' + r.status);
     const json = await r.json();
     const map = {};
-    (json.d?.results || []).forEach(f => { map[f.Name] = f.TimeLastModified; });
+    (json.d?.results || []).forEach(f => { map[f.Name] = { ts: f.TimeLastModified, etag: f.ETag || null }; });
+    return map;
+}
+
+// Thin wrapper kept for any call-sites that only need timestamps.
+async function spGetFolderTimestamps(ctx) {
+    const meta = await spGetFolderMeta(ctx);
+    const map = {};
+    Object.entries(meta).forEach(([f, v]) => { map[f] = v.ts; });
     return map;
 }
 // ─────────────────────────────────────────────────────────────────────────────
