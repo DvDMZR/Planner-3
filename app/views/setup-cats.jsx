@@ -93,7 +93,7 @@ const SetupCatsView = ({ s, h }) => {
                             {basicTasks.map(task => {
                                 const meta = basicTasksMeta?.[task];
                                 const isUserCreated = !!meta;
-                                const isPerm = !isUserCreated || !!meta?.permanent;
+                                const isPerm = !meta || meta.permanent !== false;
                                 const weeksLeft = meta && !isPerm
                                     ? Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(meta.createdAt).getTime()) / (7*24*60*60*1000)))
                                     : null;
