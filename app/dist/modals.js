@@ -376,10 +376,28 @@ const AssignmentModal = ({
       ...formData,
       hours: parseFloat(e.target.value) / 100 * empWeeklyHours
     }),
-    className: "w-full accent-gea-600"
+    className: "w-full accent-gea-600 block"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-xs text-slate-400 mt-1"
-  }, /*#__PURE__*/React.createElement("span", null, "0%"), /*#__PURE__*/React.createElement("span", null, "50%"), /*#__PURE__*/React.createElement("span", null, "100%"), /*#__PURE__*/React.createElement("span", null, "150%"), /*#__PURE__*/React.createElement("span", null, "200%"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "relative h-2 mt-0.5"
+  }, [0, 25, 50, 75, 100, 125, 150, 175, 200].map(v => {
+    const major = v % 50 === 0;
+    return /*#__PURE__*/React.createElement("div", {
+      key: v,
+      className: `absolute top-0 w-px ${major ? 'h-2 bg-slate-400' : 'h-1 bg-slate-300'}`,
+      style: {
+        left: `${v / 2}%`
+      }
+    });
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "relative h-4 mt-0.5 text-xs text-slate-400"
+  }, [0, 50, 100, 150, 200].map(v => /*#__PURE__*/React.createElement("span", {
+    key: v,
+    className: "absolute",
+    style: {
+      left: `${v / 2}%`,
+      transform: 'translateX(-50%)'
+    }
+  }, v, "%")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
   }, "Kommentar (optional)"), /*#__PURE__*/React.createElement("textarea", {
     value: formData.comment || '',
@@ -1153,14 +1171,14 @@ const LoginModal = ({
     useEffect,
     useRef
   } = React;
-  const [selectedUserId, setSelectedUserId] = useState(appUsers[0]?.id || '');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
   const pinRef = useRef(null);
   useEffect(() => {
-    pinRef.current?.focus();
-  }, []);
+    if (selectedUserId) pinRef.current?.focus();
+  }, [selectedUserId]);
   const isFirstRun = appUsers.length === 0;
   const handleLogin = () => {
     const user = appUsers.find(u => u.id === selectedUserId);
@@ -1235,19 +1253,22 @@ const LoginModal = ({
     onClick: handleSetup,
     className: "w-full bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
   }, "Admin einrichten & anmelden")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-700 mb-1 font-semibold"
-  }, "Nutzer"), /*#__PURE__*/React.createElement("select", {
-    value: selectedUserId,
-    onChange: e => {
-      setSelectedUserId(e.target.value);
-      setError('');
-      setPin('');
-    },
-    className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-  }, appUsers.map(u => /*#__PURE__*/React.createElement("option", {
-    key: u.id,
-    value: u.id
-  }, u.name, u.role === 'admin' ? ' (Admin)' : '')))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-700 mb-2 font-semibold"
+  }, "Nutzer ausw\xE4hlen"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, appUsers.map(u => {
+    const active = selectedUserId === u.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: u.id,
+      type: "button",
+      onClick: () => {
+        setSelectedUserId(u.id);
+        setPin('');
+        setError('');
+      },
+      className: `px-3 py-1.5 rounded-full text-sm border font-medium transition-colors ${active ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-700'}`
+    }, u.name, u.role === 'admin' ? ' ★' : '');
+  }))), selectedUserId && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-700 mb-1 font-semibold"
   }, "PIN"), /*#__PURE__*/React.createElement("input", {
     ref: pinRef,
@@ -1269,7 +1290,8 @@ const LoginModal = ({
     className: "flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
   }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogin,
-    className: "flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
+    disabled: !selectedUserId,
+    className: "flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
   }, "Anmelden"))))));
 };
 

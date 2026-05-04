@@ -347,9 +347,25 @@ const AssignmentModal = ({
                         <input type="range" min="0" max="200" step="5"
                             value={exactPct}
                             onChange={e => setFormData({...formData, hours: parseFloat(e.target.value) / 100 * empWeeklyHours})}
-                            className="w-full accent-gea-600"/>
-                        <div className="flex justify-between text-xs text-slate-400 mt-1">
-                            <span>0%</span><span>50%</span><span>100%</span><span>150%</span><span>200%</span>
+                            className="w-full accent-gea-600 block"/>
+                        <div className="relative h-2 mt-0.5">
+                            {[0, 25, 50, 75, 100, 125, 150, 175, 200].map(v => {
+                                const major = v % 50 === 0;
+                                return (
+                                    <div key={v}
+                                        className={`absolute top-0 w-px ${major ? 'h-2 bg-slate-400' : 'h-1 bg-slate-300'}`}
+                                        style={{ left: `${v / 2}%` }}/>
+                                );
+                            })}
+                        </div>
+                        <div className="relative h-4 mt-0.5 text-xs text-slate-400">
+                            {[0, 50, 100, 150, 200].map(v => (
+                                <span key={v}
+                                    className="absolute"
+                                    style={{ left: `${v / 2}%`, transform: 'translateX(-50%)' }}>
+                                    {v}%
+                                </span>
+                            ))}
                         </div>
                     </div>
 
@@ -999,13 +1015,13 @@ const DepsSection = () => {
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
 const LoginModal = ({ appUsers, onLogin, onClose, onSetupAdmin }) => {
     const { useState, useEffect, useRef } = React;
-    const [selectedUserId, setSelectedUserId] = useState(appUsers[0]?.id || '');
+    const [selectedUserId, setSelectedUserId] = useState('');
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState('');
     const pinRef = useRef(null);
 
-    useEffect(() => { pinRef.current?.focus(); }, []);
+    useEffect(() => { if (selectedUserId) pinRef.current?.focus(); }, [selectedUserId]);
 
     const isFirstRun = appUsers.length === 0;
 
@@ -1072,35 +1088,45 @@ const LoginModal = ({ appUsers, onLogin, onClose, onSetupAdmin }) => {
                     ) : (
                         <>
                             <div>
-                                <label className="block text-xs text-slate-700 mb-1 font-semibold">Nutzer</label>
-                                <select
-                                    value={selectedUserId}
-                                    onChange={e => { setSelectedUserId(e.target.value); setError(''); setPin(''); }}
-                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                >
-                                    {appUsers.map(u => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.name}{u.role === 'admin' ? ' (Admin)' : ''}
-                                        </option>
-                                    ))}
-                                </select>
+                                <label className="block text-xs text-slate-700 mb-2 font-semibold">Nutzer auswählen</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {appUsers.map(u => {
+                                        const active = selectedUserId === u.id;
+                                        return (
+                                            <button
+                                                key={u.id}
+                                                type="button"
+                                                onClick={() => { setSelectedUserId(u.id); setPin(''); setError(''); }}
+                                                className={`px-3 py-1.5 rounded-full text-sm border font-medium transition-colors ${active ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-700'}`}
+                                            >
+                                                {u.name}{u.role === 'admin' ? ' ★' : ''}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN</label>
-                                <input
-                                    ref={pinRef}
-                                    type="password"
-                                    value={pin}
-                                    onChange={e => { setPin(e.target.value); setError(''); }}
-                                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="PIN eingeben"
-                                />
-                            </div>
+                            {selectedUserId && (
+                                <div>
+                                    <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN</label>
+                                    <input
+                                        ref={pinRef}
+                                        type="password"
+                                        value={pin}
+                                        onChange={e => { setPin(e.target.value); setError(''); }}
+                                        onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                                        className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                        placeholder="PIN eingeben"
+                                    />
+                                </div>
+                            )}
                             {error && <p className="text-rose-600 text-sm">{error}</p>}
                             <div className="flex gap-2 pt-1">
                                 <button onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">Abbrechen</button>
-                                <button onClick={handleLogin} className="flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors">Anmelden</button>
+                                <button
+                                    onClick={handleLogin}
+                                    disabled={!selectedUserId}
+                                    className="flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >Anmelden</button>
                             </div>
                         </>
                     )}
