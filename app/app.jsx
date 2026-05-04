@@ -1643,7 +1643,7 @@ function App() {
             {activeTab === 'setup_cats'  && currentUser && <SetupCatsView s={s} h={h}/>}
             {activeTab === 'data'        && currentUser && <DataView s={s} h={h}/>}
             {activeTab === 'audit'       && currentUser && <AuditView s={s} h={h}/>}
-            {activeTab === 'setup_users' && currentUser?.role === 'admin' && <SetupUsersView s={s} h={h}/>}
+            {activeTab === 'setup_users' && currentUser && <SetupUsersView s={s} h={h}/>}
 
             {isAssignModalOpen && assignContext && currentUser && (
                 <AssignmentModal

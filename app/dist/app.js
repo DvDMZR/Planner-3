@@ -2122,7 +2122,7 @@ function App() {
   }), activeTab === 'audit' && currentUser && /*#__PURE__*/React.createElement(AuditView, {
     s: s,
     h: h
-  }), activeTab === 'setup_users' && currentUser?.role === 'admin' && /*#__PURE__*/React.createElement(SetupUsersView, {
+  }), activeTab === 'setup_users' && currentUser && /*#__PURE__*/React.createElement(SetupUsersView, {
     s: s,
     h: h
   }), isAssignModalOpen && assignContext && currentUser && /*#__PURE__*/React.createElement(AssignmentModal, {
