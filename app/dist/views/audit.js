@@ -166,7 +166,7 @@ const AuditView = ({
   }, /*#__PURE__*/React.createElement("span", {
     className: `text-xs px-2 py-0.5 rounded-full font-medium ${actionColors[entry.action] || 'bg-slate-100 text-slate-600'}`
   }, actionLabels[entry.action] || entry.action)), /*#__PURE__*/React.createElement("td", {
-    className: "px-4 py-3 text-xs text-slate-700 max-w-xs truncate",
+    className: "px-4 py-3 text-xs text-slate-700",
     title: entry.description
   }, entry.description), /*#__PURE__*/React.createElement("td", {
     className: "px-4 py-3 text-right"
