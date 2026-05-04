@@ -546,12 +546,14 @@ function App() {
         setExpenses(data.expenses || []);
         if (data.costItems) setCostItems(migrateCostItems(data.costItems));
         else if (data.expenses && data.expenses.length > 0) setCostItems(migrateCostItems(migrateExpensesToCostItems(data.expenses)));
-        if (data.empCategories) setEmpCategories(data.empCategories);
-        if (data.projCategories) setProjCategories(data.projCategories);
-        if (data.basicTasks) setBasicTasks(data.basicTasks);
+        if (data.empCategories?.length) setEmpCategories(data.empCategories);
+        // Guard: never overwrite non-empty category arrays with empty remote data
+        // (protects against settings.json load failures wiping user-defined categories)
+        setProjCategories(prev => data.projCategories?.length > 0 ? data.projCategories : prev);
+        setBasicTasks(prev => data.basicTasks?.length > 0 ? data.basicTasks : prev);
         if (data.basicTasksMeta !== undefined) setBasicTasksMeta(data.basicTasksMeta);
         if (data.inactiveBasicTasks) setInactiveBasicTasks(data.inactiveBasicTasks);
-        if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
+        setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
         if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
         setAppUsers(injectAdmin(data.appUsers));
