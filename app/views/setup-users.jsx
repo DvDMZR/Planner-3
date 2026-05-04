@@ -163,14 +163,14 @@ const SetupUsersView = ({ s, h }) => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
-                                                <button onClick={() => startEdit(user)} className="px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                                                    Bearbeiten
-                                                </button>
-                                                {user.role !== 'admin' && (
+                                                {user.role !== 'admin' && (<>
+                                                    <button onClick={() => startEdit(user)} className="px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
+                                                        Bearbeiten
+                                                    </button>
                                                     <button onClick={() => handleDelete(user.id)} className="px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors">
                                                         Löschen
                                                     </button>
-                                                )}
+                                                </>)}
                                             </div>
                                         </div>
                                     )}
@@ -226,7 +226,7 @@ const SetupUsersView = ({ s, h }) => {
                         >
                             Nutzer anlegen
                         </button>
-                        <p className="text-xs text-slate-400">Neue Nutzer erhalten die Rolle „Aktiver Nutzer". Die Admin-Rolle kann nur einmal vergeben werden.</p>
+                        <p className="text-xs text-slate-400">Neue Nutzer erhalten die Rolle „Aktiver Nutzer".</p>
                     </div>
                 </div>
             </div>

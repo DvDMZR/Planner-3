@@ -134,7 +134,7 @@ function App() {
   });
 
   // ── USER ROLES & SESSION ───────────────────────────────────────────────────
-  const [appUsers, setAppUsers] = useState([]);
+  const [appUsers, setAppUsers] = useState([HARDCODED_ADMIN]);
   const [auditLog, setAuditLog] = useState([]);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -177,16 +177,6 @@ function App() {
       return restricted.includes(prev) ? 'resource' : prev;
     });
   }, []);
-  const handleSetupAdmin = useCallback(pin => {
-    const admin = {
-      id: makeId('usr'),
-      name: 'Admin',
-      pin,
-      role: 'admin'
-    };
-    setAppUsers([admin]);
-    loginUser(admin);
-  }, [loginUser]);
 
   // Central audit-log writer – uses refs to avoid stale closures
   const logAudit = useCallback((action, description, undoData = null) => {
@@ -390,7 +380,7 @@ function App() {
         if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
         if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
         if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-        if (parsedData.appUsers) setAppUsers(parsedData.appUsers);
+        setAppUsers(injectAdmin(parsedData.appUsers));
         if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
         // Seed diff snapshots so the first save cycle is a no-op for
@@ -715,7 +705,7 @@ function App() {
     if (data.offtimeTasks) setOfftimeTasks(data.offtimeTasks);
     if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
     if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-    if (data.appUsers) setAppUsers(data.appUsers);
+    setAppUsers(injectAdmin(data.appUsers));
     if (data.auditLog) setAuditLog(data.auditLog);
     // Also re-seed the snapshots so the save cascade triggered by these
     // setStates doesn't rewrite identical data back to the server.
@@ -2233,8 +2223,7 @@ function App() {
   }, "Ohne Sync starten"))), isHelpModalOpen && HelpModal(), isLoginModalOpen && /*#__PURE__*/React.createElement(LoginModal, {
     appUsers: appUsers,
     onLogin: loginUser,
-    onClose: () => setIsLoginModalOpen(false),
-    onSetupAdmin: handleSetupAdmin
+    onClose: () => setIsLoginModalOpen(false)
   }));
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));
