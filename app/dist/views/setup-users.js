@@ -1,4 +1,4 @@
-// ─── BENUTZERVERWALTUNG (Admin only) ────────────────────────────────────────
+// ─── BENUTZERVERWALTUNG ──────────────────────────────────────────────────────
 const SetupUsersView = ({
   s,
   h
@@ -14,6 +14,9 @@ const SetupUsersView = ({
     setAppUsers,
     loginUser
   } = h;
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Shared edit state (used by both admin full-edit and self-PIN-only edit)
   const [newName, setNewName] = useState('');
   const [newPin, setNewPin] = useState('');
   const [newPinConfirm, setNewPinConfirm] = useState('');
@@ -24,10 +27,10 @@ const SetupUsersView = ({
   const [editError, setEditError] = useState('');
   const [editName, setEditName] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  if (currentUser?.role !== 'admin') {
+  if (!currentUser) {
     return /*#__PURE__*/React.createElement("main", {
       className: "flex-1 flex items-center justify-center text-slate-400 text-sm"
-    }, "Kein Zugriff \u2013 nur f\xFCr Administratoren.");
+    }, "Kein Zugriff \u2013 bitte anmelden.");
   }
   const showSuccess = msg => {
     setSuccessMsg(msg);
@@ -78,7 +81,7 @@ const SetupUsersView = ({
     setEditError('');
   };
   const handleSaveEdit = user => {
-    if (!editName.trim()) {
+    if (isAdmin && !editName.trim()) {
       setEditError('Name darf nicht leer sein.');
       return;
     }
@@ -90,28 +93,32 @@ const SetupUsersView = ({
       setEditError('PINs stimmen nicht überein.');
       return;
     }
+    if (!editPin) {
+      setEditError('Bitte einen neuen PIN eingeben.');
+      return;
+    }
     const updated = {
       ...user,
-      name: editName.trim(),
-      pin: editPin || user.pin
+      name: isAdmin ? editName.trim() : user.name,
+      pin: editPin
     };
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
-    // Update session if editing yourself
-    if (currentUser.id === user.id) {
-      loginUser(updated);
-    }
+    if (currentUser.id === user.id) loginUser(updated);
     setEditingId(null);
-    showSuccess(`Nutzer „${updated.name}" wurde gespeichert.`);
+    showSuccess(`PIN für „${updated.name}" wurde gespeichert.`);
   };
+
+  // Whether this row is editable by the current user
+  const canEdit = user => isAdmin ? user.role !== 'admin' : user.id === currentUser.id;
   return /*#__PURE__*/React.createElement("main", {
     className: "flex-1 overflow-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-2xl mx-auto p-6 space-y-8"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-semibold text-slate-900 mb-1"
-  }, "Benutzerverwaltung"), /*#__PURE__*/React.createElement("p", {
+  }, "Benutzer"), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500"
-  }, "Aktive Nutzer k\xF6nnen sich anmelden und \xC4nderungen vornehmen. Passive Nutzer sehen die Planung ohne sich anzumelden.")), successMsg && /*#__PURE__*/React.createElement("div", {
+  }, isAdmin ? 'Aktive Nutzer können sich anmelden und Änderungen vornehmen.' : 'Sie können Ihren eigenen PIN hier ändern.')), successMsg && /*#__PURE__*/React.createElement("div", {
     className: "bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-4 py-3 text-sm"
   }, successMsg), /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
@@ -119,7 +126,7 @@ const SetupUsersView = ({
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-semibold text-slate-700 uppercase tracking-wide"
-  }, "Aktive Nutzer")), appUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "Nutzer")), appUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-6 text-center text-slate-400 text-sm"
   }, "Keine Nutzer vorhanden.") : /*#__PURE__*/React.createElement("div", {
     className: "divide-y divide-slate-100"
@@ -127,9 +134,7 @@ const SetupUsersView = ({
     key: user.id
   }, editingId === user.id ? /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3 bg-gea-50"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, isAdmin && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
   }, "Name"), /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -139,26 +144,20 @@ const SetupUsersView = ({
       setEditError('');
     },
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Rolle"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    disabled: true,
-    value: user.role === 'admin' ? 'Administrator' : 'Aktiver Nutzer',
-    className: "w-full p-2 border border-slate-200 rounded text-sm bg-slate-50 text-slate-400"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Neuer PIN ", /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-normal"
-  }, "(leer lassen = unver\xE4ndert)")), /*#__PURE__*/React.createElement("input", {
+  }, "Neuer PIN"), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: editPin,
+    autoFocus: true,
     onChange: e => {
       setEditPin(e.target.value);
       setEditError('');
     },
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
-    placeholder: "Neuer PIN"
+    placeholder: "Min. 4 Zeichen"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
   }, "PIN best\xE4tigen"), /*#__PURE__*/React.createElement("input", {
@@ -195,15 +194,15 @@ const SetupUsersView = ({
     className: "text-xs px-1.5 py-0.5 rounded-full bg-gea-100 text-gea-700 font-medium shrink-0"
   }, "Admin"), currentUser.id === user.id && /*#__PURE__*/React.createElement("span", {
     className: "text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0"
-  }, "Ich"))), /*#__PURE__*/React.createElement("div", {
+  }, "Ich"))), canEdit(user) && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
-  }, user.role !== 'admin' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: () => startEdit(user),
     className: "px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-  }, "Bearbeiten"), /*#__PURE__*/React.createElement("button", {
+  }, isAdmin ? 'Bearbeiten' : 'PIN ändern'), isAdmin && /*#__PURE__*/React.createElement("button", {
     onClick: () => handleDelete(user.id),
     className: "px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
-  }, "L\xF6schen")))))))), /*#__PURE__*/React.createElement("div", {
+  }, "L\xF6schen"))))))), isAdmin && /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200"

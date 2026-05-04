@@ -93,7 +93,7 @@ const _SidebarBase = ({ s, h }) => {
                         {tabBtn('setup_cats', 'Kategorien',     <IconTag size={18}/>)}
                         {tabBtn('data',       'System & Export',<IconSettings size={18}/>)}
                         {tabBtn('audit',      'Verlauf',        <IconHistory size={18}/>)}
-                        {isAdmin && tabBtn('setup_users', 'Benutzer', <IconShield size={18}/>)}
+                        {tabBtn('setup_users', 'Benutzer', <IconShield size={18}/>)}
                     </>
                 ) : (
                     <>

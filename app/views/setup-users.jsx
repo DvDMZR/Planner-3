@@ -1,9 +1,12 @@
-// ─── BENUTZERVERWALTUNG (Admin only) ────────────────────────────────────────
+// ─── BENUTZERVERWALTUNG ──────────────────────────────────────────────────────
 const SetupUsersView = ({ s, h }) => {
     const { useState } = React;
     const { currentUser, appUsers } = s;
     const { setAppUsers, loginUser } = h;
 
+    const isAdmin = currentUser?.role === 'admin';
+
+    // Shared edit state (used by both admin full-edit and self-PIN-only edit)
     const [newName, setNewName] = useState('');
     const [newPin, setNewPin] = useState('');
     const [newPinConfirm, setNewPinConfirm] = useState('');
@@ -15,10 +18,10 @@ const SetupUsersView = ({ s, h }) => {
     const [editName, setEditName] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
-    if (currentUser?.role !== 'admin') {
+    if (!currentUser) {
         return (
             <main className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-                Kein Zugriff – nur für Administratoren.
+                Kein Zugriff – bitte anmelden.
             </main>
         );
     }
@@ -58,29 +61,34 @@ const SetupUsersView = ({ s, h }) => {
     };
 
     const handleSaveEdit = (user) => {
-        if (!editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
+        if (isAdmin && !editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
         if (editPin && editPin.length < 4) { setEditError('PIN muss mindestens 4 Zeichen haben.'); return; }
         if (editPin && editPin !== editPinConfirm) { setEditError('PINs stimmen nicht überein.'); return; }
+        if (!editPin) { setEditError('Bitte einen neuen PIN eingeben.'); return; }
         const updated = {
             ...user,
-            name: editName.trim(),
-            pin: editPin || user.pin,
+            name: isAdmin ? editName.trim() : user.name,
+            pin: editPin,
         };
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
-        // Update session if editing yourself
-        if (currentUser.id === user.id) {
-            loginUser(updated);
-        }
+        if (currentUser.id === user.id) loginUser(updated);
         setEditingId(null);
-        showSuccess(`Nutzer „${updated.name}" wurde gespeichert.`);
+        showSuccess(`PIN für „${updated.name}" wurde gespeichert.`);
     };
+
+    // Whether this row is editable by the current user
+    const canEdit = (user) => isAdmin ? user.role !== 'admin' : user.id === currentUser.id;
 
     return (
         <main className="flex-1 overflow-auto">
             <div className="max-w-2xl mx-auto p-6 space-y-8">
                 <div>
-                    <h2 className="text-xl font-semibold text-slate-900 mb-1">Benutzerverwaltung</h2>
-                    <p className="text-sm text-slate-500">Aktive Nutzer können sich anmelden und Änderungen vornehmen. Passive Nutzer sehen die Planung ohne sich anzumelden.</p>
+                    <h2 className="text-xl font-semibold text-slate-900 mb-1">Benutzer</h2>
+                    <p className="text-sm text-slate-500">
+                        {isAdmin
+                            ? 'Aktive Nutzer können sich anmelden und Änderungen vornehmen.'
+                            : 'Sie können Ihren eigenen PIN hier ändern.'}
+                    </p>
                 </div>
 
                 {successMsg && (
@@ -92,7 +100,7 @@ const SetupUsersView = ({ s, h }) => {
                 {/* Nutzerliste */}
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Aktive Nutzer</h3>
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Nutzer</h3>
                     </div>
                     {appUsers.length === 0 ? (
                         <div className="px-4 py-6 text-center text-slate-400 text-sm">Keine Nutzer vorhanden.</div>
@@ -102,7 +110,7 @@ const SetupUsersView = ({ s, h }) => {
                                 <div key={user.id}>
                                     {editingId === user.id ? (
                                         <div className="p-4 space-y-3 bg-gea-50">
-                                            <div className="grid grid-cols-2 gap-3">
+                                            {isAdmin && (
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
                                                     <input
@@ -112,20 +120,17 @@ const SetupUsersView = ({ s, h }) => {
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
                                                     />
                                                 </div>
+                                            )}
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                                                        Rolle
-                                                    </label>
-                                                    <input type="text" disabled value={user.role === 'admin' ? 'Administrator' : 'Aktiver Nutzer'} className="w-full p-2 border border-slate-200 rounded text-sm bg-slate-50 text-slate-400"/>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Neuer PIN <span className="text-slate-400 font-normal">(leer lassen = unverändert)</span></label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Neuer PIN</label>
                                                     <input
                                                         type="password"
                                                         value={editPin}
+                                                        autoFocus
                                                         onChange={e => { setEditPin(e.target.value); setEditError(''); }}
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                                        placeholder="Neuer PIN"
+                                                        placeholder="Min. 4 Zeichen"
                                                     />
                                                 </div>
                                                 <div>
@@ -162,16 +167,18 @@ const SetupUsersView = ({ s, h }) => {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                {user.role !== 'admin' && (<>
+                                            {canEdit(user) && (
+                                                <div className="flex items-center gap-1 shrink-0">
                                                     <button onClick={() => startEdit(user)} className="px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                                                        Bearbeiten
+                                                        {isAdmin ? 'Bearbeiten' : 'PIN ändern'}
                                                     </button>
-                                                    <button onClick={() => handleDelete(user.id)} className="px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors">
-                                                        Löschen
-                                                    </button>
-                                                </>)}
-                                            </div>
+                                                    {isAdmin && (
+                                                        <button onClick={() => handleDelete(user.id)} className="px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors">
+                                                            Löschen
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -180,55 +187,57 @@ const SetupUsersView = ({ s, h }) => {
                     )}
                 </div>
 
-                {/* Neuen Nutzer anlegen */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Neuen Nutzer anlegen</h3>
-                    </div>
-                    <div className="p-4 space-y-3">
-                        <div className="grid grid-cols-3 gap-3">
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
-                                <input
-                                    type="text"
-                                    value={newName}
-                                    onChange={e => { setNewName(e.target.value); setNewError(''); }}
-                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="z.B. Max Mustermann"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">PIN</label>
-                                <input
-                                    type="password"
-                                    value={newPin}
-                                    onChange={e => { setNewPin(e.target.value); setNewError(''); }}
-                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="Min. 4 Zeichen"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">PIN bestätigen</label>
-                                <input
-                                    type="password"
-                                    value={newPinConfirm}
-                                    onChange={e => { setNewPinConfirm(e.target.value); setNewError(''); }}
-                                    onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                                    className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="Wiederholen"
-                                />
-                            </div>
+                {/* Neuen Nutzer anlegen – nur für Admins */}
+                {isAdmin && (
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Neuen Nutzer anlegen</h3>
                         </div>
-                        {newError && <p className="text-rose-600 text-xs">{newError}</p>}
-                        <button
-                            onClick={handleAdd}
-                            className="px-4 py-2 bg-gea-600 text-white rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
-                        >
-                            Nutzer anlegen
-                        </button>
-                        <p className="text-xs text-slate-400">Neue Nutzer erhalten die Rolle „Aktiver Nutzer".</p>
+                        <div className="p-4 space-y-3">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
+                                    <input
+                                        type="text"
+                                        value={newName}
+                                        onChange={e => { setNewName(e.target.value); setNewError(''); }}
+                                        className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                        placeholder="z.B. Max Mustermann"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">PIN</label>
+                                    <input
+                                        type="password"
+                                        value={newPin}
+                                        onChange={e => { setNewPin(e.target.value); setNewError(''); }}
+                                        className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                        placeholder="Min. 4 Zeichen"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">PIN bestätigen</label>
+                                    <input
+                                        type="password"
+                                        value={newPinConfirm}
+                                        onChange={e => { setNewPinConfirm(e.target.value); setNewError(''); }}
+                                        onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                                        className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+                                        placeholder="Wiederholen"
+                                    />
+                                </div>
+                            </div>
+                            {newError && <p className="text-rose-600 text-xs">{newError}</p>}
+                            <button
+                                onClick={handleAdd}
+                                className="px-4 py-2 bg-gea-600 text-white rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
+                            >
+                                Nutzer anlegen
+                            </button>
+                            <p className="text-xs text-slate-400">Neue Nutzer erhalten die Rolle „Aktiver Nutzer".</p>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </main>
     );
