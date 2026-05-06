@@ -192,15 +192,34 @@ const ResourceView = ({ s, h }) => {
         const leftSpacerSpan = safeStart;
         const rightSpacerSpan = Math.max(0, resourceWeeks.length - 1 - safeEnd);
 
+        if (activeEmployees.length === 0) {
+            const isLoggedIn = !!s.currentUser;
+            return (
+                <div className="flex-1 flex flex-col h-full bg-white">
+                    <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3">
+                        <h2 className="text-gea-800 text-xl font-semibold shrink-0">Ressourcenplaner</h2>
+                    </div>
+                    <EmptyState
+                        icon={<IconUsers size={32}/>}
+                        title="Noch keine Mitarbeiter angelegt"
+                        description={isLoggedIn
+                            ? "Legen Sie Ihre Mitarbeiter an, um sie im Ressourcenplaner einzuteilen."
+                            : "Bitte melden Sie sich an, um Mitarbeiter anzulegen."}
+                        action={isLoggedIn ? { label: 'Mitarbeiter anlegen', onClick: () => setActiveTab('setup_emp') } : null}
+                    />
+                </div>
+            );
+        }
+
         return (
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3">
                     <h2 className="text-gea-800 text-xl font-semibold shrink-0">Ressourcenplaner</h2>
                     <div className="flex items-center gap-2">
                         <div className="flex items-center">
-                            <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
+                            <Tooltip text="4 Wochen zurück"><button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"><IconChevronLeft size={16}/></button></Tooltip>
                             <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
-                            <button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200" title="4 Wochen vor"><IconChevronRight size={16}/></button>
+                            <Tooltip text="4 Wochen vor"><button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"><IconChevronRight size={16}/></button></Tooltip>
                         </div>
                         <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
                             className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">

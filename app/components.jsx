@@ -55,6 +55,68 @@ const StatusBadge = ({ status }) => {
     return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>;
 };
 
+// --- TOAST CONTAINER ---
+const ToastContainer = ({ toasts, onDismiss }) => (
+    <div className="fixed top-4 right-4 z-[60] space-y-2 pointer-events-none">
+        {toasts.map(t => (
+            <div key={t.id} className={`pointer-events-auto min-w-[280px] max-w-md shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border ${
+                t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                t.type === 'error'   ? 'bg-rose-50 border-rose-200 text-rose-800' :
+                t.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                                       'bg-white border-slate-200 text-slate-800'
+            }`}>
+                <span className="text-sm flex-1">{t.message}</span>
+                {t.action && (
+                    <button onClick={() => { t.action.onClick(); onDismiss(t.id); }}
+                        className="text-xs font-semibold underline hover:no-underline shrink-0">
+                        {t.action.label}
+                    </button>
+                )}
+                <button onClick={() => onDismiss(t.id)} className="text-current opacity-50 hover:opacity-100 shrink-0">
+                    <IconX size={14}/>
+                </button>
+            </div>
+        ))}
+    </div>
+);
+
+// --- EMPTY STATE ---
+const EmptyState = ({ icon, title, description, action }) => (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        {icon && <div className="bg-slate-100 text-slate-400 rounded-full p-4 mb-4">{icon}</div>}
+        <h3 className="text-base font-semibold text-slate-700 mb-1">{title}</h3>
+        {description && <p className="text-sm text-slate-500 max-w-sm mb-6">{description}</p>}
+        {action && (
+            <button onClick={action.onClick}
+                className="bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors">
+                {action.label}
+            </button>
+        )}
+    </div>
+);
+
+// --- TOOLTIP (faster + stylable replacement for native title="") ---
+const Tooltip = ({ text, children, side = 'top', delay = 250 }) => {
+    const [show, setShow] = React.useState(false);
+    const timer = React.useRef(null);
+    if (!text) return children;
+    const onEnter = () => { timer.current = setTimeout(() => setShow(true), delay); };
+    const onLeave = () => { clearTimeout(timer.current); setShow(false); };
+    return (
+        <span className="relative inline-flex" onMouseEnter={onEnter} onMouseLeave={onLeave} onFocus={onEnter} onBlur={onLeave}>
+            {children}
+            {show && (
+                <span className={`absolute z-50 whitespace-nowrap px-2 py-1 rounded text-xs bg-slate-900 text-white shadow-lg pointer-events-none ${
+                    side === 'top'    ? 'bottom-full mb-1 left-1/2 -translate-x-1/2' :
+                    side === 'bottom' ? 'top-full mt-1 left-1/2 -translate-x-1/2' :
+                    side === 'left'   ? 'right-full mr-1 top-1/2 -translate-y-1/2' :
+                                        'left-full ml-1 top-1/2 -translate-y-1/2'
+                }`}>{text}</span>
+            )}
+        </span>
+    );
+};
+
 // --- WEEK CALENDAR PICKER ---
 const WeekCalendarPicker = ({ value, onChange, minWeek }) => {
     const getMonthFromWeek = (weekId) => {

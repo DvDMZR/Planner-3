@@ -234,9 +234,13 @@ const SetupProjView = ({
     className: "flex items-center gap-2 bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors shadow-sm"
   }, /*#__PURE__*/React.createElement(IconPlus, {
     size: 16
-  }), " Neues Projekt")), activeCats.length === 0 && activeProjects.length === 0 && /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-slate-400 text-sm py-8"
-  }, "Noch keine aktiven Projekte."), activeCats.map(cat => {
+  }), " Neues Projekt")), activeCats.length === 0 && activeProjects.length === 0 && /*#__PURE__*/React.createElement(EmptyState, {
+    icon: /*#__PURE__*/React.createElement(IconBriefcase, {
+      size: 32
+    }),
+    title: "Noch keine aktiven Projekte",
+    description: "Legen Sie Ihr erstes Projekt an \u2014 der Plus-Button oben rechts startet das Formular."
+  }), activeCats.map(cat => {
     const catProjs = activeProjects.filter(p => p.category === cat);
     const isCollapsed = collapsedProjCategories[cat];
     return /*#__PURE__*/React.createElement("div", {

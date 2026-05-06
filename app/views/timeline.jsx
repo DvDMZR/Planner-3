@@ -120,6 +120,22 @@ const TimelineView = ({ s, h }) => {
         const leftSpacerSpan = safeStart;
         const rightSpacerSpan = Math.max(0, timelineWeeks.length - 1 - safeEnd);
 
+        if (projects.length === 0) {
+            const isLoggedIn = !!s.currentUser;
+            return (
+                <div className="flex-1 flex flex-col h-full bg-white">
+                    <EmptyState
+                        icon={<IconBriefcase size={32}/>}
+                        title="Noch keine Projekte angelegt"
+                        description={isLoggedIn
+                            ? "Legen Sie Ihr erstes Projekt an, um Termine zu planen."
+                            : "Bitte melden Sie sich an, um Projekte anzulegen."}
+                        action={isLoggedIn ? { label: 'Projekt anlegen', onClick: () => setActiveTab('setup_proj') } : null}
+                    />
+                </div>
+            );
+        }
+
         return (
             <div className="flex-1 flex h-full overflow-hidden bg-white">
                 <div className="w-fit min-w-[10rem] max-w-[20rem] border-r border-slate-200 flex flex-col bg-slate-50 shrink-0">
@@ -176,9 +192,9 @@ const TimelineView = ({ s, h }) => {
                         <h3 className="text-slate-900 text-lg font-medium shrink-0">Projekt-Planung</h3>
                         <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center">
-                                <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
+                                <Tooltip text="4 Wochen zurück"><button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"><IconChevronLeft size={16}/></button></Tooltip>
                                 <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
-                                <button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200" title="4 Wochen vor"><IconChevronRight size={16}/></button>
+                                <Tooltip text="4 Wochen vor"><button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"><IconChevronRight size={16}/></button></Tooltip>
                             </div>
                             <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
                                 className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">

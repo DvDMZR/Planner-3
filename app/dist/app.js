@@ -144,10 +144,29 @@ function App() {
     }
   });
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const currentUserRef = useRef(null);
   useEffect(() => {
     currentUserRef.current = currentUser;
   }, [currentUser]);
+  const dismissToast = useCallback(id => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+  const showToast = useCallback((message, opts = {}) => {
+    const id = makeId('toast');
+    const duration = opts.duration ?? 4000;
+    const toast = {
+      id,
+      message,
+      type: opts.type || 'info',
+      action: opts.action || null
+    };
+    setToasts(prev => [...prev, toast]);
+    if (duration > 0) {
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
+    }
+    return id;
+  }, []);
 
   // Stable ref so audit handlers see current assignments without deps
   const assignmentsRef = useRef([]);
@@ -492,10 +511,20 @@ function App() {
       });
     } else if (employees.length < prev.length) {
       const removed = prev.find(e => !employees.some(p => p.id === e.id));
-      if (removed) logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, {
-        type: 'restore_employee',
-        prev: removed
-      });
+      if (removed) {
+        logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, {
+          type: 'restore_employee',
+          prev: removed
+        });
+        showToast(`Mitarbeiter „${removed.name}" gelöscht`, {
+          type: 'success',
+          duration: 6000,
+          action: {
+            label: 'Rückgängig',
+            onClick: () => setEmployees(p => p.some(e => e.id === removed.id) ? p : [...p, removed])
+          }
+        });
+      }
     } else {
       const changed = employees.find(e => {
         const p = prev.find(p => p.id === e.id);
@@ -509,7 +538,7 @@ function App() {
         });
       }
     }
-  }, [employees, logAudit]);
+  }, [employees, logAudit, showToast]);
 
   // ── AUDIT WATCH: projects ──────────────────────────────────────────────────
   const prevProjectsRef = useRef(null);
@@ -531,10 +560,20 @@ function App() {
       });
     } else if (projects.length < prev.length) {
       const removed = prev.find(p => !projects.some(q => q.id === p.id));
-      if (removed) logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, {
-        type: 'restore_project',
-        prev: removed
-      });
+      if (removed) {
+        logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, {
+          type: 'restore_project',
+          prev: removed
+        });
+        showToast(`Projekt „${removed.name}" gelöscht`, {
+          type: 'success',
+          duration: 6000,
+          action: {
+            label: 'Rückgängig',
+            onClick: () => setProjects(p => p.some(q => q.id === removed.id) ? p : [...p, removed])
+          }
+        });
+      }
     } else {
       const changed = projects.find(p => {
         const q = prev.find(q => q.id === p.id);
@@ -548,7 +587,7 @@ function App() {
         });
       }
     }
-  }, [projects, logAudit]);
+  }, [projects, logAudit, showToast]);
 
   // Save on change. localStorage runs at ~400 ms, SharePoint at 1.5 s. The
   // SharePoint write is split per entity / team; saveSplitState() only
@@ -638,6 +677,10 @@ function App() {
                 notify: false
               });
               setSyncStatus('conflict-reload');
+              showToast('Änderung eines Kollegen wurde übernommen.', {
+                type: 'warning',
+                duration: 5000
+              });
               setTimeout(() => {
                 if (syncStatusRef.current === 'conflict-reload') setSyncStatus('idle');
               }, 3000);
@@ -2111,6 +2154,8 @@ function App() {
     setAppUsers,
     setAuditLog,
     setIsLoginModalOpen,
+    showToast,
+    dismissToast,
     loginUser,
     logoutUser,
     getEmpWeeklyHours,
@@ -2271,6 +2316,9 @@ function App() {
     appUsers: appUsers,
     onLogin: loginUser,
     onClose: () => setIsLoginModalOpen(false)
+  }), /*#__PURE__*/React.createElement(ToastContainer, {
+    toasts: toasts,
+    onDismiss: dismissToast
   }));
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));

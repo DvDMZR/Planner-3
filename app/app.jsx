@@ -111,8 +111,24 @@ function App() {
         catch { return null; }
     });
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [toasts, setToasts] = useState([]);
     const currentUserRef = useRef(null);
     useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
+
+    const dismissToast = useCallback((id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    const showToast = useCallback((message, opts = {}) => {
+        const id = makeId('toast');
+        const duration = opts.duration ?? 4000;
+        const toast = { id, message, type: opts.type || 'info', action: opts.action || null };
+        setToasts(prev => [...prev, toast]);
+        if (duration > 0) {
+            setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
+        }
+        return id;
+    }, []);
 
     // Stable ref so audit handlers see current assignments without deps
     const assignmentsRef = useRef([]);
@@ -393,7 +409,13 @@ function App() {
             if (added) logAudit('employee_create', `Mitarbeiter angelegt: ${added.name}`, { type: 'del_employee', id: added.id });
         } else if (employees.length < prev.length) {
             const removed = prev.find(e => !employees.some(p => p.id === e.id));
-            if (removed) logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, { type: 'restore_employee', prev: removed });
+            if (removed) {
+                logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, { type: 'restore_employee', prev: removed });
+                showToast(`Mitarbeiter „${removed.name}" gelöscht`, {
+                    type: 'success', duration: 6000,
+                    action: { label: 'Rückgängig', onClick: () => setEmployees(p => p.some(e => e.id === removed.id) ? p : [...p, removed]) }
+                });
+            }
         } else {
             const changed = employees.find(e => { const p = prev.find(p => p.id === e.id); return p && JSON.stringify(e) !== JSON.stringify(p); });
             if (changed) {
@@ -401,7 +423,7 @@ function App() {
                 logAudit('employee_update', `Mitarbeiter bearbeitet: ${changed.name}`, { type: 'restore_employee', prev: prevEmp });
             }
         }
-    }, [employees, logAudit]);
+    }, [employees, logAudit, showToast]);
 
     // ── AUDIT WATCH: projects ──────────────────────────────────────────────────
     const prevProjectsRef = useRef(null);
@@ -417,7 +439,13 @@ function App() {
             if (added) logAudit('project_create', `Projekt angelegt: ${added.name}`, { type: 'del_project', id: added.id });
         } else if (projects.length < prev.length) {
             const removed = prev.find(p => !projects.some(q => q.id === p.id));
-            if (removed) logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, { type: 'restore_project', prev: removed });
+            if (removed) {
+                logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, { type: 'restore_project', prev: removed });
+                showToast(`Projekt „${removed.name}" gelöscht`, {
+                    type: 'success', duration: 6000,
+                    action: { label: 'Rückgängig', onClick: () => setProjects(p => p.some(q => q.id === removed.id) ? p : [...p, removed]) }
+                });
+            }
         } else {
             const changed = projects.find(p => { const q = prev.find(q => q.id === p.id); return q && JSON.stringify(p) !== JSON.stringify(q); });
             if (changed) {
@@ -425,7 +453,7 @@ function App() {
                 logAudit('project_update', `Projekt bearbeitet: ${changed.name}`, { type: 'restore_project', prev: prevProj });
             }
         }
-    }, [projects, logAudit]);
+    }, [projects, logAudit, showToast]);
 
     // Save on change. localStorage runs at ~400 ms, SharePoint at 1.5 s. The
     // SharePoint write is split per entity / team; saveSplitState() only
@@ -502,6 +530,7 @@ function App() {
                             spFileEtagsRef.current = stripMetaEtag(etags);
                             applyRemoteSnapshot(state, { notify: false });
                             setSyncStatus('conflict-reload');
+                            showToast('Änderung eines Kollegen wurde übernommen.', { type: 'warning', duration: 5000 });
                             setTimeout(() => { if (syncStatusRef.current === 'conflict-reload') setSyncStatus('idle'); }, 3000);
                         } catch(e2) {
                             console.warn('[SP] conflict reload failed', e2);
@@ -1667,6 +1696,7 @@ function App() {
         setSyncStatus, setFsStatus,
         setCompactView, setScrollTarget,
         setAppUsers, setAuditLog, setIsLoginModalOpen,
+        showToast, dismissToast,
         loginUser, logoutUser,
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
         toggleCategory, toggleProjCategory, toggleEmpSetup,
@@ -1782,6 +1812,8 @@ function App() {
                     onClose={() => setIsLoginModalOpen(false)}
                 />
             )}
+
+            <ToastContainer toasts={toasts} onDismiss={dismissToast}/>
         </div>
     );
 }
