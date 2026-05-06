@@ -292,6 +292,26 @@ const ResourceView = ({
   const visibleWeeks = React.useMemo(() => resourceWeeks.slice(safeStart, safeEnd + 1), [resourceWeeks, safeStart, safeEnd]);
   const leftSpacerSpan = safeStart;
   const rightSpacerSpan = Math.max(0, resourceWeeks.length - 1 - safeEnd);
+  if (activeEmployees.length === 0) {
+    const isLoggedIn = !!s.currentUser;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full bg-white"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "text-gea-800 text-xl font-semibold shrink-0"
+    }, "Ressourcenplaner")), /*#__PURE__*/React.createElement(EmptyState, {
+      icon: /*#__PURE__*/React.createElement(IconUsers, {
+        size: 32
+      }),
+      title: "Noch keine Mitarbeiter angelegt",
+      description: isLoggedIn ? "Legen Sie Ihre Mitarbeiter an, um sie im Ressourcenplaner einzuteilen." : "Bitte melden Sie sich an, um Mitarbeiter anzulegen.",
+      action: isLoggedIn ? {
+        label: 'Mitarbeiter anlegen',
+        onClick: () => setActiveTab('setup_emp')
+      } : null
+    }));
+  }
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
@@ -302,21 +322,23 @@ const ResourceView = ({
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
+  }, /*#__PURE__*/React.createElement(Tooltip, {
+    text: "4 Wochen zur\xFCck"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(-4),
-    className: "p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200",
-    title: "4 Wochen zur\xFCck"
+    className: "p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"
   }, /*#__PURE__*/React.createElement(IconChevronLeft, {
     size: 16
-  })), /*#__PURE__*/React.createElement("span", {
+  }))), /*#__PURE__*/React.createElement("span", {
     className: "px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums"
-  }, scrollInfo.label || '—'), /*#__PURE__*/React.createElement("button", {
+  }, scrollInfo.label || '—'), /*#__PURE__*/React.createElement(Tooltip, {
+    text: "4 Wochen vor"
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(4),
-    className: "p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200",
-    title: "4 Wochen vor"
+    className: "p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"
   }, /*#__PURE__*/React.createElement(IconChevronRight, {
     size: 16
-  }))), /*#__PURE__*/React.createElement("select", {
+  })))), /*#__PURE__*/React.createElement("select", {
     value: timelineYear,
     onChange: e => setTimelineYear(Number(e.target.value)),
     className: "border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400"

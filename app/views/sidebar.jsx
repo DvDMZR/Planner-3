@@ -42,6 +42,22 @@ const _SidebarBase = ({ s, h }) => {
     const isActive = !!currentUser;
     const isAdmin = currentUser?.role === 'admin';
 
+    // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
+    const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+    const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
+        try {
+            const stored = localStorage.getItem('sidebar.verwaltungOpen');
+            if (stored !== null) return stored === 'true';
+        } catch(e) {}
+        return currentUser?.role === 'admin';
+    });
+    React.useEffect(() => {
+        try { localStorage.setItem('sidebar.verwaltungOpen', String(verwaltungOpen)); } catch(e) {}
+    }, [verwaltungOpen]);
+    React.useEffect(() => {
+        if (VERWALTUNG_TABS.includes(activeTab) && !verwaltungOpen) setVerwaltungOpen(true);
+    }, [activeTab]);
+
     // Helper: locked tab button for passive users
     const lockedTabBtn = (label, icon) => (
         <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-600 opacity-50 cursor-not-allowed select-none">
@@ -88,8 +104,15 @@ const _SidebarBase = ({ s, h }) => {
                     : lockedTabBtn('Übersicht', <IconTable size={18}/>)
                 }
 
-                <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold">Verwaltung</div>
-                {isActive ? (
+                <button
+                    type="button"
+                    onClick={() => setVerwaltungOpen(o => !o)}
+                    className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
+                >
+                    <span>Verwaltung</span>
+                    {verwaltungOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
+                </button>
+                {verwaltungOpen && (isActive ? (
                     <>
                         {tabBtn('setup_emp',  'Mitarbeiter',    <IconUser size={18}/>)}
                         {tabBtn('setup_proj', 'Projekte',       <IconBriefcase size={18}/>)}
@@ -106,7 +129,7 @@ const _SidebarBase = ({ s, h }) => {
                         {lockedTabBtn('System & Export', <IconSettings size={18}/>)}
                         {lockedTabBtn('Verlauf',         <IconHistory size={18}/>)}
                     </>
-                )}
+                ))}
             </nav>
 
             {/* Login / Logout area */}
@@ -120,13 +143,14 @@ const _SidebarBase = ({ s, h }) => {
                             <span className="text-gea-200 text-xs font-medium truncate block">{currentUser.name}</span>
                             <span className="text-gea-500 text-xs">{isAdmin ? 'Administrator' : 'Aktiver Nutzer'}</span>
                         </div>
-                        <button
-                            onClick={logoutUser}
-                            title="Abmelden"
-                            className="text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
-                        >
-                            <IconLogOut size={15}/>
-                        </button>
+                        <Tooltip text="Abmelden" side="top">
+                            <button
+                                onClick={logoutUser}
+                                className="text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
+                            >
+                                <IconLogOut size={15}/>
+                            </button>
+                        </Tooltip>
                     </div>
                 ) : (
                     <button

@@ -121,8 +121,12 @@ const AuditView = ({ s, h }) => {
                 </div>
 
                 {filtered.length === 0 ? (
-                    <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400 text-sm">
-                        Keine Einträge für den gewählten Zeitraum.
+                    <div className="bg-white border border-slate-200 rounded-xl">
+                        <EmptyState
+                            icon={<IconHistory size={32}/>}
+                            title="Keine Einträge"
+                            description="Für den gewählten Zeitraum gibt es keine Verlaufseinträge."
+                        />
                     </div>
                 ) : (
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -177,13 +181,14 @@ const AuditView = ({ s, h }) => {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => setUndoConfirm(entry.id)}
-                                                        title="Zustand vor dieser Änderung wiederherstellen"
-                                                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors ml-auto"
-                                                    >
-                                                        <IconUndo size={13}/> Rückgängig
-                                                    </button>
+                                                    <Tooltip text="Zustand vor dieser Änderung wiederherstellen" side="left">
+                                                        <button
+                                                            onClick={() => setUndoConfirm(entry.id)}
+                                                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors ml-auto"
+                                                        >
+                                                            <IconUndo size={13}/> Rückgängig
+                                                        </button>
+                                                    </Tooltip>
                                                 )
                                             )}
                                         </td>

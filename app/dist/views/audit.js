@@ -126,8 +126,14 @@ const AuditView = ({
     onClick: () => setFilter(val),
     className: `px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${filter === val ? 'bg-gea-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`
   }, label)))), filtered.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400 text-sm"
-  }, "Keine Eintr\xE4ge f\xFCr den gew\xE4hlten Zeitraum.") : /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-slate-200 rounded-xl"
+  }, /*#__PURE__*/React.createElement(EmptyState, {
+    icon: /*#__PURE__*/React.createElement(IconHistory, {
+      size: 32
+    }),
+    title: "Keine Eintr\xE4ge",
+    description: "F\xFCr den gew\xE4hlten Zeitraum gibt es keine Verlaufseintr\xE4ge."
+  })) : /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full text-sm"
@@ -180,13 +186,15 @@ const AuditView = ({
   }, "Ja"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setUndoConfirm(null),
     className: "px-2 py-1 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-  }, "Nein")) : /*#__PURE__*/React.createElement("button", {
+  }, "Nein")) : /*#__PURE__*/React.createElement(Tooltip, {
+    text: "Zustand vor dieser \xC4nderung wiederherstellen",
+    side: "left"
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setUndoConfirm(entry.id),
-    title: "Zustand vor dieser \xC4nderung wiederherstellen",
     className: "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors ml-auto"
   }, /*#__PURE__*/React.createElement(IconUndo, {
     size: 13
-  }), " R\xFCckg\xE4ngig")))))))), auditLog.length > 0 && /*#__PURE__*/React.createElement("p", {
+  }), " R\xFCckg\xE4ngig"))))))))), auditLog.length > 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 text-right"
   }, auditLog.length, " Eintrag", auditLog.length !== 1 ? 'e' : '', " gespeichert (max. 500)")));
 };

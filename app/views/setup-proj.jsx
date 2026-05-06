@@ -106,7 +106,11 @@ const SetupProjView = ({ s, h }) => {
 
                     {/* Active projects by category */}
                     {activeCats.length === 0 && activeProjects.length === 0 && (
-                        <div className="text-center text-slate-400 text-sm py-8">Noch keine aktiven Projekte.</div>
+                        <EmptyState
+                            icon={<IconBriefcase size={32}/>}
+                            title="Noch keine aktiven Projekte"
+                            description="Legen Sie Ihr erstes Projekt an — der Plus-Button oben rechts startet das Formular."
+                        />
                     )}
                     {activeCats.map(cat => {
                         const catProjs = activeProjects.filter(p => p.category === cat);

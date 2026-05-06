@@ -146,6 +146,24 @@ const _SidebarBase = ({
   const isActive = !!currentUser;
   const isAdmin = currentUser?.role === 'admin';
 
+  // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
+  const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+  const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
+    try {
+      const stored = localStorage.getItem('sidebar.verwaltungOpen');
+      if (stored !== null) return stored === 'true';
+    } catch (e) {}
+    return currentUser?.role === 'admin';
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('sidebar.verwaltungOpen', String(verwaltungOpen));
+    } catch (e) {}
+  }, [verwaltungOpen]);
+  React.useEffect(() => {
+    if (VERWALTUNG_TABS.includes(activeTab) && !verwaltungOpen) setVerwaltungOpen(true);
+  }, [activeTab]);
+
   // Helper: locked tab button for passive users
   const lockedTabBtn = (label, icon) => /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-600 opacity-50 cursor-not-allowed select-none"
@@ -207,9 +225,15 @@ const _SidebarBase = ({
     size: 18
   })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
     size: 18
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold"
-  }, "Verwaltung"), isActive ? /*#__PURE__*/React.createElement(React.Fragment, null, tabBtn('setup_emp', 'Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setVerwaltungOpen(o => !o),
+    className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
+  }, /*#__PURE__*/React.createElement("span", null, "Verwaltung"), verwaltungOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
+    size: 14
+  }) : /*#__PURE__*/React.createElement(IconChevronRight, {
+    size: 14
+  })), verwaltungOpen && (isActive ? /*#__PURE__*/React.createElement(React.Fragment, null, tabBtn('setup_emp', 'Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
     size: 18
   })), tabBtn('setup_proj', 'Projekte', /*#__PURE__*/React.createElement(IconBriefcase, {
     size: 18
@@ -231,7 +255,7 @@ const _SidebarBase = ({
     size: 18
   })), lockedTabBtn('Verlauf', /*#__PURE__*/React.createElement(IconHistory, {
     size: 18
-  })))), /*#__PURE__*/React.createElement("div", {
+  }))))), /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 border-t border-gea-700 shrink-0"
   }, isActive ? /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
@@ -243,13 +267,15 @@ const _SidebarBase = ({
     className: "text-gea-200 text-xs font-medium truncate block"
   }, currentUser.name), /*#__PURE__*/React.createElement("span", {
     className: "text-gea-500 text-xs"
-  }, isAdmin ? 'Administrator' : 'Aktiver Nutzer')), /*#__PURE__*/React.createElement("button", {
+  }, isAdmin ? 'Administrator' : 'Aktiver Nutzer')), /*#__PURE__*/React.createElement(Tooltip, {
+    text: "Abmelden",
+    side: "top"
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: logoutUser,
-    title: "Abmelden",
     className: "text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
   }, /*#__PURE__*/React.createElement(IconLogOut, {
     size: 15
-  }))) : /*#__PURE__*/React.createElement("button", {
+  })))) : /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsLoginModalOpen(true),
     className: "w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
   }, /*#__PURE__*/React.createElement(IconLogIn, {
