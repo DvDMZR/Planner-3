@@ -1165,88 +1165,12 @@ function App() {
   const supportEmpCategories = useMemo(() => Array.from(supportEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [supportEmpsByCategory]);
   const hasSupportEmployees = supportEmpIds.size > 0;
 
-  // Employees who have ever been planned for any 'offtime' assignment
-  const offtimeEmpIds = useMemo(() => {
-    const s = new Set();
-    for (let i = 0; i < assignments.length; i++) {
-      if (assignments[i].type === 'offtime') s.add(assignments[i].empId);
-    }
-    return s;
-  }, [assignments]);
-  const offtimeEmpsByCategory = useMemo(() => {
-    const m = new Map();
-    const seen = new Set();
-    const add = e => {
-      if (seen.has(e.id)) return;
-      seen.add(e.id);
-      let arr = m.get(e.category);
-      if (!arr) {
-        arr = [];
-        m.set(e.category, arr);
-      }
-      arr.push(e);
-    };
-    activeEmployees.forEach(e => {
-      if (offtimeEmpIds.has(e.id)) add(e);
-    });
-    employees.forEach(e => {
-      if (offtimeEmpIds.has(e.id)) add(e);
-    });
-    m.forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name, 'de')));
-    return m;
-  }, [activeEmployees, employees, offtimeEmpIds]);
-  const offtimeEmpCategories = useMemo(() => Array.from(offtimeEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [offtimeEmpsByCategory]);
-  const hasOfftimeEmployees = offtimeEmpIds.size > 0;
-
-  // Employees who have ever been planned for any 'training' assignment
-  const trainingEmpIds = useMemo(() => {
-    const s = new Set();
-    for (let i = 0; i < assignments.length; i++) {
-      if (assignments[i].type === 'training') s.add(assignments[i].empId);
-    }
-    return s;
-  }, [assignments]);
-  const trainingEmpsByCategory = useMemo(() => {
-    const m = new Map();
-    const seen = new Set();
-    const add = e => {
-      if (seen.has(e.id)) return;
-      seen.add(e.id);
-      let arr = m.get(e.category);
-      if (!arr) {
-        arr = [];
-        m.set(e.category, arr);
-      }
-      arr.push(e);
-    };
-    activeEmployees.forEach(e => {
-      if (trainingEmpIds.has(e.id)) add(e);
-    });
-    employees.forEach(e => {
-      if (trainingEmpIds.has(e.id)) add(e);
-    });
-    m.forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name, 'de')));
-    return m;
-  }, [activeEmployees, employees, trainingEmpIds]);
-  const trainingEmpCategories = useMemo(() => Array.from(trainingEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [trainingEmpsByCategory]);
-  const hasTrainingEmployees = trainingEmpIds.size > 0;
-
-  // Fall back to Ressourcen when last assignment of a special type disappears
+  // Fall back to Ressourcen if on Support tab and last support assignment disappears
   useEffect(() => {
     if (activeTab === 'support' && !hasSupportEmployees) {
       setActiveTab('resource');
     }
   }, [activeTab, hasSupportEmployees]);
-  useEffect(() => {
-    if (activeTab === 'offtime' && !hasOfftimeEmployees) {
-      setActiveTab('resource');
-    }
-  }, [activeTab, hasOfftimeEmployees]);
-  useEffect(() => {
-    if (activeTab === 'training' && !hasTrainingEmployees) {
-      setActiveTab('resource');
-    }
-  }, [activeTab, hasTrainingEmployees]);
   const projectsByCategory = useMemo(() => {
     const m = new Map();
     projects.forEach(p => {
@@ -1262,7 +1186,7 @@ function App() {
     }
     return m;
   }, [projects]);
-  const projCategoriesFromProjects = useMemo(() => Array.from(projectsByCategory.keys()), [projectsByCategory]);
+  const projCategoriesFromProjects = useMemo(() => Array.from(projectsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [projectsByCategory]);
 
   // Cache weeks per year – generateWeeksForYear does Easter math + 54
   // iterations, expensive to redo on every render.
@@ -2160,12 +2084,6 @@ function App() {
     supportEmpsByCategory,
     supportEmpCategories,
     hasSupportEmployees,
-    offtimeEmpsByCategory,
-    offtimeEmpCategories,
-    hasOfftimeEmployees,
-    trainingEmpsByCategory,
-    trainingEmpCategories,
-    hasTrainingEmployees,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -2274,10 +2192,10 @@ function App() {
   }), activeTab === 'support' && hasSupportEmployees && /*#__PURE__*/React.createElement(SupportView, {
     s: s,
     h: h
-  }), activeTab === 'offtime' && hasOfftimeEmployees && /*#__PURE__*/React.createElement(OfftimeView, {
+  }), activeTab === 'offtime' && /*#__PURE__*/React.createElement(OfftimeView, {
     s: s,
     h: h
-  }), activeTab === 'training' && hasTrainingEmployees && /*#__PURE__*/React.createElement(TrainingView, {
+  }), activeTab === 'training' && /*#__PURE__*/React.createElement(TrainingView, {
     s: s,
     h: h
   }), activeTab === 'utilization' && currentUser && /*#__PURE__*/React.createElement(UtilizationView, {

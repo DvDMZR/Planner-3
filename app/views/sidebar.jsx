@@ -15,8 +15,6 @@ const _SidebarBase = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         supportEmpsByCategory, supportEmpCategories, hasSupportEmployees,
-        offtimeEmpsByCategory, offtimeEmpCategories, hasOfftimeEmployees,
-        trainingEmpsByCategory, trainingEmpCategories, hasTrainingEmployees,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef,
         currentUser, appUsers } = s;
@@ -102,7 +100,7 @@ const _SidebarBase = ({ s, h }) => {
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
-                            <span className="text-xs font-medium">Einsatzplanung v0.8</span>
+                            <span className="text-xs font-medium">Einsatzplanung v0.81</span>
                             <span className="changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
                         </button>
                     </div>
@@ -111,6 +109,21 @@ const _SidebarBase = ({ s, h }) => {
             <nav className="flex-1 py-4 space-y-0.5 px-3 overflow-y-auto">
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">Planung</div>
                 {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
+
+                <button
+                    type="button"
+                    onClick={() => setSonderOpen(o => !o)}
+                    className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold hover:text-gea-300 transition-colors"
+                >
+                    <span>Details</span>
+                    {sonderOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
+                </button>
+                {sonderOpen && (<>
+                    {hasSupportEmployees && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
+                    {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
+                    {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+                </>)}
+
                 {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
                 {isActive
                     ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
@@ -120,22 +133,6 @@ const _SidebarBase = ({ s, h }) => {
                     ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
                     : lockedTabBtn('Übersicht', <IconTable size={18}/>)
                 }
-
-                {(hasSupportEmployees || hasOfftimeEmployees || hasTrainingEmployees) && (<>
-                    <button
-                        type="button"
-                        onClick={() => setSonderOpen(o => !o)}
-                        className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
-                    >
-                        <span>Sondertätigkeiten</span>
-                        {sonderOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
-                    </button>
-                    {sonderOpen && (<>
-                        {hasSupportEmployees  && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
-                        {hasOfftimeEmployees  && tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
-                        {hasTrainingEmployees && tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
-                    </>)}
-                </>)}
 
                 <button
                     type="button"
@@ -236,12 +233,10 @@ const _SidebarBase = ({ s, h }) => {
 // Only re-render when sidebar-visible state actually changes (not on every
 // background poll that touches employees/projects/assignments).
 const SidebarView = React.memo(_SidebarBase, (prev, next) =>
-    prev.s.activeTab            === next.s.activeTab           &&
-    prev.s.syncStatus           === next.s.syncStatus          &&
-    prev.s.fsStatus             === next.s.fsStatus            &&
-    prev.s.projects             === next.s.projects            && // needed for onClick: setSelectedProject(projects[0])
-    prev.s.hasSupportEmployees  === next.s.hasSupportEmployees &&
-    prev.s.hasOfftimeEmployees  === next.s.hasOfftimeEmployees &&
-    prev.s.hasTrainingEmployees === next.s.hasTrainingEmployees &&
-    prev.s.currentUser          === next.s.currentUser            // login/logout
+    prev.s.activeTab           === next.s.activeTab          &&
+    prev.s.syncStatus          === next.s.syncStatus         &&
+    prev.s.fsStatus            === next.s.fsStatus           &&
+    prev.s.projects            === next.s.projects           && // needed for onClick: setSelectedProject(projects[0])
+    prev.s.hasSupportEmployees === next.s.hasSupportEmployees &&
+    prev.s.currentUser         === next.s.currentUser           // login/logout
 );

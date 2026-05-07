@@ -1,7 +1,6 @@
-// TrainingView – like SupportView but scoped to employees who have ever been
-// planned for a 'training' assignment. Only training chips show up in the
-// cells; clicking an empty cell or dragging a chip pre-selects type='training'
-// in the AssignmentModal.
+// TrainingView – shows all active employees; only training chips are rendered
+// in the cells. Clicking an empty cell or dragging a chip opens the
+// AssignmentModal restricted to type='training'.
 const TrainingView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
@@ -18,7 +17,6 @@ const TrainingView = ({ s, h }) => {
         employeeById, projectById, assignmentsByEmpWeek, assignmentsByProject,
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
-        trainingEmpsByCategory, trainingEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
@@ -261,9 +259,9 @@ const TrainingView = ({ s, h }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {trainingEmpCategories.map(category => {
+                        {activeEmpCategories.map(category => {
                             const isCollapsed = collapsedCategories[category];
-                            const catEmps = trainingEmpsByCategory.get(category) || [];
+                            const catEmps = activeEmpsByCategory.get(category) || [];
 
                             return (
                                 <React.Fragment key={category}>
@@ -316,7 +314,7 @@ const TrainingView = ({ s, h }) => {
                                                                         draggable={!isDeleteMode}
                                                                         title={pct === 0 ? (a.comment ? a.comment + ' · Unter Vorbehalt (0 %)' : 'Unter Vorbehalt (0 %)') : (a.comment || undefined)}
                                                                         onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
-                                                                        onClick={e => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
+                                                                        onClick={e => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a, allowedType: 'training' }); setIsAssignModalOpen(true); } }}
                                                                         className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} bg-sky-50 border-sky-200 text-sky-800 ${pct === 0 ? 'bg-hatched' : ''}`}>
                                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                                             <div className="w-1 flex-shrink-0 self-stretch bg-sky-500"></div>
@@ -341,7 +339,7 @@ const TrainingView = ({ s, h }) => {
 
                                                             {!compact && trainingAss.length > 0 && (
                                                                 <div
-                                                                    onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id, defaultType: 'training' }); setIsAssignModalOpen(true); }}
+                                                                    onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id, defaultType: 'training', allowedType: 'training' }); setIsAssignModalOpen(true); }}
                                                                     className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">
                                                                     <IconPlus size={12} className="mr-1"/> weitere
                                                                 </div>

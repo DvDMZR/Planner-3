@@ -36,7 +36,9 @@ const AssignmentModal = ({
   const activeTrainingTasks = useMemo(() => [...TRAINING_TASKS, ...(customTrainingTasks || [])].filter(t => !(inactiveTrainingTasks || []).includes(t)), [inactiveTrainingTasks, customTrainingTasks]);
   const activeOfftimeTasks = useMemo(() => offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(iot => iot.name === t)), [offtimeTasks, inactiveOfftimeTasks]);
   const otherTasks = useMemo(() => basicTasks.filter(t => basicTasksMeta && basicTasksMeta[t]), [basicTasks, basicTasksMeta]);
+  const allowedType = assignContext.allowedType || null;
   const getInitialType = () => {
+    if (allowedType) return allowedType;
     const ex = assignContext.existing;
     if (ex) return ex.type || 'basic';
     return assignContext.defaultType || 'basic';
@@ -277,7 +279,7 @@ const AssignmentModal = ({
     className: "mx-2"
   }, "\xB7"), /*#__PURE__*/React.createElement("span", {
     className: "font-medium text-slate-700"
-  }, formData.week)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, formData.week)), !allowedType && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
   }, "Typ"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1"
@@ -285,7 +287,7 @@ const AssignmentModal = ({
     key: opt.value,
     onClick: () => handleTypeChange(opt.value),
     className: `py-2 px-1 text-xs rounded-md border font-medium transition-colors ${formData.type === opt.value ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`
-  }, opt.label)))), formData.type === 'new' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, opt.label)))), !allowedType && formData.type === 'new' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium"
   }, "Neuer Task-Name (Other)"), /*#__PURE__*/React.createElement("input", {
     type: "text",

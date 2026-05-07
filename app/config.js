@@ -36,6 +36,28 @@ const injectAdmin = (users) => [HARDCODED_ADMIN, ...(users || []).filter(u => u.
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.81 (2026-05-07)
+
+### Sidebar: neuer Bereich "Details"
+- Der bisherige Support-Reiter ist jetzt Teil einer aufklappbaren Gruppe
+  **Details**, die direkt unter Ressourcen platziert ist.
+- Drei Subreiter:
+  - **Support** – wie gehabt (sichtbar nur wenn Support-Mitarbeiter vorhanden).
+  - **Abwesenheiten** – Urlaub, Krankheit, Gleitzeit usw.
+  - **Trainings** – alle Trainings-Aufgaben.
+- Abwesenheiten und Trainings zeigen alle aktiven Mitarbeiter, sodass
+  Planung möglich ist, bevor erste Zuweisungen existieren.
+
+### Planungsdialog
+- Beim Öffnen aus den Tabs Abwesenheiten oder Trainings ist die Typauswahl
+  ausgeblendet und der passende Typ (offtime / training) automatisch gesetzt
+  – so können dort nur fachgerechte Zuweisungen erfasst werden.
+
+### Übersicht & Projekte
+- Projektkategorien werden in den Reitern Projekte und Übersicht jetzt
+  alphabetisch sortiert (Locale de), wobei "Other" konsequent ans Ende
+  gestellt wird – analog zu Mitarbeiterkategorien.
+
 ## v0.8 (2026-05-04)
 
 ### Synchronisation & Datenintegrität

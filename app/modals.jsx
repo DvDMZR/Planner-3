@@ -45,7 +45,10 @@ const AssignmentModal = ({
         [basicTasks, basicTasksMeta]
     );
 
+    const allowedType = assignContext.allowedType || null;
+
     const getInitialType = () => {
+        if (allowedType) return allowedType;
         const ex = assignContext.existing;
         if (ex) return ex.type || 'basic';
         return assignContext.defaultType || 'basic';
@@ -275,6 +278,7 @@ const AssignmentModal = ({
                         <span className="font-medium text-slate-700">{formData.week}</span>
                     </div>
 
+                    {!allowedType && (
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Typ</label>
                         <div className="grid grid-cols-4 gap-1">
@@ -286,8 +290,9 @@ const AssignmentModal = ({
                             ))}
                         </div>
                     </div>
+                    )}
 
-                    {formData.type === 'new' && (
+                    {!allowedType && formData.type === 'new' && (
                         <div>
                             <label className="block text-xs text-slate-500 mb-1 font-medium">Neuer Task-Name (Other)</label>
                             <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)}
