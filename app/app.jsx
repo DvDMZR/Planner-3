@@ -994,7 +994,9 @@ function App() {
     }, [projects]);
 
     const projCategoriesFromProjects = useMemo(
-        () => Array.from(projectsByCategory.keys()),
+        () => Array.from(projectsByCategory.keys()).sort((a, b) =>
+            a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')
+        ),
         [projectsByCategory]
     );
 

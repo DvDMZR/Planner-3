@@ -1186,7 +1186,7 @@ function App() {
     }
     return m;
   }, [projects]);
-  const projCategoriesFromProjects = useMemo(() => Array.from(projectsByCategory.keys()), [projectsByCategory]);
+  const projCategoriesFromProjects = useMemo(() => Array.from(projectsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [projectsByCategory]);
 
   // Cache weeks per year – generateWeeksForYear does Easter math + 54
   // iterations, expensive to redo on every render.
