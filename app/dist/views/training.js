@@ -1,7 +1,6 @@
-// TrainingView – like SupportView but scoped to employees who have ever been
-// planned for a 'training' assignment. Only training chips show up in the
-// cells; clicking an empty cell or dragging a chip pre-selects type='training'
-// in the AssignmentModal.
+// TrainingView – shows all active employees; only training chips are rendered
+// in the cells. Clicking an empty cell or dragging a chip opens the
+// AssignmentModal restricted to type='training'.
 const TrainingView = ({
   s,
   h
@@ -66,8 +65,6 @@ const TrainingView = ({
     activeEmployees,
     activeEmpsByCategory,
     activeEmpCategories,
-    trainingEmpsByCategory,
-    trainingEmpCategories,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -401,9 +398,9 @@ const TrainingView = ({
       className: "text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate",
       title: w.holidays.join(' · ')
     }, w.holidays.join(' · ')));
-  }))), /*#__PURE__*/React.createElement("tbody", null, trainingEmpCategories.map(category => {
+  }))), /*#__PURE__*/React.createElement("tbody", null, activeEmpCategories.map(category => {
     const isCollapsed = collapsedCategories[category];
-    const catEmps = trainingEmpsByCategory.get(category) || [];
+    const catEmps = activeEmpsByCategory.get(category) || [];
     return /*#__PURE__*/React.createElement(React.Fragment, {
       key: category
     }, /*#__PURE__*/React.createElement("tr", {
@@ -488,7 +485,8 @@ const TrainingView = ({
                 setAssignContext({
                   empId: emp.id,
                   week: w.id,
-                  existing: a
+                  existing: a,
+                  allowedType: 'training'
                 });
                 setIsAssignModalOpen(true);
               }
@@ -529,7 +527,8 @@ const TrainingView = ({
             setAssignContext({
               empId: emp.id,
               week: w.id,
-              defaultType: 'training'
+              defaultType: 'training',
+              allowedType: 'training'
             });
             setIsAssignModalOpen(true);
           },

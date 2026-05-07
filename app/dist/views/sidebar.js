@@ -65,12 +65,6 @@ const _SidebarBase = ({
     supportEmpsByCategory,
     supportEmpCategories,
     hasSupportEmployees,
-    offtimeEmpsByCategory,
-    offtimeEmpCategories,
-    hasOfftimeEmployees,
-    trainingEmpsByCategory,
-    trainingEmpCategories,
-    hasTrainingEmployees,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -233,7 +227,21 @@ const _SidebarBase = ({
     className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold"
   }, "Planung"), tabBtn('resource', 'Ressourcen', /*#__PURE__*/React.createElement(IconUsers, {
     size: 18
-  })), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setSonderOpen(o => !o),
+    className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold hover:text-gea-300 transition-colors"
+  }, /*#__PURE__*/React.createElement("span", null, "Details"), sonderOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
+    size: 14
+  }) : /*#__PURE__*/React.createElement(IconChevronRight, {
+    size: 14
+  })), sonderOpen && /*#__PURE__*/React.createElement(React.Fragment, null, hasSupportEmployees && tabBtn('support', 'Support', /*#__PURE__*/React.createElement(IconLifebuoy, {
+    size: 18
+  })), tabBtn('offtime', 'Abwesenheiten', /*#__PURE__*/React.createElement(IconCalendar, {
+    size: 18
+  })), tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
+    size: 18
+  }))), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
     size: 18
   }), () => {
     setActiveTab('project');
@@ -247,21 +255,7 @@ const _SidebarBase = ({
     size: 18
   })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
     size: 18
-  })), (hasSupportEmployees || hasOfftimeEmployees || hasTrainingEmployees) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setSonderOpen(o => !o),
-    className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
-  }, /*#__PURE__*/React.createElement("span", null, "Sondert\xE4tigkeiten"), sonderOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
-    size: 14
-  }) : /*#__PURE__*/React.createElement(IconChevronRight, {
-    size: 14
-  })), sonderOpen && /*#__PURE__*/React.createElement(React.Fragment, null, hasSupportEmployees && tabBtn('support', 'Support', /*#__PURE__*/React.createElement(IconLifebuoy, {
-    size: 18
-  })), hasOfftimeEmployees && tabBtn('offtime', 'Abwesenheiten', /*#__PURE__*/React.createElement(IconCalendar, {
-    size: 18
-  })), hasTrainingEmployees && tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
-    size: 18
-  })))), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVerwaltungOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
@@ -334,5 +328,5 @@ const _SidebarBase = ({
 // background poll that touches employees/projects/assignments).
 const SidebarView = React.memo(_SidebarBase, (prev, next) => prev.s.activeTab === next.s.activeTab && prev.s.syncStatus === next.s.syncStatus && prev.s.fsStatus === next.s.fsStatus && prev.s.projects === next.s.projects &&
 // needed for onClick: setSelectedProject(projects[0])
-prev.s.hasSupportEmployees === next.s.hasSupportEmployees && prev.s.hasOfftimeEmployees === next.s.hasOfftimeEmployees && prev.s.hasTrainingEmployees === next.s.hasTrainingEmployees && prev.s.currentUser === next.s.currentUser // login/logout
+prev.s.hasSupportEmployees === next.s.hasSupportEmployees && prev.s.currentUser === next.s.currentUser // login/logout
 );

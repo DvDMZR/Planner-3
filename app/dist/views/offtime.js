@@ -1,7 +1,6 @@
-// OfftimeView – like SupportView but scoped to employees who have ever been
-// planned for an 'offtime' assignment (vacation, sickness, etc.).
-// Only offtime chips show up in the cells; clicking an empty cell or
-// dragging a chip pre-selects type='offtime' in the AssignmentModal.
+// OfftimeView – shows all active employees; only offtime chips are rendered in
+// the cells. Clicking an empty cell or dragging a chip opens the
+// AssignmentModal restricted to type='offtime'.
 const OfftimeView = ({
   s,
   h
@@ -66,8 +65,6 @@ const OfftimeView = ({
     activeEmployees,
     activeEmpsByCategory,
     activeEmpCategories,
-    offtimeEmpsByCategory,
-    offtimeEmpCategories,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -401,9 +398,9 @@ const OfftimeView = ({
       className: "text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate",
       title: w.holidays.join(' · ')
     }, w.holidays.join(' · ')));
-  }))), /*#__PURE__*/React.createElement("tbody", null, offtimeEmpCategories.map(category => {
+  }))), /*#__PURE__*/React.createElement("tbody", null, activeEmpCategories.map(category => {
     const isCollapsed = collapsedCategories[category];
-    const catEmps = offtimeEmpsByCategory.get(category) || [];
+    const catEmps = activeEmpsByCategory.get(category) || [];
     return /*#__PURE__*/React.createElement(React.Fragment, {
       key: category
     }, /*#__PURE__*/React.createElement("tr", {
@@ -488,7 +485,8 @@ const OfftimeView = ({
                 setAssignContext({
                   empId: emp.id,
                   week: w.id,
-                  existing: a
+                  existing: a,
+                  allowedType: 'offtime'
                 });
                 setIsAssignModalOpen(true);
               }
@@ -529,7 +527,8 @@ const OfftimeView = ({
             setAssignContext({
               empId: emp.id,
               week: w.id,
-              defaultType: 'offtime'
+              defaultType: 'offtime',
+              allowedType: 'offtime'
             });
             setIsAssignModalOpen(true);
           },
