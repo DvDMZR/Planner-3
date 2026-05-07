@@ -440,7 +440,7 @@ const OfftimeView = ({
         colSpan: leftSpacerSpan,
         className: "border-b border-r border-slate-300 bg-white"
       }), visibleWeeks.map(w => {
-        const allWeekAss = assignmentsByEmpWeek.get(emp.id + ' ' + w.id) || [];
+        const allWeekAss = assignmentsByEmpWeek.get(emp.id + ' ' + w.id) || [];
         const offtimeAss = allWeekAss.filter(a => a.type === 'offtime');
         return /*#__PURE__*/React.createElement("td", {
           key: w.id,

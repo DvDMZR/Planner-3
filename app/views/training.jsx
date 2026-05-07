@@ -291,7 +291,7 @@ const TrainingView = ({ s, h }) => {
                                             </td>
                                             {leftSpacerSpan > 0 && <td colSpan={leftSpacerSpan} className="border-b border-r border-slate-300 bg-white"/>}
                                             {visibleWeeks.map(w => {
-                                                const allWeekAss = (assignmentsByEmpWeek.get(emp.id + ' ' + w.id) || []);
+                                                const allWeekAss = (assignmentsByEmpWeek.get(emp.id + ' ' + w.id) || []);
                                                 const trainingAss = allWeekAss.filter(a => a.type === 'training');
                                                 return (
                                                     <td key={w.id}
