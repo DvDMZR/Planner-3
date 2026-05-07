@@ -15,6 +15,8 @@ const _SidebarBase = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         supportEmpsByCategory, supportEmpCategories, hasSupportEmployees,
+        offtimeEmpsByCategory, offtimeEmpCategories, hasOfftimeEmployees,
+        trainingEmpsByCategory, trainingEmpCategories, hasTrainingEmployees,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef,
         currentUser, appUsers } = s;
@@ -41,6 +43,22 @@ const _SidebarBase = ({ s, h }) => {
 
     const isActive = !!currentUser;
     const isAdmin = currentUser?.role === 'admin';
+
+    // Sondertätigkeiten group: collapsible, persisted, auto-expand on navigation
+    const SONDER_TABS = ['support', 'offtime', 'training'];
+    const [sonderOpen, setSonderOpen] = React.useState(() => {
+        try {
+            const stored = localStorage.getItem('sidebar.sonderOpen');
+            if (stored !== null) return stored === 'true';
+        } catch(e) {}
+        return false;
+    });
+    React.useEffect(() => {
+        try { localStorage.setItem('sidebar.sonderOpen', String(sonderOpen)); } catch(e) {}
+    }, [sonderOpen]);
+    React.useEffect(() => {
+        if (SONDER_TABS.includes(activeTab) && !sonderOpen) setSonderOpen(true);
+    }, [activeTab]);
 
     // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
     const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
@@ -94,7 +112,6 @@ const _SidebarBase = ({ s, h }) => {
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">Planung</div>
                 {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
                 {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
-                {hasSupportEmployees && tabBtn('support', 'Support', <IconLifebuoy size={18}/>)}
                 {isActive
                     ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
                     : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
@@ -103,6 +120,22 @@ const _SidebarBase = ({ s, h }) => {
                     ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
                     : lockedTabBtn('Übersicht', <IconTable size={18}/>)
                 }
+
+                {(hasSupportEmployees || hasOfftimeEmployees || hasTrainingEmployees) && (<>
+                    <button
+                        type="button"
+                        onClick={() => setSonderOpen(o => !o)}
+                        className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
+                    >
+                        <span>Sondertätigkeiten</span>
+                        {sonderOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
+                    </button>
+                    {sonderOpen && (<>
+                        {hasSupportEmployees  && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
+                        {hasOfftimeEmployees  && tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
+                        {hasTrainingEmployees && tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+                    </>)}
+                </>)}
 
                 <button
                     type="button"
@@ -203,10 +236,12 @@ const _SidebarBase = ({ s, h }) => {
 // Only re-render when sidebar-visible state actually changes (not on every
 // background poll that touches employees/projects/assignments).
 const SidebarView = React.memo(_SidebarBase, (prev, next) =>
-    prev.s.activeTab            === next.s.activeTab          &&
-    prev.s.syncStatus           === next.s.syncStatus         &&
-    prev.s.fsStatus             === next.s.fsStatus           &&
-    prev.s.projects             === next.s.projects           && // needed for onClick: setSelectedProject(projects[0])
+    prev.s.activeTab            === next.s.activeTab           &&
+    prev.s.syncStatus           === next.s.syncStatus          &&
+    prev.s.fsStatus             === next.s.fsStatus            &&
+    prev.s.projects             === next.s.projects            && // needed for onClick: setSelectedProject(projects[0])
     prev.s.hasSupportEmployees  === next.s.hasSupportEmployees &&
-    prev.s.currentUser          === next.s.currentUser           // login/logout
+    prev.s.hasOfftimeEmployees  === next.s.hasOfftimeEmployees &&
+    prev.s.hasTrainingEmployees === next.s.hasTrainingEmployees &&
+    prev.s.currentUser          === next.s.currentUser            // login/logout
 );

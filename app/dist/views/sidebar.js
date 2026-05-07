@@ -65,6 +65,12 @@ const _SidebarBase = ({
     supportEmpsByCategory,
     supportEmpCategories,
     hasSupportEmployees,
+    offtimeEmpsByCategory,
+    offtimeEmpCategories,
+    hasOfftimeEmployees,
+    trainingEmpsByCategory,
+    trainingEmpCategories,
+    hasTrainingEmployees,
     projectsByCategory,
     projCategoriesFromProjects,
     timelineWeeks,
@@ -146,6 +152,24 @@ const _SidebarBase = ({
   const isActive = !!currentUser;
   const isAdmin = currentUser?.role === 'admin';
 
+  // Sondertätigkeiten group: collapsible, persisted, auto-expand on navigation
+  const SONDER_TABS = ['support', 'offtime', 'training'];
+  const [sonderOpen, setSonderOpen] = React.useState(() => {
+    try {
+      const stored = localStorage.getItem('sidebar.sonderOpen');
+      if (stored !== null) return stored === 'true';
+    } catch (e) {}
+    return false;
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('sidebar.sonderOpen', String(sonderOpen));
+    } catch (e) {}
+  }, [sonderOpen]);
+  React.useEffect(() => {
+    if (SONDER_TABS.includes(activeTab) && !sonderOpen) setSonderOpen(true);
+  }, [activeTab]);
+
   // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
   const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
   const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
@@ -215,9 +239,7 @@ const _SidebarBase = ({
     setActiveTab('project');
     setSelectedProject(projects[0]);
     setSelectedProjectDetails(null);
-  }), hasSupportEmployees && tabBtn('support', 'Support', /*#__PURE__*/React.createElement(IconLifebuoy, {
-    size: 18
-  })), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+  }), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
   })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
@@ -225,7 +247,21 @@ const _SidebarBase = ({
     size: 18
   })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
     size: 18
-  })), /*#__PURE__*/React.createElement("button", {
+  })), (hasSupportEmployees || hasOfftimeEmployees || hasTrainingEmployees) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setSonderOpen(o => !o),
+    className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
+  }, /*#__PURE__*/React.createElement("span", null, "Sondert\xE4tigkeiten"), sonderOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
+    size: 14
+  }) : /*#__PURE__*/React.createElement(IconChevronRight, {
+    size: 14
+  })), sonderOpen && /*#__PURE__*/React.createElement(React.Fragment, null, hasSupportEmployees && tabBtn('support', 'Support', /*#__PURE__*/React.createElement(IconLifebuoy, {
+    size: 18
+  })), hasOfftimeEmployees && tabBtn('offtime', 'Abwesenheiten', /*#__PURE__*/React.createElement(IconCalendar, {
+    size: 18
+  })), hasTrainingEmployees && tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
+    size: 18
+  })))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVerwaltungOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
@@ -298,5 +334,5 @@ const _SidebarBase = ({
 // background poll that touches employees/projects/assignments).
 const SidebarView = React.memo(_SidebarBase, (prev, next) => prev.s.activeTab === next.s.activeTab && prev.s.syncStatus === next.s.syncStatus && prev.s.fsStatus === next.s.fsStatus && prev.s.projects === next.s.projects &&
 // needed for onClick: setSelectedProject(projects[0])
-prev.s.hasSupportEmployees === next.s.hasSupportEmployees && prev.s.currentUser === next.s.currentUser // login/logout
+prev.s.hasSupportEmployees === next.s.hasSupportEmployees && prev.s.hasOfftimeEmployees === next.s.hasOfftimeEmployees && prev.s.hasTrainingEmployees === next.s.hasTrainingEmployees && prev.s.currentUser === next.s.currentUser // login/logout
 );
