@@ -827,6 +827,74 @@ const IconUndo = ({
 }), /*#__PURE__*/React.createElement("path", {
   d: "M3.51 15a9 9 0 1 0 .49-4.5"
 }));
+const IconBookOpen = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+}));
+const IconSunset = ({
+  className,
+  size = 20
+}) => /*#__PURE__*/React.createElement("svg", {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  className: className
+}, /*#__PURE__*/React.createElement("path", {
+  d: "M17 18a5 5 0 0 0-10 0"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "2",
+  x2: "12",
+  y2: "9"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "4.22",
+  y1: "10.22",
+  x2: "5.64",
+  y2: "11.64"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "1",
+  y1: "18",
+  x2: "3",
+  y2: "18"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "21",
+  y1: "18",
+  x2: "23",
+  y2: "18"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "18.36",
+  y1: "11.64",
+  x2: "19.78",
+  y2: "10.22"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "23",
+  y1: "22",
+  x2: "1",
+  y2: "22"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "8 6 12 2 16 6"
+}));
 
 // --- SHARED UI COMPONENTS (module scope) ---
 // Defined outside App() so they keep a stable component identity across
