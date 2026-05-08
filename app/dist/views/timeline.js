@@ -354,7 +354,7 @@ const TimelineView = ({
     size: 16
   })), menuOpen && /*#__PURE__*/React.createElement("div", {
     className: "absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, s.currentUser && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setIsDeleteMode(m => !m);
       setMenuOpen(false);

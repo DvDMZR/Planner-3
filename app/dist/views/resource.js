@@ -422,7 +422,7 @@ const ResourceView = ({
     className: "shrink-0 text-slate-400"
   }), /*#__PURE__*/React.createElement("span", null, "Kompaktansicht"), compact && /*#__PURE__*/React.createElement("span", {
     className: "ml-auto text-gea-600 font-bold text-xs"
-  }, "\u2713")), /*#__PURE__*/React.createElement("button", {
+  }, "\u2713")), s.currentUser && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setIsDeleteMode(m => !m);
       setMenuOpen(false);

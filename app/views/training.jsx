@@ -200,13 +200,13 @@ const TrainingView = ({ s, h }) => {
                                     <span>Kompaktansicht</span>
                                     {compact && <span className="ml-auto text-gea-600 font-bold text-xs">✓</span>}
                                 </button>
-                                <button
+                                {s.currentUser && <button
                                     onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
                                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
                                     <IconX size={14} className={`shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`}/>
                                     <span>Löschmodus</span>
                                     {isDeleteMode && <span className="ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"/>}
-                                </button>
+                                </button>}
                                 <div className="my-1 border-t border-slate-100"/>
                                 <button
                                     onClick={() => { setIsHelpModalOpen(true); setMenuOpen(false); }}
