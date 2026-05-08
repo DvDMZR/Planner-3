@@ -228,7 +228,7 @@ const TimelineView = ({ s, h }) => {
                                     </button>
                                 </div>
                             )}
-                            <div className="relative" ref={menuRef}>
+                            {s.currentUser && <div className="relative" ref={menuRef}>
                                 <button
                                     onClick={() => setMenuOpen(o => !o)}
                                     aria-label="Weitere Optionen"
@@ -237,16 +237,16 @@ const TimelineView = ({ s, h }) => {
                                 </button>
                                 {menuOpen && (
                                     <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50">
-                                        {s.currentUser && <button
+                                        <button
                                             onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
                                             className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
                                             <IconX size={14} className={`shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`}/>
                                             <span>Löschmodus</span>
                                             {isDeleteMode && <span className="ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"/>}
-                                        </button>}
+                                        </button>
                                     </div>
                                 )}
-                            </div>
+                            </div>}
                         </div>
                     </div>
                     
