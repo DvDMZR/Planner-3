@@ -343,7 +343,7 @@ const TimelineView = ({
     className: "flex items-center px-2.5 py-1.5 text-rose-500 hover:bg-rose-100 border-l border-rose-300 transition-colors"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 14
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), s.currentUser && /*#__PURE__*/React.createElement("div", {
     className: "relative",
     ref: menuRef
   }, /*#__PURE__*/React.createElement("button", {
@@ -354,7 +354,7 @@ const TimelineView = ({
     size: 16
   })), menuOpen && /*#__PURE__*/React.createElement("div", {
     className: "absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px] z-50"
-  }, s.currentUser && /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setIsDeleteMode(m => !m);
       setMenuOpen(false);
