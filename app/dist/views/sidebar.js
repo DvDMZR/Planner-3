@@ -241,7 +241,9 @@ const _SidebarBase = ({
     size: 18
   })), tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
     size: 18
-  }))), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mx-3 mt-2 mb-1 border-t border-gea-700/60"
+  }), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
     size: 18
   }), () => {
     setActiveTab('project');

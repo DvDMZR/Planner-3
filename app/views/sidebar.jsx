@@ -123,6 +123,7 @@ const _SidebarBase = ({ s, h }) => {
                     {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
                     {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
                 </>)}
+                <div className="mx-3 mt-2 mb-1 border-t border-gea-700/60"/>
 
                 {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
                 {isActive
