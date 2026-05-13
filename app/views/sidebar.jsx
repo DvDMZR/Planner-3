@@ -42,23 +42,6 @@ const _SidebarBase = ({ s, h }) => {
     const isActive = !!currentUser;
     const isAdmin = currentUser?.role === 'admin';
 
-    // Sondertätigkeiten group: collapsible, persisted, auto-expand on navigation
-    // Details group: auto-expand when navigating to any of its tabs
-    const SONDER_TABS = ['support', 'offtime', 'training', 'utilization', 'overview'];
-    const [sonderOpen, setSonderOpen] = React.useState(() => {
-        try {
-            const stored = localStorage.getItem('sidebar.sonderOpen');
-            if (stored !== null) return stored === 'true';
-        } catch(e) {}
-        return false;
-    });
-    React.useEffect(() => {
-        try { localStorage.setItem('sidebar.sonderOpen', String(sonderOpen)); } catch(e) {}
-    }, [sonderOpen]);
-    React.useEffect(() => {
-        if (SONDER_TABS.includes(activeTab) && !sonderOpen) setSonderOpen(true);
-    }, [activeTab]);
-
     // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
     const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
     const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
@@ -112,28 +95,22 @@ const _SidebarBase = ({ s, h }) => {
                 {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
                 {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
 
-                <button
-                    type="button"
-                    onClick={() => setSonderOpen(o => !o)}
-                    className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold hover:text-gea-300 transition-colors"
-                >
-                    <span>Details</span>
-                    {sonderOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
-                </button>
-                {sonderOpen && (<>
-                    {hasSupportEmployees && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
-                    {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
-                    {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
-                    <div className="mx-3 my-1" style={{height:'1px', background:'rgba(255,255,255,0.08)'}}/>
-                    {isActive
-                        ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
-                        : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
-                    }
-                    {isActive
-                        ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
-                        : lockedTabBtn('Übersicht', <IconTable size={18}/>)
-                    }
-                </>)}
+                <div className="px-3 pt-3 pb-1 flex items-center gap-2">
+                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
+                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">Sonderplanung</span>
+                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
+                </div>
+                {tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
+                {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
+                {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+
+                <div className="px-3 pt-3 pb-1 flex items-center gap-2">
+                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
+                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">Auswertung</span>
+                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
+                </div>
+                {isActive ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>) : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)}
+                {isActive ? tabBtn('overview',    'Übersicht',  <IconTable size={18}/>)    : lockedTabBtn('Übersicht',  <IconTable size={18}/>)}
 
                 <button
                     type="button"
@@ -238,6 +215,5 @@ const SidebarView = React.memo(_SidebarBase, (prev, next) =>
     prev.s.syncStatus          === next.s.syncStatus         &&
     prev.s.fsStatus            === next.s.fsStatus           &&
     prev.s.projects            === next.s.projects           && // needed for onClick: setSelectedProject(projects[0])
-    prev.s.hasSupportEmployees === next.s.hasSupportEmployees &&
     prev.s.currentUser         === next.s.currentUser           // login/logout
 );

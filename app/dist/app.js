@@ -1164,13 +1164,6 @@ function App() {
   }, [activeEmployees, employees, supportEmpIds]);
   const supportEmpCategories = useMemo(() => Array.from(supportEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [supportEmpsByCategory]);
   const hasSupportEmployees = supportEmpIds.size > 0;
-
-  // Fall back to Ressourcen if on Support tab and last support assignment disappears
-  useEffect(() => {
-    if (activeTab === 'support' && !hasSupportEmployees) {
-      setActiveTab('resource');
-    }
-  }, [activeTab, hasSupportEmployees]);
   const projectsByCategory = useMemo(() => {
     const m = new Map();
     projects.forEach(p => {
@@ -2189,7 +2182,7 @@ function App() {
   }), activeTab === 'project' && /*#__PURE__*/React.createElement(TimelineView, {
     s: s,
     h: h
-  }), activeTab === 'support' && hasSupportEmployees && /*#__PURE__*/React.createElement(SupportView, {
+  }), activeTab === 'support' && /*#__PURE__*/React.createElement(SupportView, {
     s: s,
     h: h
   }), activeTab === 'offtime' && /*#__PURE__*/React.createElement(OfftimeView, {
