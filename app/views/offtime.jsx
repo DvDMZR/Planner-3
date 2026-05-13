@@ -319,7 +319,7 @@ const OfftimeView = ({ s, h }) => {
                                                                         <div className="flex items-center gap-1.5 min-w-0">
                                                                             <div className="w-1 flex-shrink-0 self-stretch bg-slate-500"></div>
                                                                             <span className={`truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`}>{a.reference}</span>
-                                                                            {!compact && a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
+                                                                            {a.comment && <IconMessageSquare size={9} className="flex-shrink-0 opacity-60"/>}
                                                                             {!compact && a.ruleId && <IconRepeat size={9} className="flex-shrink-0 opacity-60"/>}
                                                                         </div>
                                                                         <div className="flex items-center gap-1 ml-1 flex-shrink-0">

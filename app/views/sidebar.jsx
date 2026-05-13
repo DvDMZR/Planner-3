@@ -43,7 +43,8 @@ const _SidebarBase = ({ s, h }) => {
     const isAdmin = currentUser?.role === 'admin';
 
     // Sondertätigkeiten group: collapsible, persisted, auto-expand on navigation
-    const SONDER_TABS = ['support', 'offtime', 'training'];
+    // Details group: auto-expand when navigating to any of its tabs
+    const SONDER_TABS = ['support', 'offtime', 'training', 'utilization', 'overview'];
     const [sonderOpen, setSonderOpen] = React.useState(() => {
         try {
             const stored = localStorage.getItem('sidebar.sonderOpen');
@@ -74,11 +75,11 @@ const _SidebarBase = ({ s, h }) => {
         if (VERWALTUNG_TABS.includes(activeTab) && !verwaltungOpen) setVerwaltungOpen(true);
     }, [activeTab]);
 
-    // Helper: locked tab button for passive users
+    // Helper: locked tab button for passive users — same brightness as normal, lock icon signals restriction
     const lockedTabBtn = (label, icon) => (
-        <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-600 opacity-50 cursor-not-allowed select-none">
+        <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-300 cursor-not-allowed select-none">
             {icon} {label}
-            <IconLock size={13} className="ml-auto shrink-0"/>
+            <IconLock size={13} className="ml-auto shrink-0 text-gea-500"/>
         </div>
     );
 
@@ -122,18 +123,18 @@ const _SidebarBase = ({ s, h }) => {
                     {hasSupportEmployees && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
                     {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
                     {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+                    {isActive
+                        ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
+                        : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
+                    }
+                    {isActive
+                        ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
+                        : lockedTabBtn('Übersicht', <IconTable size={18}/>)
+                    }
                 </>)}
                 <div className="mx-3 mt-2 mb-1" style={{height:'1px', background:'rgba(255,255,255,0.10)'}}/>
 
                 {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
-                {isActive
-                    ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
-                    : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
-                }
-                {isActive
-                    ? tabBtn('overview', 'Übersicht', <IconTable size={18}/>)
-                    : lockedTabBtn('Übersicht', <IconTable size={18}/>)
-                }
 
                 <button
                     type="button"
