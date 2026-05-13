@@ -228,7 +228,13 @@ const _SidebarBase = ({
     className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold"
   }, "Planung"), tabBtn('resource', 'Ressourcen', /*#__PURE__*/React.createElement(IconUsers, {
     size: 18
-  })), /*#__PURE__*/React.createElement("button", {
+  })), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
+    size: 18
+  }), () => {
+    setActiveTab('project');
+    setSelectedProject(projects[0]);
+    setSelectedProjectDetails(null);
+  }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setSonderOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold hover:text-gea-300 transition-colors"
@@ -242,7 +248,13 @@ const _SidebarBase = ({
     size: 18
   })), tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
     size: 18
-  })), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mx-3 my-1",
+    style: {
+      height: '1px',
+      background: 'rgba(255,255,255,0.08)'
+    }
+  }), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
   })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
@@ -250,19 +262,7 @@ const _SidebarBase = ({
     size: 18
   })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
     size: 18
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "mx-3 mt-2 mb-1",
-    style: {
-      height: '1px',
-      background: 'rgba(255,255,255,0.10)'
-    }
-  }), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
-    size: 18
-  }), () => {
-    setActiveTab('project');
-    setSelectedProject(projects[0]);
-    setSelectedProjectDetails(null);
-  }), /*#__PURE__*/React.createElement("button", {
+  }))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVerwaltungOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"

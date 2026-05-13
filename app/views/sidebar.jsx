@@ -110,6 +110,7 @@ const _SidebarBase = ({ s, h }) => {
             <nav className="flex-1 py-4 space-y-0.5 px-3 overflow-y-auto">
                 <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">Planung</div>
                 {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
+                {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
 
                 <button
                     type="button"
@@ -123,6 +124,7 @@ const _SidebarBase = ({ s, h }) => {
                     {hasSupportEmployees && tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
                     {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
                     {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+                    <div className="mx-3 my-1" style={{height:'1px', background:'rgba(255,255,255,0.08)'}}/>
                     {isActive
                         ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>)
                         : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)
@@ -132,9 +134,6 @@ const _SidebarBase = ({ s, h }) => {
                         : lockedTabBtn('Übersicht', <IconTable size={18}/>)
                     }
                 </>)}
-                <div className="mx-3 mt-2 mb-1" style={{height:'1px', background:'rgba(255,255,255,0.10)'}}/>
-
-                {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
 
                 <button
                     type="button"
