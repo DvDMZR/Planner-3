@@ -147,7 +147,8 @@ const _SidebarBase = ({
   const isAdmin = currentUser?.role === 'admin';
 
   // Sondertätigkeiten group: collapsible, persisted, auto-expand on navigation
-  const SONDER_TABS = ['support', 'offtime', 'training'];
+  // Details group: auto-expand when navigating to any of its tabs
+  const SONDER_TABS = ['support', 'offtime', 'training', 'utilization', 'overview'];
   const [sonderOpen, setSonderOpen] = React.useState(() => {
     try {
       const stored = localStorage.getItem('sidebar.sonderOpen');
@@ -182,12 +183,12 @@ const _SidebarBase = ({
     if (VERWALTUNG_TABS.includes(activeTab) && !verwaltungOpen) setVerwaltungOpen(true);
   }, [activeTab]);
 
-  // Helper: locked tab button for passive users
+  // Helper: locked tab button for passive users — same brightness as normal, lock icon signals restriction
   const lockedTabBtn = (label, icon) => /*#__PURE__*/React.createElement("div", {
-    className: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-600 opacity-50 cursor-not-allowed select-none"
+    className: "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gea-300 cursor-not-allowed select-none"
   }, icon, " ", label, /*#__PURE__*/React.createElement(IconLock, {
     size: 13,
-    className: "ml-auto shrink-0"
+    className: "ml-auto shrink-0 text-gea-500"
   }));
 
   // Helper: normal tab button
@@ -241,6 +242,14 @@ const _SidebarBase = ({
     size: 18
   })), tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
     size: 18
+  })), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+    size: 18
+  })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+    size: 18
+  })), isActive ? tabBtn('overview', 'Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+    size: 18
+  })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+    size: 18
   }))), /*#__PURE__*/React.createElement("div", {
     className: "mx-3 mt-2 mb-1",
     style: {
@@ -253,15 +262,7 @@ const _SidebarBase = ({
     setActiveTab('project');
     setSelectedProject(projects[0]);
     setSelectedProjectDetails(null);
-  }), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
-    size: 18
-  })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
-    size: 18
-  })), isActive ? tabBtn('overview', 'Übersicht', /*#__PURE__*/React.createElement(IconTable, {
-    size: 18
-  })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
-    size: 18
-  })), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVerwaltungOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"

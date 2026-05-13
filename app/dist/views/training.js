@@ -498,7 +498,7 @@ const TrainingView = ({
             className: "w-1 flex-shrink-0 self-stretch bg-sky-500"
           }), /*#__PURE__*/React.createElement("span", {
             className: `truncate font-medium px-1 ${compact ? 'py-0.5' : 'py-1.5'}`
-          }, a.reference), !compact && a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+          }, a.reference), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
             size: 9,
             className: "flex-shrink-0 opacity-60"
           }), !compact && a.ruleId && /*#__PURE__*/React.createElement(IconRepeat, {
