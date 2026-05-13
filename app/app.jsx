@@ -973,13 +973,6 @@ function App() {
 
     const hasSupportEmployees = supportEmpIds.size > 0;
 
-    // Fall back to Ressourcen if on Support tab and last support assignment disappears
-    useEffect(() => {
-        if (activeTab === 'support' && !hasSupportEmployees) {
-            setActiveTab('resource');
-        }
-    }, [activeTab, hasSupportEmployees]);
-
     const projectsByCategory = useMemo(() => {
         const m = new Map();
         projects.forEach(p => {
@@ -1720,7 +1713,7 @@ function App() {
             
             {activeTab === 'resource' && <ResourceView s={s} h={h}/>}
             {activeTab === 'project' && <TimelineView s={s} h={h}/>}
-            {activeTab === 'support'  && hasSupportEmployees && <SupportView s={s} h={h}/>}
+            {activeTab === 'support'  && <SupportView s={s} h={h}/>}
             {activeTab === 'offtime'  && <OfftimeView s={s} h={h}/>}
             {activeTab === 'training' && <TrainingView s={s} h={h}/>}
             {activeTab === 'utilization' && currentUser && <UtilizationView s={s} h={h}/>}
