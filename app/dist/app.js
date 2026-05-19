@@ -244,7 +244,7 @@ function App() {
     setCurrentUser(null);
     // Redirect away from restricted tabs
     setActiveTab(prev => {
-      const restricted = ['utilization', 'setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+      const restricted = ['utilization', 'setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit'];
       return restricted.includes(prev) ? 'resource' : prev;
     });
   }, []);
@@ -2427,9 +2427,6 @@ function App() {
     s: s,
     h: h
   }), activeTab === 'audit' && currentUser && /*#__PURE__*/React.createElement(AuditView, {
-    s: s,
-    h: h
-  }), activeTab === 'setup_users' && currentUser && /*#__PURE__*/React.createElement(SetupUsersView, {
     s: s,
     h: h
   }), isAssignModalOpen && assignContext && currentUser && /*#__PURE__*/React.createElement(AssignmentModal, {

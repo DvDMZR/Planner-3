@@ -43,7 +43,7 @@ const _SidebarBase = ({ s, h }) => {
     const isAdmin = currentUser?.role === 'admin';
 
     // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
-    const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+    const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit'];
     const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
         try {
             const stored = localStorage.getItem('sidebar.verwaltungOpen');
@@ -127,7 +127,6 @@ const _SidebarBase = ({ s, h }) => {
                         {tabBtn('setup_cats', 'Kategorien',     <IconTag size={18}/>)}
                         {tabBtn('data',       'System & Export',<IconSettings size={18}/>)}
                         {tabBtn('audit',      'Verlauf',        <IconHistory size={18}/>)}
-                        {tabBtn('setup_users', 'Benutzer', <IconShield size={18}/>)}
                     </>
                 ) : (
                     <>
