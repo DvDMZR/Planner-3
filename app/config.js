@@ -29,9 +29,35 @@ let _idCounter = 0;
 const makeId = (prefix = 'id') =>
     `${prefix}-${Date.now().toString(36)}-${(_idCounter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
-// Hardcoded admin – always injected at runtime, never stored in settings.json.
-const HARDCODED_ADMIN = { id: 'admin', name: 'Admin', pin: '1397', role: 'admin' };
-const injectAdmin = (users) => [HARDCODED_ADMIN, ...(users || []).filter(u => u.role !== 'admin')];
+// Admin seed: used only once when no users.json exists yet. The admin then
+// lives in users.json like any other user, with a hashed PIN. Change via UI.
+const DEFAULT_ADMIN_PIN = '1397';
+const ADMIN_SEED = { id: 'admin', name: 'Admin', role: 'admin' };
+
+// Build an admin user with a hashed PIN. Used at first-init only.
+const buildAdminSeed = async () => {
+    const salt = generatePinSalt();
+    const pinHash = await hashPin(DEFAULT_ADMIN_PIN, salt);
+    return { ...ADMIN_SEED, pinHash, pinSalt: salt };
+};
+
+// Ensure an admin exists in the user list. If missing, prepend a seeded one
+// with the hashed default PIN. PIN can then be changed via the UI.
+const ensureAdmin = async (users) => {
+    const list = users || [];
+    if (list.some(u => u.role === 'admin')) return list;
+    const admin = await buildAdminSeed();
+    return [admin, ...list];
+};
+
+// Legacy / compatibility – older callers use injectAdmin synchronously.
+// Returns the list unchanged if an admin is present; otherwise prepends a
+// non-hashed placeholder that triggers re-seeding on the next save cycle.
+const injectAdmin = (users) => {
+    const list = users || [];
+    if (list.some(u => u.role === 'admin')) return list;
+    return [{ ...ADMIN_SEED, _needsSeed: true }, ...list];
+};
 
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog

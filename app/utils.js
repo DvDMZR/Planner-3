@@ -220,3 +220,58 @@ const generateInitialData = (empCats) => {
     }));
     return { employees: emps, projects: [], assignments: [], expenses: [] };
 };
+
+// ─── PIN HASHING (Web Crypto, SHA-256 + per-user salt) ───────────────────────
+// Stored on user records as { pinHash, pinSalt } – never the raw PIN.
+
+const _bufToHex = (buf) =>
+    [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+const generatePinSalt = () => {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return _bufToHex(arr);
+};
+
+const hashPin = async (pin, salt) => {
+    const data = new TextEncoder().encode(`${salt}:${pin}`);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return _bufToHex(buf);
+};
+
+const verifyPin = async (pin, hash, salt) => {
+    if (!hash || !salt) return false;
+    const computed = await hashPin(pin, salt);
+    return computed === hash;
+};
+
+// Migrate a single user record:
+//  - { pin: '1234', ... }                 → { pinHash, pinSalt, ... } (plain pin removed)
+//  - { pinHash, pinSalt, ... }            → unchanged
+// Returns { user, changed } so callers can mark dirty and persist.
+const migrateUserPin = async (user) => {
+    if (!user) return { user, changed: false };
+    if (user.pinHash && user.pinSalt) return { user, changed: false };
+    if (user.pin) {
+        const salt = generatePinSalt();
+        const pinHash = await hashPin(user.pin, salt);
+        const { pin, ...rest } = user;
+        return { user: { ...rest, pinHash, pinSalt: salt }, changed: true };
+    }
+    return { user, changed: false };
+};
+
+const migrateUsersList = async (users) => {
+    const out = [];
+    let changed = false;
+    for (const u of users || []) {
+        const r = await migrateUserPin(u);
+        out.push(r.user);
+        if (r.changed) changed = true;
+    }
+    return { users: out, changed };
+};
+
+// Strip pin/pinHash/pinSalt for safe export / display.
+const stripUserSecrets = (users) =>
+    (users || []).map(({ pin, pinHash, pinSalt, ...rest }) => rest);

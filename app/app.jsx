@@ -104,7 +104,10 @@ function App() {
     const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, other: false, support: false, training: false, offtime: false, empCats: false, projCats: false });
 
     // ── USER ROLES & SESSION ───────────────────────────────────────────────────
-    const [appUsers, setAppUsers] = useState([HARDCODED_ADMIN]);
+    // Seeded with a placeholder admin; the load effect replaces it with the
+    // hashed record from users.json (or seeds one with the default PIN if
+    // none exists yet).
+    const [appUsers, setAppUsers] = useState([{ ...ADMIN_SEED, _needsSeed: true }]);
     const [auditLog, setAuditLog] = useState([]);
     const [currentUser, setCurrentUser] = useState(() => {
         try { return JSON.parse(sessionStorage.getItem('plannerSession')); }
@@ -343,7 +346,14 @@ function App() {
                 if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
                 if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-                setAppUsers(injectAdmin(parsedData.appUsers));
+                // Migrate plaintext PINs to hashes and seed admin if missing.
+                // Async; result triggers a re-render and the normal save cycle
+                // will persist the hashed records.
+                (async () => {
+                    const withAdmin = await ensureAdmin(parsedData.appUsers || []);
+                    const { users: hashed } = await migrateUsersList(withAdmin);
+                    setAppUsers(hashed);
+                })();
                 if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -358,6 +368,11 @@ function App() {
                 setProjects(init.projects);
                 setAssignments(init.assignments);
                 setExpenses(init.expenses);
+                // Fresh install: seed the admin with the default hashed PIN.
+                (async () => {
+                    const withAdmin = await ensureAdmin([]);
+                    setAppUsers(withAdmin);
+                })();
             }
 
             const w = [];
@@ -605,7 +620,11 @@ function App() {
         setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
         if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-        setAppUsers(injectAdmin(data.appUsers));
+        (async () => {
+            const withAdmin = await ensureAdmin(data.appUsers || []);
+            const { users: hashed } = await migrateUsersList(withAdmin);
+            setAppUsers(hashed);
+        })();
         if (data.auditLog) setAuditLog(data.auditLog);
         // Also re-seed the snapshots so the save cascade triggered by these
         // setStates doesn't rewrite identical data back to the server.
@@ -1174,10 +1193,17 @@ function App() {
     }, [logAudit]);
 
     const exportData = useCallback(() => {
+        // Full export: every persisted field, minus user secrets (pin/pinHash/pinSalt).
         const data = JSON.stringify({
             employees, projects, assignments, expenses, costItems,
-            empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-            offtimeTasks, customTrainingTasks, invoiceRecipient,
+            empCategories, projCategories,
+            basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, inactiveOfftimeTasks,
+            inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks,
+            invoiceRecipient,
+            appUsers: stripUserSecrets(appUsers),
+            auditLog,
+            exportedAt: new Date().toISOString(),
             schemaVersion: SCHEMA_VERSION
         }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -1187,7 +1213,9 @@ function App() {
         a.download = `Einsatzplanung3.0_Backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories,
-        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, customTrainingTasks, invoiceRecipient]);
+        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
+        inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient,
+        appUsers, auditLog]);
 
     const importData = useCallback((e) => {
         const file = e.target.files[0];
@@ -1211,7 +1239,14 @@ function App() {
                 if (parsed.basicTasksMeta) setBasicTasksMeta(parsed.basicTasksMeta);
                 if (parsed.inactiveBasicTasks) setInactiveBasicTasks(parsed.inactiveBasicTasks);
                 if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
+                if (parsed.inactiveOfftimeTasks) setInactiveOfftimeTasks(parsed.inactiveOfftimeTasks);
+                if (parsed.inactiveSupportTasks) setInactiveSupportTasks(parsed.inactiveSupportTasks);
+                if (parsed.inactiveTrainingTasks) setInactiveTrainingTasks(parsed.inactiveTrainingTasks);
                 if (parsed.customTrainingTasks) setCustomTrainingTasks(parsed.customTrainingTasks);
+                if (parsed.invoiceRecipient !== undefined) setInvoiceRecipient(parsed.invoiceRecipient);
+                if (parsed.auditLog) setAuditLog(parsed.auditLog);
+                // Note: appUsers from an export are imported without PINs (stripped on export);
+                // existing users keep their hashed credentials.
             } catch (err) {
                 alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
             }

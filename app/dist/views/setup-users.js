@@ -36,7 +36,7 @@ const SetupUsersView = ({
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 2500);
   };
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) {
       setNewError('Name darf nicht leer sein.');
       return;
@@ -53,10 +53,13 @@ const SetupUsersView = ({
       setNewError('Ein Nutzer mit diesem Namen existiert bereits.');
       return;
     }
+    const pinSalt = generatePinSalt();
+    const pinHash = await hashPin(newPin, pinSalt);
     const user = {
       id: makeId('usr'),
       name: newName.trim(),
-      pin: newPin,
+      pinHash,
+      pinSalt,
       role: 'active'
     };
     setAppUsers(prev => [...prev, user]);
@@ -80,7 +83,7 @@ const SetupUsersView = ({
     setEditPinConfirm('');
     setEditError('');
   };
-  const handleSaveEdit = user => {
+  const handleSaveEdit = async user => {
     if (isAdmin && !editName.trim()) {
       setEditError('Name darf nicht leer sein.');
       return;
@@ -97,10 +100,17 @@ const SetupUsersView = ({
       setEditError('Bitte einen neuen PIN eingeben.');
       return;
     }
+    const pinSalt = generatePinSalt();
+    const pinHash = await hashPin(editPin, pinSalt);
+    const {
+      pin: _legacyPin,
+      ...rest
+    } = user;
     const updated = {
-      ...user,
+      ...rest,
       name: isAdmin ? editName.trim() : user.name,
-      pin: editPin
+      pinHash,
+      pinSalt
     };
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
     if (currentUser.id === user.id) loginUser(updated);

@@ -31,14 +31,16 @@ const SetupUsersView = ({ s, h }) => {
         setTimeout(() => setSuccessMsg(''), 2500);
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!newName.trim()) { setNewError('Name darf nicht leer sein.'); return; }
         if (newPin.length < 4) { setNewError('PIN muss mindestens 4 Zeichen haben.'); return; }
         if (newPin !== newPinConfirm) { setNewError('PINs stimmen nicht überein.'); return; }
         if (appUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase())) {
             setNewError('Ein Nutzer mit diesem Namen existiert bereits.'); return;
         }
-        const user = { id: makeId('usr'), name: newName.trim(), pin: newPin, role: 'active' };
+        const pinSalt = generatePinSalt();
+        const pinHash = await hashPin(newPin, pinSalt);
+        const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, role: 'active' };
         setAppUsers(prev => [...prev, user]);
         setNewName(''); setNewPin(''); setNewPinConfirm(''); setNewError('');
         showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
@@ -60,15 +62,18 @@ const SetupUsersView = ({ s, h }) => {
         setEditError('');
     };
 
-    const handleSaveEdit = (user) => {
+    const handleSaveEdit = async (user) => {
         if (isAdmin && !editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
         if (editPin && editPin.length < 4) { setEditError('PIN muss mindestens 4 Zeichen haben.'); return; }
         if (editPin && editPin !== editPinConfirm) { setEditError('PINs stimmen nicht überein.'); return; }
         if (!editPin) { setEditError('Bitte einen neuen PIN eingeben.'); return; }
+        const pinSalt = generatePinSalt();
+        const pinHash = await hashPin(editPin, pinSalt);
+        const { pin: _legacyPin, ...rest } = user;
         const updated = {
-            ...user,
+            ...rest,
             name: isAdmin ? editName.trim() : user.name,
-            pin: editPin,
+            pinHash, pinSalt,
         };
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
         if (currentUser.id === user.id) loginUser(updated);

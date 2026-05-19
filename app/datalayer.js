@@ -83,7 +83,10 @@ function buildSplitFiles(state) {
     const inactiveTrainingTasks = state.inactiveTrainingTasks || [];
     const customTrainingTasks   = state.customTrainingTasks   || [];
     const invoiceRecipient      = state.invoiceRecipient      || '';
-    const appUsers              = (state.appUsers || []).filter(u => u.role !== 'admin');
+    // Persist all users (admin included, with hashed PIN). Skip placeholders
+    // that signal "admin needs re-seeding" – the next save cycle will replace
+    // them with a hashed entry.
+    const appUsers              = (state.appUsers || []).filter(u => !u._needsSeed);
     const auditLog              = state.auditLog              || [];
 
     const teams = [...new Set([...DEFAULT_TEAMS, ...empCategories])];
