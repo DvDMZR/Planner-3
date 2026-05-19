@@ -162,6 +162,7 @@ const UtilizationView = ({
     const result = new Map();
     activeEmployees.forEach(emp => {
       let totalAll = 0;
+      let maxWeekAll = 0; // peak single-week utilization across the period
       const perMonth = {};
       visibleWeeks.forEach(w => {
         const {
@@ -169,18 +170,21 @@ const UtilizationView = ({
           isOfftime
         } = getUtilization(emp.id, w.id);
         totalAll += total;
+        if (total > maxWeekAll) maxWeekAll = total;
         let bucket = perMonth[w.month];
         if (!bucket) {
           bucket = {
             total: 0,
             count: 0,
-            hasOfftime: false
+            hasOfftime: false,
+            maxWeek: 0
           };
           perMonth[w.month] = bucket;
         }
         bucket.total += total;
         bucket.count += 1;
         if (isOfftime) bucket.hasOfftime = true;
+        if (total > bucket.maxWeek) bucket.maxWeek = total;
       });
       const avgAll = visibleWeeks.length === 0 ? 0 : Math.round(totalAll / visibleWeeks.length);
       const monthAvgs = {};
@@ -188,16 +192,34 @@ const UtilizationView = ({
         const b = perMonth[m];
         monthAvgs[m] = {
           avg: b.count === 0 ? 0 : Math.round(b.total / b.count),
-          hasOfftime: b.hasOfftime
+          hasOfftime: b.hasOfftime,
+          maxWeek: b.maxWeek
         };
       }
       result.set(emp.id, {
         avgAll,
-        monthAvgs
+        monthAvgs,
+        maxWeekAll
       });
     });
     return result;
   }, [activeEmployees, visibleWeeks, getUtilization]);
+
+  // Returns the overload indicator for a single peak-week value:
+  //   >=200% → red 💢, >=150% → orange 💢, otherwise null.
+  const overloadIndicator = maxPct => {
+    if (maxPct >= 200) return {
+      emoji: '💢',
+      tone: 'text-rose-600',
+      title: `Spitze: ${maxPct}% – doppelt verplant`
+    };
+    if (maxPct >= 150) return {
+      emoji: '💢',
+      tone: 'text-amber-500',
+      title: `Spitze: ${maxPct}% – Überlast`
+    };
+    return null;
+  };
   const activeCategories = activeEmpCategories;
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full bg-white overflow-hidden"
@@ -303,11 +325,18 @@ const UtilizationView = ({
         title: `In Ressourcenplanung nach „${emp.name}" filtern`,
         className: "p-2 border-r border-slate-300 cursor-pointer"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all"
-      }, avgAll, "%")), months.map(m => {
+        className: "w-full h-8 rounded flex items-center justify-center gap-1 text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all"
+      }, /*#__PURE__*/React.createElement("span", null, avgAll, "%"), (() => {
+        const o = overloadIndicator(empUtil?.maxWeekAll ?? 0);
+        return o ? /*#__PURE__*/React.createElement("span", {
+          className: o.tone,
+          title: o.title
+        }, o.emoji) : null;
+      })())), months.map(m => {
         const cell = monthAvgs[m];
         const avgMonth = cell?.avg ?? 0;
         const hasOfftime = cell?.hasOfftime ?? false;
+        const maxWeek = cell?.maxWeek ?? 0;
         let bgColor = 'bg-slate-50';
         let textColor = 'text-slate-400';
         if (avgMonth === 0 && hasOfftime) {
@@ -329,14 +358,18 @@ const UtilizationView = ({
           if (!firstWeek) return;
           jumpToEmp(firstWeek);
         };
+        const overload = overloadIndicator(maxWeek);
+        const cellTitle = overload ? `${overload.title}${firstWeek ? ' · Zur Ressourcenplanung – ' + emp.name + ', ' + m : ''}` : firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined;
         return /*#__PURE__*/React.createElement("td", {
           key: m,
           className: "p-1 border-r border-slate-300 last:border-0"
         }, /*#__PURE__*/React.createElement("div", {
           onClick: jump,
-          title: firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined,
-          className: `w-full h-8 rounded flex items-center justify-center text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`
-        }, label));
+          title: cellTitle,
+          className: `w-full h-8 rounded flex items-center justify-center gap-1 text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`
+        }, /*#__PURE__*/React.createElement("span", null, label), overload && /*#__PURE__*/React.createElement("span", {
+          className: overload.tone
+        }, overload.emoji)));
       }));
     }));
   })))));

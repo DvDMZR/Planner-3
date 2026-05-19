@@ -67,6 +67,22 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.84 (2026-05-19)
+
+### Auslastung
+- Doppelbuchungs-Warnsymbol: 💢 (orange ≥150 %, rot ≥200 %) erscheint
+  in der Monats-Zelle, wenn mindestens eine Woche im Monat überlastet
+  ist – fällt auch dann auf, wenn der Monatsdurchschnitt < 100 % bleibt.
+
+### Planung
+- Abgelaufene Projekte (IBN-Woche vergangen) fliegen aus den
+  Planungs-Reitern raus. In Verwaltung → Projekte bleiben sie bis zum
+  „Abgeschlossen"-Haken.
+
+### System & Export
+- Backup-Feedback nutzt jetzt das globale Toast-System: sichtbar
+  unabhängig vom Scroll-Stand, 6 Sekunden Anzeigedauer.
+
 ## v0.83 (2026-05-19)
 
 ### Datenverlust verhindern

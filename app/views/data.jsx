@@ -7,7 +7,7 @@ const DataView = ({ s, h }) => {
     const { currentUser, appUsers, autoBackup, lastBackupAt, emailTemplate,
             invoiceRecipient } = s;
     const { setAppUsers, loginUser, setAutoBackup, runBackup, setEmailTemplate,
-            setInvoiceRecipient, exportData, importData } = h;
+            setInvoiceRecipient, exportData, importData, showToast } = h;
 
     const isAdmin = currentUser?.role === 'admin';
 
@@ -31,9 +31,17 @@ const DataView = ({ s, h }) => {
         );
     }
 
-    const showSuccess = (msg) => {
+    // Show feedback as a real floating toast (anchored to the viewport, so
+    // it stays visible regardless of scroll position) with a generous
+    // duration. The inline `successMsg` banner is kept as a fallback for
+    // contexts where the toast helper isn't available.
+    const showSuccess = (msg, type = 'success') => {
+        if (showToast) {
+            showToast(msg, { type, duration: 6000 });
+            return;
+        }
         setSuccessMsg(msg);
-        setTimeout(() => setSuccessMsg(''), 2500);
+        setTimeout(() => setSuccessMsg(''), 6000);
     };
 
     const handleAdd = async () => {
@@ -251,9 +259,11 @@ const DataView = ({ s, h }) => {
                         <button
                             onClick={async () => {
                                 const res = await runBackup('manual');
-                                showSuccess(res.ok
-                                    ? `Backup wurde erstellt (${res.target === 'fs' ? 'lokal' : 'SharePoint'}).`
-                                    : `Backup fehlgeschlagen: ${res.error || 'unbekannter Fehler'}`);
+                                if (res.ok) {
+                                    showSuccess(`Backup wurde erstellt (${res.target === 'fs' ? 'lokal' : 'SharePoint'}).`);
+                                } else {
+                                    showSuccess(`Backup fehlgeschlagen: ${res.error || 'unbekannter Fehler'}`, 'warning');
+                                }
                             }}
                             className="px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors">
                             Jetzt sichern

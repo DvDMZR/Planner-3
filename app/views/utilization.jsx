@@ -61,18 +61,21 @@ const UtilizationView = ({ s, h }) => {
             const result = new Map();
             activeEmployees.forEach(emp => {
                 let totalAll = 0;
+                let maxWeekAll = 0; // peak single-week utilization across the period
                 const perMonth = {};
                 visibleWeeks.forEach(w => {
                     const { total, isOfftime } = getUtilization(emp.id, w.id);
                     totalAll += total;
+                    if (total > maxWeekAll) maxWeekAll = total;
                     let bucket = perMonth[w.month];
                     if (!bucket) {
-                        bucket = { total: 0, count: 0, hasOfftime: false };
+                        bucket = { total: 0, count: 0, hasOfftime: false, maxWeek: 0 };
                         perMonth[w.month] = bucket;
                     }
                     bucket.total += total;
                     bucket.count += 1;
                     if (isOfftime) bucket.hasOfftime = true;
+                    if (total > bucket.maxWeek) bucket.maxWeek = total;
                 });
                 const avgAll = visibleWeeks.length === 0 ? 0 : Math.round(totalAll / visibleWeeks.length);
                 const monthAvgs = {};
@@ -80,13 +83,22 @@ const UtilizationView = ({ s, h }) => {
                     const b = perMonth[m];
                     monthAvgs[m] = {
                         avg: b.count === 0 ? 0 : Math.round(b.total / b.count),
-                        hasOfftime: b.hasOfftime
+                        hasOfftime: b.hasOfftime,
+                        maxWeek: b.maxWeek
                     };
                 }
-                result.set(emp.id, { avgAll, monthAvgs });
+                result.set(emp.id, { avgAll, monthAvgs, maxWeekAll });
             });
             return result;
         }, [activeEmployees, visibleWeeks, getUtilization]);
+
+        // Returns the overload indicator for a single peak-week value:
+        //   >=200% → red 💢, >=150% → orange 💢, otherwise null.
+        const overloadIndicator = (maxPct) => {
+            if (maxPct >= 200) return { emoji: '💢', tone: 'text-rose-600', title: `Spitze: ${maxPct}% – doppelt verplant` };
+            if (maxPct >= 150) return { emoji: '💢', tone: 'text-amber-500', title: `Spitze: ${maxPct}% – Überlast` };
+            return null;
+        };
 
         const activeCategories = activeEmpCategories;
 
@@ -182,8 +194,12 @@ const UtilizationView = ({ s, h }) => {
                                                     <td onClick={() => jumpToEmp(null)}
                                                         title={`In Ressourcenplanung nach „${emp.name}" filtern`}
                                                         className="p-2 border-r border-slate-300 cursor-pointer">
-                                                        <div className="w-full h-8 rounded flex items-center justify-center text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all">
-                                                            {avgAll}%
+                                                        <div className="w-full h-8 rounded flex items-center justify-center gap-1 text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all">
+                                                            <span>{avgAll}%</span>
+                                                            {(() => {
+                                                                const o = overloadIndicator(empUtil?.maxWeekAll ?? 0);
+                                                                return o ? <span className={o.tone} title={o.title}>{o.emoji}</span> : null;
+                                                            })()}
                                                         </div>
                                                     </td>
 
@@ -191,6 +207,7 @@ const UtilizationView = ({ s, h }) => {
                                                         const cell = monthAvgs[m];
                                                         const avgMonth = cell?.avg ?? 0;
                                                         const hasOfftime = cell?.hasOfftime ?? false;
+                                                        const maxWeek = cell?.maxWeek ?? 0;
 
                                                         let bgColor = 'bg-slate-50';
                                                         let textColor = 'text-slate-400';
@@ -206,14 +223,19 @@ const UtilizationView = ({ s, h }) => {
                                                             if (!firstWeek) return;
                                                             jumpToEmp(firstWeek);
                                                         };
+                                                        const overload = overloadIndicator(maxWeek);
+                                                        const cellTitle = overload
+                                                            ? `${overload.title}${firstWeek ? ' · Zur Ressourcenplanung – ' + emp.name + ', ' + m : ''}`
+                                                            : (firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined);
 
                                                         return (
                                                             <td key={m} className="p-1 border-r border-slate-300 last:border-0">
                                                                 <div
                                                                     onClick={jump}
-                                                                    title={firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined}
-                                                                    className={`w-full h-8 rounded flex items-center justify-center text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`}>
-                                                                    {label}
+                                                                    title={cellTitle}
+                                                                    className={`w-full h-8 rounded flex items-center justify-center gap-1 text-xs transition-all ${bgColor} ${textColor} ${hasOfftime && avgMonth === 0 ? 'diagonal-stripes' : ''} ${firstWeek ? 'cursor-pointer hover:ring-2 hover:ring-gea-400 hover:ring-offset-1' : ''} font-medium`}>
+                                                                    <span>{label}</span>
+                                                                    {overload && <span className={overload.tone}>{overload.emoji}</span>}
                                                                 </div>
                                                             </td>
                                                         )
