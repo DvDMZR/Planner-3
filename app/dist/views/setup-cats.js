@@ -92,6 +92,17 @@ const SetupCatsView = ({
       createdAt: meta?.createdAt || new Date().toISOString()
     }]);
   };
+
+  // Add a Basic Task without a meta entry so it appears under the
+  // hardcoded-Basic dropdown in the planning modal (and renders here under
+  // Basic, not Other).
+  const addBasicTask = () => {
+    const t = newBasicTask.trim();
+    if (!t) return;
+    if (basicTasks.includes(t)) return;
+    setBasicTasks(prev => [...prev, t]);
+    setNewBasicTask('');
+  };
   const reactivateBasic = item => {
     setBasicTasks(prev => [...prev, item.name]);
     setBasicTasksMeta(prev => ({
@@ -127,7 +138,19 @@ const SetupCatsView = ({
     className: "flex-1 overflow-auto p-8 bg-slate-50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-4xl mx-auto space-y-6"
-  }, section('basic', 'Basic Tasks', /*#__PURE__*/React.createElement("ul", {
+  }, section('basic', 'Basic Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "p-4 flex gap-2 border-b border-slate-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: newBasicTask,
+    onChange: e => setNewBasicTask(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addBasicTask(),
+    placeholder: "Neuer Basic Task",
+    className: "flex-1 p-2 border border-slate-300 rounded text-sm"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: addBasicTask,
+    className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
+  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, hardcodedBasicTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
@@ -147,7 +170,7 @@ const SetupCatsView = ({
     className: "px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
   }, "Inaktiv setzen")))), hardcodedBasicTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine aktiven Basic Tasks."))), section('other', 'Other Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, "Keine aktiven Basic Tasks.")))), section('other', 'Other Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",

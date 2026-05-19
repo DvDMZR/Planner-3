@@ -53,6 +53,17 @@ const SetupCatsView = ({ s, h }) => {
         setInactiveBasicTasks(prev => [...prev, { name: task, createdAt: meta?.createdAt || new Date().toISOString() }]);
     };
 
+    // Add a Basic Task without a meta entry so it appears under the
+    // hardcoded-Basic dropdown in the planning modal (and renders here under
+    // Basic, not Other).
+    const addBasicTask = () => {
+        const t = newBasicTask.trim();
+        if (!t) return;
+        if (basicTasks.includes(t)) return;
+        setBasicTasks(prev => [...prev, t]);
+        setNewBasicTask('');
+    };
+
     const reactivateBasic = (item) => {
         setBasicTasks(prev => [...prev, item.name]);
         setBasicTasksMeta(prev => ({...prev, [item.name]: {...(prev[item.name]||{}), createdAt: item.createdAt || new Date().toISOString()}}));
@@ -80,25 +91,38 @@ const SetupCatsView = ({ s, h }) => {
         <div className="flex-1 overflow-auto p-8 bg-slate-50">
             <div className="max-w-4xl mx-auto space-y-6">
 
-                {/* ── Basic Tasks (hardcoded) ─────────────────────────── */}
+                {/* ── Basic Tasks ─────────────────────────────────────── */}
                 {section('basic', 'Basic Tasks', (
-                    <ul className="divide-y divide-slate-200">
-                        {hardcodedBasicTasks.map(task => (
-                            <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
-                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                    <span className="text-slate-800 font-medium">{task}</span>
-                                    <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button onClick={() => setBasicInactive(task)}
-                                        className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                        Inaktiv setzen
-                                    </button>
-                                </div>
-                            </li>
-                        ))}
-                        {hardcodedBasicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Basic Tasks.</li>}
-                    </ul>
+                    <div>
+                        <div className="p-4 flex gap-2 border-b border-slate-200">
+                            <input type="text" value={newBasicTask}
+                                onChange={e => setNewBasicTask(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && addBasicTask()}
+                                placeholder="Neuer Basic Task"
+                                className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                            <button onClick={addBasicTask}
+                                className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
+                                Hinzufügen
+                            </button>
+                        </div>
+                        <ul className="divide-y divide-slate-200">
+                            {hardcodedBasicTasks.map(task => (
+                                <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
+                                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                        <span className="text-slate-800 font-medium">{task}</span>
+                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button onClick={() => setBasicInactive(task)}
+                                            className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
+                                            Inaktiv setzen
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                            {hardcodedBasicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Basic Tasks.</li>}
+                        </ul>
+                    </div>
                 ))}
 
                 {/* ── Other Tasks (user-created) ──────────────────────── */}
