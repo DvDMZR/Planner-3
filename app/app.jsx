@@ -104,8 +104,14 @@ function App() {
     const [expandedSetupCats, setExpandedSetupCats] = useState({ basic: true, other: false, support: false, training: false, offtime: false, empCats: false, projCats: false });
 
     // ── USER ROLES & SESSION ───────────────────────────────────────────────────
-    const [appUsers, setAppUsers] = useState([HARDCODED_ADMIN]);
+    // Seeded with a placeholder admin; the load effect replaces it with the
+    // hashed record from users.json (or seeds one with the default PIN if
+    // none exists yet).
+    const [appUsers, setAppUsers] = useState([{ ...ADMIN_SEED, _needsSeed: true }]);
     const [auditLog, setAuditLog] = useState([]);
+    // Auto-backup config (persisted in settings.json). Default: every 60 min,
+    // enabled. Admins can change interval/enable via Verwaltung → Benutzer.
+    const [autoBackup, setAutoBackup] = useState({ enabled: true, intervalMinutes: 60, lastBackupAt: null });
     const [currentUser, setCurrentUser] = useState(() => {
         try { return JSON.parse(sessionStorage.getItem('plannerSession')); }
         catch { return null; }
@@ -343,7 +349,15 @@ function App() {
                 if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
                 if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
                 if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-                setAppUsers(injectAdmin(parsedData.appUsers));
+                if (parsedData.autoBackup) setAutoBackup(prev => ({ ...prev, ...parsedData.autoBackup }));
+                // Migrate plaintext PINs to hashes and seed admin if missing.
+                // Async; result triggers a re-render and the normal save cycle
+                // will persist the hashed records.
+                (async () => {
+                    const withAdmin = await ensureAdmin(parsedData.appUsers || []);
+                    const { users: hashed } = await migrateUsersList(withAdmin);
+                    setAppUsers(hashed);
+                })();
                 if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -358,6 +372,11 @@ function App() {
                 setProjects(init.projects);
                 setAssignments(init.assignments);
                 setExpenses(init.expenses);
+                // Fresh install: seed the admin with the default hashed PIN.
+                (async () => {
+                    const withAdmin = await ensureAdmin([]);
+                    setAppUsers(withAdmin);
+                })();
             }
 
             const w = [];
@@ -474,7 +493,7 @@ function App() {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
             offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
-            customTrainingTasks, invoiceRecipient, appUsers, auditLog
+            customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup
         };
 
         if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
@@ -559,7 +578,61 @@ function App() {
                 }
             }, 1500);
         }
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
+
+    // ── AUTO-BACKUP (periodic snapshot of all data to planner-data/backups/) ──
+    // Runs only when SharePoint is connected. One check per minute; writes a
+    // single timestamped JSON when `intervalMinutes` has elapsed since the last
+    // successful backup. Triggered manually via the "Jetzt sichern" button too.
+    const lastBackupTriedRef = useRef(0);
+    const runBackup = useCallback(async (reason = 'auto') => {
+        if (!SP_CONTEXT) return false;
+        // Build the same payload as exportData, sans user secrets.
+        const payload = {
+            employees, projects, assignments, expenses, costItems,
+            empCategories, projCategories,
+            basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, inactiveOfftimeTasks,
+            inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks,
+            invoiceRecipient,
+            appUsers: stripUserSecrets(appUsers),
+            auditLog,
+            backupReason: reason,
+            backupAt: new Date().toISOString(),
+            schemaVersion: SCHEMA_VERSION
+        };
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        try {
+            await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, JSON.stringify(payload));
+            setAutoBackup(prev => ({ ...prev, lastBackupAt: new Date().toISOString() }));
+            return true;
+        } catch(e) {
+            console.warn('[AUTO-BACKUP] failed', e);
+            return false;
+        }
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories,
+        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
+        inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient,
+        appUsers, auditLog]);
+
+    useEffect(() => {
+        if (!SP_CONTEXT) return;
+        if (!autoBackup?.enabled) return;
+        const intervalMs = Math.max(5, autoBackup.intervalMinutes || 60) * 60 * 1000;
+        const tick = () => {
+            // Avoid hammering on tab focus; require a real elapsed interval.
+            const now = Date.now();
+            const last = autoBackup.lastBackupAt ? new Date(autoBackup.lastBackupAt).getTime() : 0;
+            if (now - last < intervalMs) return;
+            if (now - lastBackupTriedRef.current < 60 * 1000) return; // anti-flap
+            lastBackupTriedRef.current = now;
+            runBackup('auto');
+        };
+        // Initial check shortly after mount, then every minute.
+        const t1 = setTimeout(tick, 30 * 1000);
+        const t2 = setInterval(tick, 60 * 1000);
+        return () => { clearTimeout(t1); clearInterval(t2); };
+    }, [autoBackup, runBackup]);
 
     // Keep latestStateRef current so the beforeunload flush always sees the
     // latest data without re-registering the event listener on every change.
@@ -568,9 +641,9 @@ function App() {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
             offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks,
-            customTrainingTasks, invoiceRecipient, appUsers, auditLog
+            customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup
         };
-    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
+    }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
 
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
@@ -605,7 +678,12 @@ function App() {
         setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
         if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-        setAppUsers(injectAdmin(data.appUsers));
+        if (data.autoBackup) setAutoBackup(prev => ({ ...prev, ...data.autoBackup }));
+        (async () => {
+            const withAdmin = await ensureAdmin(data.appUsers || []);
+            const { users: hashed } = await migrateUsersList(withAdmin);
+            setAppUsers(hashed);
+        })();
         if (data.auditLog) setAuditLog(data.auditLog);
         // Also re-seed the snapshots so the save cascade triggered by these
         // setStates doesn't rewrite identical data back to the server.
@@ -653,9 +731,7 @@ function App() {
                     }
                     pendingReloadRef.current = false;
 
-                    const needsFullReload = changedFiles.some(f =>
-                        f === 'employees.json' || f === 'projects.json' || f === 'settings.json'
-                    );
+                    const needsFullReload = changedFiles.some(f => GLOBAL_DATA_FILES.includes(f));
 
                     // A changed team file referring to an unknown team can happen when
                     // an employee's team was renamed mid-air – fall back to full reload.
@@ -1174,10 +1250,17 @@ function App() {
     }, [logAudit]);
 
     const exportData = useCallback(() => {
+        // Full export: every persisted field, minus user secrets (pin/pinHash/pinSalt).
         const data = JSON.stringify({
             employees, projects, assignments, expenses, costItems,
-            empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks,
-            offtimeTasks, customTrainingTasks, invoiceRecipient,
+            empCategories, projCategories,
+            basicTasks, basicTasksMeta, inactiveBasicTasks,
+            offtimeTasks, inactiveOfftimeTasks,
+            inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks,
+            invoiceRecipient,
+            appUsers: stripUserSecrets(appUsers),
+            auditLog,
+            exportedAt: new Date().toISOString(),
             schemaVersion: SCHEMA_VERSION
         }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
@@ -1187,7 +1270,9 @@ function App() {
         a.download = `Einsatzplanung3.0_Backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories,
-        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, customTrainingTasks, invoiceRecipient]);
+        basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
+        inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient,
+        appUsers, auditLog]);
 
     const importData = useCallback((e) => {
         const file = e.target.files[0];
@@ -1211,7 +1296,14 @@ function App() {
                 if (parsed.basicTasksMeta) setBasicTasksMeta(parsed.basicTasksMeta);
                 if (parsed.inactiveBasicTasks) setInactiveBasicTasks(parsed.inactiveBasicTasks);
                 if (parsed.offtimeTasks) setOfftimeTasks(parsed.offtimeTasks);
+                if (parsed.inactiveOfftimeTasks) setInactiveOfftimeTasks(parsed.inactiveOfftimeTasks);
+                if (parsed.inactiveSupportTasks) setInactiveSupportTasks(parsed.inactiveSupportTasks);
+                if (parsed.inactiveTrainingTasks) setInactiveTrainingTasks(parsed.inactiveTrainingTasks);
                 if (parsed.customTrainingTasks) setCustomTrainingTasks(parsed.customTrainingTasks);
+                if (parsed.invoiceRecipient !== undefined) setInvoiceRecipient(parsed.invoiceRecipient);
+                if (parsed.auditLog) setAuditLog(parsed.auditLog);
+                // Note: appUsers from an export are imported without PINs (stripped on export);
+                // existing users keep their hashed credentials.
             } catch (err) {
                 alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
             }
@@ -1671,6 +1763,7 @@ function App() {
         currentWeekColRef, resourceScrollRef, timelineScrollRef,
         compactView, scrollTarget,
         currentUser, appUsers, auditLog, isLoginModalOpen,
+        autoBackup,
     };
     const h = useMemo(() => ({
         setActiveTab, setEmployees, setProjects, setAssignments,
@@ -1689,6 +1782,7 @@ function App() {
         setSyncStatus, setFsStatus,
         setCompactView, setScrollTarget,
         setAppUsers, setAuditLog, setIsLoginModalOpen,
+        setAutoBackup, runBackup,
         showToast, dismissToast,
         loginUser, logoutUser,
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
@@ -1703,7 +1797,7 @@ function App() {
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
         buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint,
         scrollToWeekById, handleSaveAssignment, handleDeleteAssignment,
-        handleDeleteAssignmentSeries, handleDrop,
+        handleDeleteAssignmentSeries, handleDrop, runBackup,
     ]);
 
     return (

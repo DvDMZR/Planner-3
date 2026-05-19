@@ -14,7 +14,21 @@ const SetupCatsView = ({ s, h }) => {
     } = h;
 
     const [newTrainingTask, setNewTrainingTask] = useState('');
+    const [newOtherTask, setNewOtherTask] = useState('');
     const [inactiveOpen, setInactiveOpen] = useState(false);
+
+    // Separate hardcoded Basic Tasks (no meta) from user-created Other Tasks (with meta).
+    const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
+    const otherTasks          = basicTasks.filter(t =>  basicTasksMeta?.[t]);
+
+    const addOtherTask = () => {
+        const t = newOtherTask.trim();
+        if (!t) return;
+        if (basicTasks.includes(t)) return;
+        setBasicTasks(prev => [...prev, t]);
+        setBasicTasksMeta(prev => ({...prev, [t]: { createdAt: new Date().toISOString(), permanent: false }}));
+        setNewOtherTask('');
+    };
 
     const COLOR_SWATCHES = [null, ...PROJECT_COLORS.map(c => c.id)];
     const renderSwatch = (colorId) => {
@@ -32,15 +46,6 @@ const SetupCatsView = ({ s, h }) => {
             ))}
         </div>
     );
-
-    const addBasicTask = () => {
-        const t = newBasicTask.trim();
-        if (!t) return;
-        if (basicTasks.includes(t)) return;
-        setBasicTasks(prev => [...prev, t]);
-        setBasicTasksMeta(prev => ({...prev, [t]: { createdAt: new Date().toISOString(), permanent: true }}));
-        setNewBasicTask('');
-    };
 
     const setBasicInactive = (task) => {
         const meta = basicTasksMeta?.[task];
@@ -75,26 +80,46 @@ const SetupCatsView = ({ s, h }) => {
         <div className="flex-1 overflow-auto p-8 bg-slate-50">
             <div className="max-w-4xl mx-auto space-y-6">
 
-                {/* ── Basic Tasks ─────────────────────────────────────── */}
+                {/* ── Basic Tasks (hardcoded) ─────────────────────────── */}
                 {section('basic', 'Basic Tasks', (
+                    <ul className="divide-y divide-slate-200">
+                        {hardcodedBasicTasks.map(task => (
+                            <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
+                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                    <span className="text-slate-800 font-medium">{task}</span>
+                                    <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button onClick={() => setBasicInactive(task)}
+                                        className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
+                                        Inaktiv setzen
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                        {hardcodedBasicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Basic Tasks.</li>}
+                    </ul>
+                ))}
+
+                {/* ── Other Tasks (user-created) ──────────────────────── */}
+                {section('other', 'Other Tasks', (
                     <div>
                         <div className="p-4 flex gap-2 border-b border-slate-200">
-                            <input type="text" value={newBasicTask}
-                                onChange={e => setNewBasicTask(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && addBasicTask()}
-                                placeholder="Neuer Basic Task"
+                            <input type="text" value={newOtherTask}
+                                onChange={e => setNewOtherTask(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && addOtherTask()}
+                                placeholder="Neuer Other Task"
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
-                            <button onClick={addBasicTask}
+                            <button onClick={addOtherTask}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
                                 Hinzufügen
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
-                            {basicTasks.map(task => {
-                                const meta = basicTasksMeta?.[task];
-                                const isUserCreated = !!meta;
-                                const isPerm = !meta || meta.permanent !== false;
-                                const weeksLeft = meta && !isPerm
+                            {otherTasks.map(task => {
+                                const meta = basicTasksMeta?.[task] || {};
+                                const isPerm = meta.permanent !== false;
+                                const weeksLeft = !isPerm && meta.createdAt
                                     ? Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(meta.createdAt).getTime()) / (7*24*60*60*1000)))
                                     : null;
                                 return (
@@ -108,18 +133,16 @@ const SetupCatsView = ({ s, h }) => {
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                             {renderColorPicker(task)}
-                                            {isUserCreated && (
-                                                <button
-                                                    onClick={() => setBasicTasksMeta(prev => ({...prev, [task]: {...(prev[task]||{}), permanent: !isPerm}}))}
-                                                    className={`px-2 py-1 text-xs border rounded flex items-center gap-1 ${isPerm ? 'bg-gea-50 text-gea-700 border-gea-200 hover:bg-gea-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
-                                                    <IconPin size={10}/>{isPerm ? 'Permanent' : 'Temporär'}
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => setBasicTasksMeta(prev => ({...prev, [task]: {...(prev[task]||{}), permanent: !isPerm}}))}
+                                                className={`px-2 py-1 text-xs border rounded flex items-center gap-1 ${isPerm ? 'bg-gea-50 text-gea-700 border-gea-200 hover:bg-gea-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
+                                                <IconPin size={10}/>{isPerm ? 'Permanent' : 'Temporär'}
+                                            </button>
                                             <button onClick={() => setBasicInactive(task)}
                                                 className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
                                                 Inaktiv setzen
                                             </button>
-                                            {isUserCreated && !isPerm && (
+                                            {!isPerm && (
                                                 <button onClick={() => { setBasicTasks(prev => prev.filter(t => t !== task)); setBasicTasksMeta(prev => { const n = {...prev}; delete n[task]; return n; }); }}
                                                     className="text-rose-500 hover:text-rose-700">
                                                     <IconX size={14}/>
@@ -129,7 +152,7 @@ const SetupCatsView = ({ s, h }) => {
                                     </li>
                                 );
                             })}
-                            {basicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Basic Tasks.</li>}
+                            {otherTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Other Tasks.</li>}
                         </ul>
                     </div>
                 ))}

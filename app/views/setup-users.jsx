@@ -1,8 +1,8 @@
 // ─── BENUTZERVERWALTUNG ──────────────────────────────────────────────────────
 const SetupUsersView = ({ s, h }) => {
     const { useState } = React;
-    const { currentUser, appUsers } = s;
-    const { setAppUsers, loginUser } = h;
+    const { currentUser, appUsers, autoBackup } = s;
+    const { setAppUsers, loginUser, setAutoBackup, runBackup } = h;
 
     const isAdmin = currentUser?.role === 'admin';
 
@@ -31,14 +31,16 @@ const SetupUsersView = ({ s, h }) => {
         setTimeout(() => setSuccessMsg(''), 2500);
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!newName.trim()) { setNewError('Name darf nicht leer sein.'); return; }
         if (newPin.length < 4) { setNewError('PIN muss mindestens 4 Zeichen haben.'); return; }
         if (newPin !== newPinConfirm) { setNewError('PINs stimmen nicht überein.'); return; }
         if (appUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase())) {
             setNewError('Ein Nutzer mit diesem Namen existiert bereits.'); return;
         }
-        const user = { id: makeId('usr'), name: newName.trim(), pin: newPin, role: 'active' };
+        const pinSalt = generatePinSalt();
+        const pinHash = await hashPin(newPin, pinSalt);
+        const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, role: 'active' };
         setAppUsers(prev => [...prev, user]);
         setNewName(''); setNewPin(''); setNewPinConfirm(''); setNewError('');
         showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
@@ -60,15 +62,18 @@ const SetupUsersView = ({ s, h }) => {
         setEditError('');
     };
 
-    const handleSaveEdit = (user) => {
+    const handleSaveEdit = async (user) => {
         if (isAdmin && !editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
         if (editPin && editPin.length < 4) { setEditError('PIN muss mindestens 4 Zeichen haben.'); return; }
         if (editPin && editPin !== editPinConfirm) { setEditError('PINs stimmen nicht überein.'); return; }
         if (!editPin) { setEditError('Bitte einen neuen PIN eingeben.'); return; }
+        const pinSalt = generatePinSalt();
+        const pinHash = await hashPin(editPin, pinSalt);
+        const { pin: _legacyPin, ...rest } = user;
         const updated = {
-            ...user,
+            ...rest,
             name: isAdmin ? editName.trim() : user.name,
-            pin: editPin,
+            pinHash, pinSalt,
         };
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
         if (currentUser.id === user.id) loginUser(updated);
@@ -186,6 +191,51 @@ const SetupUsersView = ({ s, h }) => {
                         </div>
                     )}
                 </div>
+
+                {/* Auto-Backup-Einstellungen – nur für Admins */}
+                {isAdmin && autoBackup && (
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Auto-Backup</h3>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <label className="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox" checked={!!autoBackup.enabled}
+                                    onChange={e => setAutoBackup(prev => ({ ...prev, enabled: e.target.checked }))}/>
+                                Periodisches Backup nach SharePoint aktivieren
+                            </label>
+                            <div className="flex items-center gap-2 text-sm text-slate-700">
+                                <span>Intervall:</span>
+                                <input type="number" min="5" step="5"
+                                    value={autoBackup.intervalMinutes || 60}
+                                    onChange={e => {
+                                        const v = parseInt(e.target.value, 10);
+                                        if (!Number.isFinite(v) || v < 5) return;
+                                        setAutoBackup(prev => ({ ...prev, intervalMinutes: v }));
+                                    }}
+                                    className="w-20 p-1 border border-slate-300 rounded text-sm"/>
+                                <span>Minuten</span>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                                Letztes Backup: {autoBackup.lastBackupAt
+                                    ? new Date(autoBackup.lastBackupAt).toLocaleString('de-DE')
+                                    : '—'}
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    const ok = await runBackup('manual');
+                                    showSuccess(ok ? 'Backup wurde erstellt.' : 'Backup fehlgeschlagen.');
+                                }}
+                                className="px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors">
+                                Jetzt sichern
+                            </button>
+                            <p className="text-xs text-slate-400">
+                                Backups landen in <code className="text-slate-600">planner-data/backups/</code>
+                                {' '}als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Neuen Nutzer anlegen – nur für Admins */}
                 {isAdmin && (

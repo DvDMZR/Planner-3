@@ -8,11 +8,14 @@ const SetupUsersView = ({
   } = React;
   const {
     currentUser,
-    appUsers
+    appUsers,
+    autoBackup
   } = s;
   const {
     setAppUsers,
-    loginUser
+    loginUser,
+    setAutoBackup,
+    runBackup
   } = h;
   const isAdmin = currentUser?.role === 'admin';
 
@@ -36,7 +39,7 @@ const SetupUsersView = ({
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 2500);
   };
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) {
       setNewError('Name darf nicht leer sein.');
       return;
@@ -53,10 +56,13 @@ const SetupUsersView = ({
       setNewError('Ein Nutzer mit diesem Namen existiert bereits.');
       return;
     }
+    const pinSalt = generatePinSalt();
+    const pinHash = await hashPin(newPin, pinSalt);
     const user = {
       id: makeId('usr'),
       name: newName.trim(),
-      pin: newPin,
+      pinHash,
+      pinSalt,
       role: 'active'
     };
     setAppUsers(prev => [...prev, user]);
@@ -80,7 +86,7 @@ const SetupUsersView = ({
     setEditPinConfirm('');
     setEditError('');
   };
-  const handleSaveEdit = user => {
+  const handleSaveEdit = async user => {
     if (isAdmin && !editName.trim()) {
       setEditError('Name darf nicht leer sein.');
       return;
@@ -97,10 +103,17 @@ const SetupUsersView = ({
       setEditError('Bitte einen neuen PIN eingeben.');
       return;
     }
+    const pinSalt = generatePinSalt();
+    const pinHash = await hashPin(editPin, pinSalt);
+    const {
+      pin: _legacyPin,
+      ...rest
+    } = user;
     const updated = {
-      ...user,
+      ...rest,
       name: isAdmin ? editName.trim() : user.name,
-      pin: editPin
+      pinHash,
+      pinSalt
     };
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
     if (currentUser.id === user.id) loginUser(updated);
@@ -202,7 +215,52 @@ const SetupUsersView = ({
   }, isAdmin ? 'Bearbeiten' : 'PIN ändern'), isAdmin && /*#__PURE__*/React.createElement("button", {
     onClick: () => handleDelete(user.id),
     className: "px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
-  }, "L\xF6schen"))))))), isAdmin && /*#__PURE__*/React.createElement("div", {
+  }, "L\xF6schen"))))))), isAdmin && autoBackup && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-4 py-3 bg-slate-50 border-b border-slate-200"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-semibold text-slate-700 uppercase tracking-wide"
+  }, "Auto-Backup")), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 space-y-3"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-sm text-slate-700"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: !!autoBackup.enabled,
+    onChange: e => setAutoBackup(prev => ({
+      ...prev,
+      enabled: e.target.checked
+    }))
+  }), "Periodisches Backup nach SharePoint aktivieren"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-sm text-slate-700"
+  }, /*#__PURE__*/React.createElement("span", null, "Intervall:"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "5",
+    step: "5",
+    value: autoBackup.intervalMinutes || 60,
+    onChange: e => {
+      const v = parseInt(e.target.value, 10);
+      if (!Number.isFinite(v) || v < 5) return;
+      setAutoBackup(prev => ({
+        ...prev,
+        intervalMinutes: v
+      }));
+    },
+    className: "w-20 p-1 border border-slate-300 rounded text-sm"
+  }), /*#__PURE__*/React.createElement("span", null, "Minuten")), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-slate-500"
+  }, "Letztes Backup: ", autoBackup.lastBackupAt ? new Date(autoBackup.lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      const ok = await runBackup('manual');
+      showSuccess(ok ? 'Backup wurde erstellt.' : 'Backup fehlgeschlagen.');
+    },
+    className: "px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors"
+  }, "Jetzt sichern"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-400"
+  }, "Backups landen in ", /*#__PURE__*/React.createElement("code", {
+    className: "text-slate-600"
+  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes."))), isAdmin && /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200"

@@ -40,7 +40,26 @@ const SetupCatsView = ({
     setNewOfftimeTask
   } = h;
   const [newTrainingTask, setNewTrainingTask] = useState('');
+  const [newOtherTask, setNewOtherTask] = useState('');
   const [inactiveOpen, setInactiveOpen] = useState(false);
+
+  // Separate hardcoded Basic Tasks (no meta) from user-created Other Tasks (with meta).
+  const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
+  const otherTasks = basicTasks.filter(t => basicTasksMeta?.[t]);
+  const addOtherTask = () => {
+    const t = newOtherTask.trim();
+    if (!t) return;
+    if (basicTasks.includes(t)) return;
+    setBasicTasks(prev => [...prev, t]);
+    setBasicTasksMeta(prev => ({
+      ...prev,
+      [t]: {
+        createdAt: new Date().toISOString(),
+        permanent: false
+      }
+    }));
+    setNewOtherTask('');
+  };
   const COLOR_SWATCHES = [null, ...PROJECT_COLORS.map(c => c.id)];
   const renderSwatch = colorId => {
     if (!colorId) return /*#__PURE__*/React.createElement("span", {
@@ -65,20 +84,6 @@ const SetupCatsView = ({
     })),
     className: `w-5 h-5 rounded-full border-2 transition-all ${(basicTasksMeta[taskName]?.color || null) === cid ? 'border-gea-600 scale-110' : 'border-transparent hover:border-slate-400'} ${cid ? resolveProjectColor(cid).dot : 'bg-white border-slate-300'}`
   })));
-  const addBasicTask = () => {
-    const t = newBasicTask.trim();
-    if (!t) return;
-    if (basicTasks.includes(t)) return;
-    setBasicTasks(prev => [...prev, t]);
-    setBasicTasksMeta(prev => ({
-      ...prev,
-      [t]: {
-        createdAt: new Date().toISOString(),
-        permanent: true
-      }
-    }));
-    setNewBasicTask('');
-  };
   const setBasicInactive = task => {
     const meta = basicTasksMeta?.[task];
     setBasicTasks(prev => prev.filter(t => t !== task));
@@ -122,25 +127,44 @@ const SetupCatsView = ({
     className: "flex-1 overflow-auto p-8 bg-slate-50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-4xl mx-auto space-y-6"
-  }, section('basic', 'Basic Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, section('basic', 'Basic Tasks', /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-slate-200"
+  }, hardcodedBasicTasks.map(task => /*#__PURE__*/React.createElement("li", {
+    key: task,
+    className: "p-4 flex justify-between items-center gap-3 text-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 min-w-0 flex-wrap"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-800 font-medium"
+  }, task), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(IconPin, {
+    size: 10
+  }), "Permanent")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 flex-shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBasicInactive(task),
+    className: "px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
+  }, "Inaktiv setzen")))), hardcodedBasicTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
+    className: "p-6 text-sm text-slate-400 text-center"
+  }, "Keine aktiven Basic Tasks."))), section('other', 'Other Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
-    value: newBasicTask,
-    onChange: e => setNewBasicTask(e.target.value),
-    onKeyDown: e => e.key === 'Enter' && addBasicTask(),
-    placeholder: "Neuer Basic Task",
+    value: newOtherTask,
+    onChange: e => setNewOtherTask(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addOtherTask(),
+    placeholder: "Neuer Other Task",
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
-    onClick: addBasicTask,
+    onClick: addOtherTask,
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
   }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
-  }, basicTasks.map(task => {
-    const meta = basicTasksMeta?.[task];
-    const isUserCreated = !!meta;
-    const isPerm = !meta || meta.permanent !== false;
-    const weeksLeft = meta && !isPerm ? Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(meta.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000))) : null;
+  }, otherTasks.map(task => {
+    const meta = basicTasksMeta?.[task] || {};
+    const isPerm = meta.permanent !== false;
+    const weeksLeft = !isPerm && meta.createdAt ? Math.max(0, BASIC_TASK_EXPIRY_WEEKS - Math.floor((Date.now() - new Date(meta.createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000))) : null;
     return /*#__PURE__*/React.createElement("li", {
       key: task,
       className: "p-4 flex justify-between items-center gap-3 text-sm"
@@ -156,7 +180,7 @@ const SetupCatsView = ({
       className: "text-xs text-slate-400"
     }, "(l\xE4uft ab in ", weeksLeft, " Wo.)")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 flex-shrink-0"
-    }, renderColorPicker(task), isUserCreated && /*#__PURE__*/React.createElement("button", {
+    }, renderColorPicker(task), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBasicTasksMeta(prev => ({
         ...prev,
         [task]: {
@@ -170,7 +194,7 @@ const SetupCatsView = ({
     }), isPerm ? 'Permanent' : 'Temporär'), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBasicInactive(task),
       className: "px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-    }, "Inaktiv setzen"), isUserCreated && !isPerm && /*#__PURE__*/React.createElement("button", {
+    }, "Inaktiv setzen"), !isPerm && /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBasicTasks(prev => prev.filter(t => t !== task));
         setBasicTasksMeta(prev => {
@@ -185,9 +209,9 @@ const SetupCatsView = ({
     }, /*#__PURE__*/React.createElement(IconX, {
       size: 14
     }))));
-  }), basicTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
+  }), otherTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine aktiven Basic Tasks.")))), section('support', 'Support', /*#__PURE__*/React.createElement("ul", {
+  }, "Keine aktiven Other Tasks.")))), section('support', 'Support', /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)).map(task => {
     const sc = SUPPORT_CHIP_COLORS[task] || {};

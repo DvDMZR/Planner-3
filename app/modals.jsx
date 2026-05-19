@@ -1027,10 +1027,20 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
 
     useEffect(() => { if (selectedUserId) pinRef.current?.focus(); }, [selectedUserId]);
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         const user = appUsers.find(u => u.id === selectedUserId);
         if (!user) { setError('Bitte einen Nutzer auswählen.'); return; }
-        if (user.pin !== pin) { setError('Falscher PIN.'); setPin(''); return; }
+        // New hashed flow (preferred). Legacy plaintext `pin` is also accepted
+        // as a fallback so users with un-migrated records can still log in –
+        // the next save will migrate them to a hash.
+        let ok = false;
+        if (user.pinHash && user.pinSalt) {
+            try { ok = await verifyPin(pin, user.pinHash, user.pinSalt); }
+            catch(e) { ok = false; }
+        } else if (typeof user.pin === 'string') {
+            ok = user.pin === pin;
+        }
+        if (!ok) { setError('Falscher PIN.'); setPin(''); return; }
         onLogin(user);
     };
 
