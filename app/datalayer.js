@@ -97,10 +97,11 @@ function buildSplitFiles(state) {
     // user changes) don't force the rest of settings to be re-written every
     // time – which used to cause ETag conflicts on settings.json.
     const autoBackup = state.autoBackup || {};
+    const emailTemplate = state.emailTemplate || null;
     const files = {
         'employees.json':  { employees },
         'projects.json':   { projects },
-        'settings.json':   { invoiceRecipient, autoBackup },
+        'settings.json':   { invoiceRecipient, autoBackup, emailTemplate },
         'categories.json': { empCategories, projCategories,
                              basicTasks, basicTasksMeta, inactiveBasicTasks,
                              offtimeTasks, inactiveOfftimeTasks,
@@ -148,6 +149,7 @@ function mergeSplitFiles({ employees, projects, settings, categories, users, aud
         customTrainingTasks:  cat.customTrainingTasks  || [],
         invoiceRecipient:     settings?.invoiceRecipient     || '',
         autoBackup:           settings?.autoBackup           || null,
+        emailTemplate:        settings?.emailTemplate        || null,
         appUsers:             usr.appUsers             || [],
         auditLog:             aud.auditLog             || []
     };

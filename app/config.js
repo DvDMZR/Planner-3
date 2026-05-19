@@ -66,6 +66,50 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.82 (2026-05-19)
+
+### Kategorien
+- Neue Sektion **Other Tasks** in Verwaltung → Kategorien. Trennt user-
+  erstellte Tasks (mit Meta, in Planung als „Other" sichtbar) sauber von
+  den hardcoded **Basic Tasks** (z. B. Office).
+
+### Sicherheit
+- **PIN-Hashing** (SHA-256 + per-User-Salt). Bestehende Plaintext-PINs
+  werden beim nächsten Login transparent migriert.
+- **Admin nicht mehr hardcoded**: lebt in \`users.json\` mit gehashtem PIN.
+  Default-PIN 1397 wird einmalig gesetzt und kann via UI geändert werden.
+
+### Synchronisation
+- \`settings.json\` aufgeteilt in vier Dateien: \`settings.json\`,
+  \`categories.json\`, \`users.json\`, \`audit.json\`. Drastisch weniger
+  ETag-Konflikte, da Audit-Writes Kategorien-Edits nicht mehr blockieren.
+- Sanity-Guard: ein Save, der zuvor nicht-leere Listen auf leer setzen
+  würde, wird abgebrochen.
+
+### Backup
+- Auto-Backup nach \`planner-data/backups/\` mit zeitgestempelten JSONs
+  (Intervall in Verwaltung → Benutzer einstellbar, Default 60 Min,
+  manueller „Jetzt sichern"-Button). Letzter Backup-Zeitstempel wird aus
+  dem Folder-Listing gelesen, nicht in \`settings.json\` geschrieben.
+
+### Export
+- Backup-Export enthält jetzt alle persistierten Felder; PIN-Hashes werden
+  gestrippt.
+
+### Personalisierung
+- Per-User-Einstellungen: Kompaktansicht wird pro Nutzer gespeichert und
+  beim Login wiederhergestellt.
+
+### Planungs-Chips
+- Kommentar-Symbol jetzt auch im Kompaktmodus und in der Projekte-Ansicht
+  (Timeline) sichtbar; Icon-Größe/Opazität angehoben.
+
+### Email-Vorlage
+- Email-Text für Planungs-Benachrichtigungen in Verwaltung → Benutzer
+  (Admin) editierbar. Platzhalter: \`{firstName}\`, \`{refLabel}\`,
+  \`{typeLabel}\`, \`{weekRange}\`, \`{comment}\`, \`{attachmentNote}\`;
+  optionale Blöcke via \`{{#comment}}…{{/comment}}\`.
+
 ## v0.81 (2026-05-07)
 
 ### Sidebar: neuer Bereich "Details"
@@ -413,6 +457,28 @@ const CHANGELOG_CONTENT = `# Changelog
 - Changelog button in sidebar is now a visible badge (more prominent)
 - System & Export tab now lists all external libraries with loaded versions and an "Check for updates" button that queries the npm registry
 `;
+
+// Default text for the assignment-notification email. Variables in {curly}
+// braces are substituted at send time. Conditional blocks
+// {{#comment}}…{{/comment}} render only when the variable is non-empty.
+const DEFAULT_EMAIL_TEMPLATE = {
+    subject: 'New assignment: {refLabel} ({weekRange})',
+    body: [
+        'Hi {firstName},',
+        '',
+        'You have been scheduled for the following work:',
+        '',
+        '  {typeLabel}: {refLabel}',
+        '  Calendar week: {weekRange}',
+        '{{#comment}}  Note: {comment}{{/comment}}',
+        '{{#attachmentNote}}',
+        '{attachmentNote}{{/attachmentNote}}',
+        '',
+        'Please review the entry in the planner and let me know if there are any conflicts or questions.',
+        '',
+        'Best regards',
+    ].join('\n'),
+};
 
 // --- KONFIGURATION ---
 const COST_TYPES = ['Dienstleistung', 'Reisekosten', 'Sonstiges'];

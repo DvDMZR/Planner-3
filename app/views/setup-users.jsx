@@ -1,8 +1,8 @@
 // ─── BENUTZERVERWALTUNG ──────────────────────────────────────────────────────
 const SetupUsersView = ({ s, h }) => {
     const { useState } = React;
-    const { currentUser, appUsers, autoBackup } = s;
-    const { setAppUsers, loginUser, setAutoBackup, runBackup } = h;
+    const { currentUser, appUsers, autoBackup, lastBackupAt, emailTemplate } = s;
+    const { setAppUsers, loginUser, setAutoBackup, runBackup, setEmailTemplate } = h;
 
     const isAdmin = currentUser?.role === 'admin';
 
@@ -217,8 +217,8 @@ const SetupUsersView = ({ s, h }) => {
                                 <span>Minuten</span>
                             </div>
                             <div className="text-xs text-slate-500">
-                                Letztes Backup: {autoBackup.lastBackupAt
-                                    ? new Date(autoBackup.lastBackupAt).toLocaleString('de-DE')
+                                Letztes Backup: {lastBackupAt
+                                    ? new Date(lastBackupAt).toLocaleString('de-DE')
                                     : '—'}
                             </div>
                             <button
@@ -233,6 +233,49 @@ const SetupUsersView = ({ s, h }) => {
                                 Backups landen in <code className="text-slate-600">planner-data/backups/</code>
                                 {' '}als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes.
                             </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Email-Template – nur für Admins */}
+                {isAdmin && emailTemplate && (
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Email-Vorlage (Planungs-Benachrichtigung)</h3>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Betreff</label>
+                                <input type="text" value={emailTemplate.subject || ''}
+                                    onChange={e => setEmailTemplate(prev => ({ ...prev, subject: e.target.value }))}
+                                    className="w-full p-2 border border-slate-300 rounded text-sm font-mono"/>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Text</label>
+                                <textarea value={emailTemplate.body || ''}
+                                    onChange={e => setEmailTemplate(prev => ({ ...prev, body: e.target.value }))}
+                                    rows={12}
+                                    className="w-full p-2 border border-slate-300 rounded text-xs font-mono leading-relaxed"/>
+                            </div>
+                            <div className="text-xs text-slate-500 leading-relaxed">
+                                Verfügbare Platzhalter:
+                                {' '}<code>{'{firstName}'}</code>,
+                                {' '}<code>{'{refLabel}'}</code>,
+                                {' '}<code>{'{typeLabel}'}</code>,
+                                {' '}<code>{'{weekRange}'}</code>,
+                                {' '}<code>{'{comment}'}</code>,
+                                {' '}<code>{'{attachmentNote}'}</code>.<br/>
+                                Optionale Blöcke (werden nur eingefügt, wenn der Wert vorhanden ist):
+                                {' '}<code>{'{{#comment}}…{{/comment}}'}</code>,
+                                {' '}<code>{'{{#attachmentNote}}…{{/attachmentNote}}'}</code>.
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => { setEmailTemplate(DEFAULT_EMAIL_TEMPLATE); showSuccess('Vorlage zurückgesetzt.'); }}
+                                    className="px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                                    Auf Standard zurücksetzen
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

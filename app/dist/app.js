@@ -44,7 +44,9 @@ function App() {
   const [weeksAhead, setWeeksAhead] = useState(DEFAULT_WEEKS_AHEAD);
 
   // Compact chip rendering shared by Ressourcen + Support so the choice
-  // survives tab switches.
+  // survives tab switches. Logged-in users have this persisted per-user
+  // via user.preferences.compactView (restored on login, written back on
+  // change).
   const [compactView, setCompactView] = useState(true);
 
   // Auslastung click → Ressourcen jump: target week to scroll to once
@@ -143,12 +145,15 @@ function App() {
   }]);
   const [auditLog, setAuditLog] = useState([]);
   // Auto-backup config (persisted in settings.json). Default: every 60 min,
-  // enabled. Admins can change interval/enable via Verwaltung → Benutzer.
+  // enabled. The "last backup at" timestamp is intentionally NOT stored
+  // here — it is derived from the backups folder listing so periodic
+  // backups never touch settings.json (which would re-introduce conflicts).
   const [autoBackup, setAutoBackup] = useState({
     enabled: true,
-    intervalMinutes: 60,
-    lastBackupAt: null
+    intervalMinutes: 60
   });
+  const [lastBackupAt, setLastBackupAt] = useState(null); // ISO string, never persisted
+  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_EMAIL_TEMPLATE);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem('plannerSession'));
@@ -225,6 +230,12 @@ function App() {
     } catch (e) {}
     setCurrentUser(session);
     setIsLoginModalOpen(false);
+    // Restore the user's UI preferences (currently only compactView).
+    // Missing preferences mean "use last value" – nothing to apply.
+    const prefs = user?.preferences;
+    if (prefs && typeof prefs.compactView === 'boolean') {
+      setCompactView(prefs.compactView);
+    }
   }, []);
   const logoutUser = useCallback(() => {
     try {
@@ -440,9 +451,19 @@ function App() {
         if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
         if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
         if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
-        if (parsedData.autoBackup) setAutoBackup(prev => ({
+        if (parsedData.autoBackup) {
+          const {
+            lastBackupAt: _ignored,
+            ...rest
+          } = parsedData.autoBackup;
+          setAutoBackup(prev => ({
+            ...prev,
+            ...rest
+          }));
+        }
+        if (parsedData.emailTemplate) setEmailTemplate(prev => ({
           ...prev,
-          ...parsedData.autoBackup
+          ...parsedData.emailTemplate
         }));
         // Migrate plaintext PINs to hashes and seed admin if missing.
         // Async; result triggers a re-render and the normal save cycle
@@ -653,7 +674,8 @@ function App() {
       invoiceRecipient,
       appUsers,
       auditLog,
-      autoBackup
+      autoBackup,
+      emailTemplate
     };
     if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
     localSaveTimer.current = setTimeout(() => {
@@ -750,7 +772,43 @@ function App() {
         }
       }, 1500);
     }
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
+
+  // On page reload, the session is restored from sessionStorage *before*
+  // appUsers loads from SP. Once appUsers arrives, re-apply the stored
+  // preferences for the current session user.
+  const prefsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prefsAppliedRef.current) return;
+    if (!currentUser) return;
+    const full = appUsers.find(u => u.id === currentUser.id);
+    if (!full) return;
+    prefsAppliedRef.current = true;
+    const prefs = full.preferences;
+    if (prefs && typeof prefs.compactView === 'boolean') {
+      setCompactView(prefs.compactView);
+    }
+  }, [appUsers, currentUser]);
+
+  // Persist UI preferences back to the logged-in user. Only writes when
+  // the value actually differs from what's stored, so this effect doesn't
+  // cause a save loop when prefs are restored on login.
+  useEffect(() => {
+    const u = currentUserRef.current;
+    if (!u) return;
+    setAppUsers(prev => {
+      const cur = prev.find(p => p.id === u.id);
+      if (!cur) return prev;
+      if (cur.preferences?.compactView === compactView) return prev;
+      return prev.map(p => p.id === u.id ? {
+        ...p,
+        preferences: {
+          ...(p.preferences || {}),
+          compactView
+        }
+      } : p);
+    });
+  }, [compactView, currentUser]);
 
   // ── AUTO-BACKUP (periodic snapshot of all data to planner-data/backups/) ──
   // Runs only when SharePoint is connected. One check per minute; writes a
@@ -759,7 +817,6 @@ function App() {
   const lastBackupTriedRef = useRef(0);
   const runBackup = useCallback(async (reason = 'auto') => {
     if (!SP_CONTEXT) return false;
-    // Build the same payload as exportData, sans user secrets.
     const payload = {
       employees,
       projects,
@@ -786,37 +843,57 @@ function App() {
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     try {
       await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, JSON.stringify(payload));
-      setAutoBackup(prev => ({
-        ...prev,
-        lastBackupAt: new Date().toISOString()
-      }));
+      // Source of truth is the folder listing; reflect locally too.
+      setLastBackupAt(new Date().toISOString());
       return true;
     } catch (e) {
       console.warn('[AUTO-BACKUP] failed', e);
       return false;
     }
   }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
+
+  // Probe the backups folder once on mount (and after a successful backup)
+  // so the UI shows an accurate "last backup at" without writing anywhere.
+  useEffect(() => {
+    if (!SP_CONTEXT) return;
+    let cancelled = false;
+    (async () => {
+      const files = await spListBackups(SP_CONTEXT).catch(() => []);
+      if (cancelled) return;
+      const newest = files.reduce((acc, f) => !acc || f.ts > acc.ts ? f : acc, null);
+      setLastBackupAt(newest?.ts || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     if (!SP_CONTEXT) return;
     if (!autoBackup?.enabled) return;
     const intervalMs = Math.max(5, autoBackup.intervalMinutes || 60) * 60 * 1000;
-    const tick = () => {
-      // Avoid hammering on tab focus; require a real elapsed interval.
+    const tick = async () => {
       const now = Date.now();
-      const last = autoBackup.lastBackupAt ? new Date(autoBackup.lastBackupAt).getTime() : 0;
-      if (now - last < intervalMs) return;
       if (now - lastBackupTriedRef.current < 60 * 1000) return; // anti-flap
+      // Re-read the folder so all clients see the same "last backup"
+      // truth; avoids two clients backing up in the same minute.
+      const files = await spListBackups(SP_CONTEXT).catch(() => []);
+      const newest = files.reduce((acc, f) => !acc || f.ts > acc.ts ? f : acc, null);
+      const lastTs = newest ? new Date(newest.ts).getTime() : 0;
+      if (lastTs && now - lastTs < intervalMs) {
+        // Another client (or an earlier session) covered it.
+        if (newest?.ts && newest.ts !== lastBackupAt) setLastBackupAt(newest.ts);
+        return;
+      }
       lastBackupTriedRef.current = now;
-      runBackup('auto');
+      await runBackup('auto');
     };
-    // Initial check shortly after mount, then every minute.
     const t1 = setTimeout(tick, 30 * 1000);
     const t2 = setInterval(tick, 60 * 1000);
     return () => {
       clearTimeout(t1);
       clearInterval(t2);
     };
-  }, [autoBackup, runBackup]);
+  }, [autoBackup, runBackup, lastBackupAt]);
 
   // Keep latestStateRef current so the beforeunload flush always sees the
   // latest data without re-registering the event listener on every change.
@@ -840,9 +917,10 @@ function App() {
       invoiceRecipient,
       appUsers,
       auditLog,
-      autoBackup
+      autoBackup,
+      emailTemplate
     };
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
 
   // Flush pending local save before the page unloads so a fast tab close
   // doesn't drop the most recent edits.
@@ -877,9 +955,19 @@ function App() {
     setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
     if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
     if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
-    if (data.autoBackup) setAutoBackup(prev => ({
+    if (data.autoBackup) {
+      const {
+        lastBackupAt: _ignored,
+        ...rest
+      } = data.autoBackup;
+      setAutoBackup(prev => ({
+        ...prev,
+        ...rest
+      }));
+    }
+    if (data.emailTemplate) setEmailTemplate(prev => ({
       ...prev,
-      ...data.autoBackup
+      ...data.emailTemplate
     }));
     (async () => {
       const withAdmin = await ensureAdmin(data.appUsers || []);
@@ -2212,7 +2300,9 @@ function App() {
     appUsers,
     auditLog,
     isLoginModalOpen,
-    autoBackup
+    autoBackup,
+    lastBackupAt,
+    emailTemplate
   };
   const h = useMemo(() => ({
     setActiveTab,
@@ -2271,6 +2361,7 @@ function App() {
     setIsLoginModalOpen,
     setAutoBackup,
     runBackup,
+    setEmailTemplate,
     showToast,
     dismissToast,
     loginUser,
@@ -2357,6 +2448,7 @@ function App() {
     getEmpWeeklyHours: getEmpWeeklyHours,
     setBasicTasks: setBasicTasks,
     setBasicTasksMeta: setBasicTasksMeta,
+    emailTemplate: emailTemplate,
     onClose: () => setIsAssignModalOpen(false),
     onSave: handleSaveAssignment,
     onDelete: handleDeleteAssignment,

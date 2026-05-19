@@ -9,13 +9,16 @@ const SetupUsersView = ({
   const {
     currentUser,
     appUsers,
-    autoBackup
+    autoBackup,
+    lastBackupAt,
+    emailTemplate
   } = s;
   const {
     setAppUsers,
     loginUser,
     setAutoBackup,
-    runBackup
+    runBackup,
+    setEmailTemplate
   } = h;
   const isAdmin = currentUser?.role === 'admin';
 
@@ -250,7 +253,7 @@ const SetupUsersView = ({
     className: "w-20 p-1 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("span", null, "Minuten")), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-slate-500"
-  }, "Letztes Backup: ", autoBackup.lastBackupAt ? new Date(autoBackup.lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
+  }, "Letztes Backup: ", lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       const ok = await runBackup('manual');
       showSuccess(ok ? 'Backup wurde erstellt.' : 'Backup fehlgeschlagen.');
@@ -260,7 +263,45 @@ const SetupUsersView = ({
     className: "text-xs text-slate-400"
   }, "Backups landen in ", /*#__PURE__*/React.createElement("code", {
     className: "text-slate-600"
-  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes."))), isAdmin && /*#__PURE__*/React.createElement("div", {
+  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes."))), isAdmin && emailTemplate && /*#__PURE__*/React.createElement("div", {
+    className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-4 py-3 bg-slate-50 border-b border-slate-200"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-semibold text-slate-700 uppercase tracking-wide"
+  }, "Email-Vorlage (Planungs-Benachrichtigung)")), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 mb-1"
+  }, "Betreff"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: emailTemplate.subject || '',
+    onChange: e => setEmailTemplate(prev => ({
+      ...prev,
+      subject: e.target.value
+    })),
+    className: "w-full p-2 border border-slate-300 rounded text-sm font-mono"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs font-semibold text-slate-600 mb-1"
+  }, "Text"), /*#__PURE__*/React.createElement("textarea", {
+    value: emailTemplate.body || '',
+    onChange: e => setEmailTemplate(prev => ({
+      ...prev,
+      body: e.target.value
+    })),
+    rows: 12,
+    className: "w-full p-2 border border-slate-300 rounded text-xs font-mono leading-relaxed"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-slate-500 leading-relaxed"
+  }, "Verf\xFCgbare Platzhalter:", ' ', /*#__PURE__*/React.createElement("code", null, '{firstName}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{refLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{typeLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{weekRange}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{comment}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{attachmentNote}'), ".", /*#__PURE__*/React.createElement("br", null), "Optionale Bl\xF6cke (werden nur eingef\xFCgt, wenn der Wert vorhanden ist):", ' ', /*#__PURE__*/React.createElement("code", null, '{{#comment}}…{{/comment}}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{{#attachmentNote}}…{{/attachmentNote}}'), "."), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setEmailTemplate(DEFAULT_EMAIL_TEMPLATE);
+      showSuccess('Vorlage zurückgesetzt.');
+    },
+    className: "px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+  }, "Auf Standard zur\xFCcksetzen")))), isAdmin && /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200"

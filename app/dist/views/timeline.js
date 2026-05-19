@@ -506,7 +506,10 @@ const TimelineView = ({
             className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`
           }, /*#__PURE__*/React.createElement("span", {
             className: "truncate font-medium"
-          }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("div", {
+          }, emp?.name || 'Unbekannt'), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+            size: 10,
+            className: "flex-shrink-0 ml-1 opacity-70"
+          }), /*#__PURE__*/React.createElement("div", {
             className: "flex items-center gap-1 ml-1 flex-shrink-0"
           }, /*#__PURE__*/React.createElement("span", {
             className: "opacity-90 font-medium"
