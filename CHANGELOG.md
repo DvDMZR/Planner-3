@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.84 (2026-05-19)
+
+### Auslastung
+- Wenn in einem Monat eine Woche mit ≥150 % geplant ist, erscheint
+  ein 💢-Symbol in der Monats-Zelle (orange) bzw. ab ≥200 % rot –
+  damit sieht man Doppelbuchungen, auch wenn der Monats-Durchschnitt
+  durch sparsame andere Wochen unter 100 % bleibt. Gleiche Anzeige
+  in der „Ø Zeitraum"-Spalte für die Peak-Woche im gesamten Zeitraum.
+
+### Planung
+- Projekte, deren IBN-Woche vergangen ist, sind **nicht mehr** in den
+  Planungs-Reitern (Projekte/Timeline, Ressourcen-Auswahl, Übersicht,
+  Planungs-Dialog) sichtbar. In Verwaltung → Projekte bleiben sie
+  bis zum Setzen des „Abgeschlossen"-Hakens.
+
+### System & Export
+- Backup-Toast nutzt jetzt das globale Toast-System: Position fixed
+  (oben rechts, sichtbar bei jedem Scroll-Stand) und 6 Sekunden
+  Anzeigedauer statt 2,5. Fehler-Toast trägt den echten Grund.
+
 ## v0.83 (2026-05-19)
 
 ### Datenverlust verhindern

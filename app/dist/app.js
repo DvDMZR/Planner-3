@@ -1423,9 +1423,17 @@ function App() {
   }, [activeEmployees, employees, supportEmpIds]);
   const supportEmpCategories = useMemo(() => Array.from(supportEmpsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [supportEmpsByCategory]);
   const hasSupportEmployees = supportEmpIds.size > 0;
+
+  // Projects grouped by category for the planning views (Timeline tab,
+  // Resource project assignments, …). Projects whose ibnWeek has passed
+  // drop out of the planning lists – they remain visible only in the
+  // Verwaltung → Projekte tab (which uses the raw `projects` array) until
+  // an admin sets the "Abgeschlossen" flag.
   const projectsByCategory = useMemo(() => {
     const m = new Map();
+    const planningStatuses = new Set(['active', 'planned']);
     projects.forEach(p => {
+      if (!planningStatuses.has(projectStatusById.get(p.id))) return;
       let arr = m.get(p.category);
       if (!arr) {
         arr = [];
@@ -1437,7 +1445,7 @@ function App() {
       arr.sort((a, b) => (a.startWeek || '').localeCompare(b.startWeek || ''));
     }
     return m;
-  }, [projects]);
+  }, [projects, projectStatusById]);
   const projCategoriesFromProjects = useMemo(() => Array.from(projectsByCategory.keys()).sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b, 'de')), [projectsByCategory]);
 
   // Cache weeks per year – generateWeeksForYear does Easter math + 54
