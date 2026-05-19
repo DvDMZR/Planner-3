@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.83 (2026-05-19)
+
+### Datenverlust verhindern
+- **`categories.json` weiter aufgeteilt** in drei Dateien nach Edit-Frequenz:
+  `category-defs.json` (Team-/Projekt-Kategorien, selten editiert),
+  `tasks.json` (Basic/Other/Offtime/Training-Definitionen), `inactive.json`
+  (alle Inaktiv-Listen, am häufigsten getoggelt). Parallele Admin-Edits
+  blockieren sich nicht mehr gegenseitig.
+- **Sanity-Guard erweitert**: jeder Write, der eine zuvor nicht-leere Liste
+  oder Map auf leer setzen würde, wird abgebrochen. Schützt jetzt
+  `category-defs.json`, `tasks.json`, `inactive.json`, `users.json` und
+  `employees.json` (vorher nur `users` + `employees` + `empCategories`).
+- **`applyRemoteSnapshot` gehärtet**: alle Listen-Properties verwenden
+  jetzt das `length > 0 ? remote : prev`-Muster; `inactiveSupportTasks`
+  und `inactiveTrainingTasks` werden jetzt auch synchronisiert (waren
+  vorher gar nicht im Update-Pfad).
+
+### Backup
+- **„Jetzt sichern" repariert**: tatsächlicher Fehlertext landet jetzt im
+  Toast (statt nur „fehlgeschlagen"). Funktioniert jetzt auch im FS-Mode
+  (lokaler Ordner) — schreibt nach `planner-data/backups/`.
+- **Login-Backup**: Beim Login wird automatisch ein Recovery-Backup
+  ausgelöst, rate-limited auf max. eines pro 30 Minuten. Jeder Login
+  hinterlässt damit eine wiederherstellbare Datei.
+
+### Kategorien
+- **„Hinzufügen"-Button für Basic Tasks**: in Verwaltung → Kategorien
+  kann jetzt unter Basic Tasks ein neuer Eintrag angelegt werden
+  (analog zu Other/Trainings/Offtime). Neue Basic Tasks landen
+  korrekt im „Basic"-Dropdown des Planungs-Dialogs.
+
+### System & Export
+- Hinweis „Inhalte ohne PIN-Hashes" entfernt — UI-Rauschen.
+
 ## v0.82 (2026-05-19)
 
 ### Kategorien

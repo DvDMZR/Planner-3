@@ -305,15 +305,15 @@ const DataView = ({
     className: "text-xs text-slate-500"
   }, "Letztes Backup: ", lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
-      const ok = await runBackup('manual');
-      showSuccess(ok ? 'Backup wurde erstellt.' : 'Backup fehlgeschlagen.');
+      const res = await runBackup('manual');
+      showSuccess(res.ok ? `Backup wurde erstellt (${res.target === 'fs' ? 'lokal' : 'SharePoint'}).` : `Backup fehlgeschlagen: ${res.error || 'unbekannter Fehler'}`);
     },
     className: "px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors"
   }, "Jetzt sichern"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
   }, "Backups landen in ", /*#__PURE__*/React.createElement("code", {
     className: "text-slate-600"
-  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien. Inhalte ohne PIN-Hashes."))), isAdmin && emailTemplate && section('Email-Vorlage (Planungs-Benachrichtigung)', /*#__PURE__*/React.createElement("div", {
+  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien."))), isAdmin && emailTemplate && section('Email-Vorlage (Planungs-Benachrichtigung)', /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"

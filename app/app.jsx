@@ -166,6 +166,10 @@ function App() {
         return ass.reference ? `${label} „${ass.reference}"` : label;
     };
 
+    // Ref so loginUser can fire a backup without re-creating the callback
+    // each time runBackup's deps change.
+    const runBackupRef = useRef(null);
+
     const loginUser = useCallback((user) => {
         const session = { id: user.id, name: user.name, role: user.role };
         try { sessionStorage.setItem('plannerSession', JSON.stringify(session)); } catch(e) {}
@@ -177,6 +181,19 @@ function App() {
         if (prefs && typeof prefs.compactView === 'boolean') {
             setCompactView(prefs.compactView);
         }
+        // Best-effort recovery backup. Rate-limited via spListBackups so
+        // multiple rapid logins don't spam the backups folder.
+        (async () => {
+            if (!SP_CONTEXT && !dirHandleRef.current) return;
+            try {
+                if (SP_CONTEXT) {
+                    const files = await spListBackups(SP_CONTEXT).catch(() => []);
+                    const newest = files.reduce((acc, f) => (!acc || f.ts > acc.ts ? f : acc), null);
+                    if (newest && Date.now() - new Date(newest.ts).getTime() < 30 * 60 * 1000) return;
+                }
+                runBackupRef.current?.('login');
+            } catch(e) { /* never block login on backup failure */ }
+        })();
     }, []);
 
     const logoutUser = useCallback(() => {
@@ -633,8 +650,8 @@ function App() {
     // single timestamped JSON when `intervalMinutes` has elapsed since the last
     // successful backup. Triggered manually via the "Jetzt sichern" button too.
     const lastBackupTriedRef = useRef(0);
+    // Returns { ok: bool, error?: string, target?: 'sp' | 'fs' }
     const runBackup = useCallback(async (reason = 'auto') => {
-        if (!SP_CONTEXT) return false;
         const payload = {
             employees, projects, assignments, expenses, costItems,
             empCategories, projCategories,
@@ -649,19 +666,38 @@ function App() {
             schemaVersion: SCHEMA_VERSION
         };
         const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        try {
-            await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, JSON.stringify(payload));
-            // Source of truth is the folder listing; reflect locally too.
-            setLastBackupAt(new Date().toISOString());
-            return true;
-        } catch(e) {
-            console.warn('[AUTO-BACKUP] failed', e);
-            return false;
+        const body = JSON.stringify(payload);
+        // Prefer SharePoint when connected; fall back to local FS if a folder
+        // handle is available. If neither is reachable, surface why.
+        if (SP_CONTEXT) {
+            try {
+                await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, body);
+                setLastBackupAt(new Date().toISOString());
+                return { ok: true, target: 'sp' };
+            } catch(e) {
+                console.error('[BACKUP] SharePoint write failed', e);
+                return { ok: false, error: e?.message || String(e), target: 'sp' };
+            }
         }
+        if (dirHandleRef.current) {
+            try {
+                await fsSaveBackup(dirHandleRef.current, `backup-${ts}.json`, body);
+                setLastBackupAt(new Date().toISOString());
+                return { ok: true, target: 'fs' };
+            } catch(e) {
+                console.error('[BACKUP] FS write failed', e);
+                return { ok: false, error: e?.message || String(e), target: 'fs' };
+            }
+        }
+        return { ok: false, error: 'Kein Backup-Ziel verfügbar (weder SharePoint noch lokaler Ordner verbunden).' };
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories,
         basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
         inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient,
         appUsers, auditLog]);
+
+    // Mirror runBackup into a ref so loginUser (which has no deps) can call
+    // it with the latest closure.
+    useEffect(() => { runBackupRef.current = runBackup; }, [runBackup]);
 
     // Probe the backups folder once on mount (and after a successful backup)
     // so the UI shows an accurate "last backup at" without writing anywhere.
@@ -736,15 +772,22 @@ function App() {
         setExpenses(data.expenses || []);
         if (data.costItems) setCostItems(migrateCostItems(data.costItems));
         else if (data.expenses && data.expenses.length > 0) setCostItems(migrateCostItems(migrateExpensesToCostItems(data.expenses)));
+        // Guard: never overwrite non-empty local arrays with empty remote data.
+        // Protects against transient load races (e.g. partial file fetches)
+        // wiping user-defined categories/tasks/inactive lists.
         if (data.empCategories?.length) setEmpCategories(data.empCategories);
-        // Guard: never overwrite non-empty category arrays with empty remote data
-        // (protects against settings.json load failures wiping user-defined categories)
         setProjCategories(prev => data.projCategories?.length > 0 ? data.projCategories : prev);
         setBasicTasks(prev => data.basicTasks?.length > 0 ? data.basicTasks : prev);
-        if (data.basicTasksMeta !== undefined) setBasicTasksMeta(data.basicTasksMeta);
-        if (data.inactiveBasicTasks) setInactiveBasicTasks(data.inactiveBasicTasks);
+        // Meta is a map – treat "non-empty map" as the truth signal.
+        if (data.basicTasksMeta && Object.keys(data.basicTasksMeta).length > 0) {
+            setBasicTasksMeta(data.basicTasksMeta);
+        }
+        setInactiveBasicTasks(prev => data.inactiveBasicTasks?.length > 0 ? data.inactiveBasicTasks : prev);
         setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
-        if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
+        setInactiveOfftimeTasks(prev => data.inactiveOfftimeTasks?.length > 0 ? data.inactiveOfftimeTasks : prev);
+        setInactiveSupportTasks(prev => data.inactiveSupportTasks?.length > 0 ? data.inactiveSupportTasks : prev);
+        setInactiveTrainingTasks(prev => data.inactiveTrainingTasks?.length > 0 ? data.inactiveTrainingTasks : prev);
+        setCustomTrainingTasks(prev => data.customTrainingTasks?.length > 0 ? data.customTrainingTasks : prev);
         if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
         if (data.autoBackup) {
             const { lastBackupAt: _ignored, ...rest } = data.autoBackup;

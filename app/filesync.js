@@ -78,6 +78,36 @@ async function fsSaveFile(dirHandle, filename, payload) {
     await w.close();
 }
 
+// Write a timestamped backup into planner-data/backups/<filename>. Creates the
+// subfolder on demand. Mirror of spSaveBackup for the File System Access path.
+async function fsSaveBackup(dirHandle, filename, payload) {
+    const dataDir = await fsGetDataDir(dirHandle, true);
+    const backups = await dataDir.getDirectoryHandle('backups', { create: true });
+    const fh = await backups.getFileHandle(filename, { create: true });
+    const w = await fh.createWritable();
+    await w.write(typeof payload === 'string' ? payload : JSON.stringify(payload));
+    await w.close();
+}
+
+// List backup files in planner-data/backups/. Returns [{ name, ts }, ...]
+// sorted oldest-first (matches spListBackups shape).
+async function fsListBackups(dirHandle) {
+    try {
+        const dataDir = await fsGetDataDir(dirHandle, false);
+        if (!dataDir) return [];
+        const backups = await dataDir.getDirectoryHandle('backups', { create: false })
+            .catch(() => null);
+        if (!backups) return [];
+        const out = [];
+        for await (const [name, handle] of backups.entries()) {
+            if (handle.kind !== 'file' || !name.endsWith('.json')) continue;
+            const file = await handle.getFile();
+            out.push({ name, ts: new Date(file.lastModified).toISOString() });
+        }
+        return out;
+    } catch(e) { return []; }
+}
+
 async function fsGetFolderTimestamps(dirHandle) {
     const dataDir = await fsGetDataDir(dirHandle, false);
     if (!dataDir) return {};

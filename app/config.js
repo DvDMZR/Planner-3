@@ -5,7 +5,8 @@ const SCHEMA_VERSION = 4;
 // Names of the global (non-team) data files. Used by buildSplitFiles,
 // the SharePoint/FS loaders, and the polling code's full-reload check.
 const GLOBAL_DATA_FILES = ['employees.json', 'projects.json', 'settings.json',
-                            'categories.json', 'users.json', 'audit.json'];
+                            'categories.json', 'users.json', 'audit.json',
+                            'category-defs.json', 'tasks.json', 'inactive.json'];
 const teamAssignmentsFile = (team) => `assignments-${team}.json`;
 const teamCostItemsFile   = (team) => `cost-items-${team}.json`;
 
@@ -65,6 +66,30 @@ const injectAdmin = (users) => {
 
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
+
+## v0.83 (2026-05-19)
+
+### Datenverlust verhindern
+- \`categories.json\` weiter aufgeteilt in drei Dateien nach Edit-Frequenz:
+  \`category-defs.json\`, \`tasks.json\`, \`inactive.json\`. Parallele
+  Admin-Edits blockieren sich nicht mehr gegenseitig.
+- Sanity-Guard erweitert: jeder Write, der eine zuvor nicht-leere Liste auf
+  leer setzen würde, wird abgebrochen.
+- \`applyRemoteSnapshot\` gehärtet: alle Listen-Properties guarden gegen
+  empty remote; \`inactiveSupportTasks\`/\`inactiveTrainingTasks\` werden
+  jetzt auch synchronisiert.
+
+### Backup
+- „Jetzt sichern" repariert; echter Fehlertext landet im Toast.
+  Funktioniert jetzt auch im FS-Mode (lokaler Ordner).
+- Login-Backup: jeder Login löst ein Recovery-Backup aus (rate-limited
+  auf max. eines pro 30 Minuten).
+
+### Kategorien
+- „Hinzufügen"-Button für Basic Tasks in Verwaltung → Kategorien.
+
+### System & Export
+- Hinweis „Inhalte ohne PIN-Hashes" entfernt.
 
 ## v0.82 (2026-05-19)
 
