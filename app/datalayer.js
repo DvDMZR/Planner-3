@@ -93,10 +93,21 @@ function buildSplitFiles(state) {
     const assGroups = groupByTeam(assignments, employees, teams);
     const ciGroups  = groupByTeam(costItems,   employees, teams);
 
+    // Split into four global files so that high-frequency writes (audit log,
+    // user changes) don't force the rest of settings to be re-written every
+    // time – which used to cause ETag conflicts on settings.json.
+    const autoBackup = state.autoBackup || {};
     const files = {
-        'employees.json': { employees },
-        'projects.json':  { projects },
-        'settings.json':  { empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog }
+        'employees.json':  { employees },
+        'projects.json':   { projects },
+        'settings.json':   { invoiceRecipient, autoBackup },
+        'categories.json': { empCategories, projCategories,
+                             basicTasks, basicTasksMeta, inactiveBasicTasks,
+                             offtimeTasks, inactiveOfftimeTasks,
+                             inactiveSupportTasks, inactiveTrainingTasks,
+                             customTrainingTasks },
+        'users.json':      { appUsers },
+        'audit.json':      { auditLog },
     };
     for (const team of teams) {
         files[teamAssignmentsFile(team)] = { assignments: assGroups[team] || [] };
@@ -106,30 +117,39 @@ function buildSplitFiles(state) {
 }
 
 // Merge split files back into a flat state object (like the old monolithic parsedData).
-function mergeSplitFiles({ employees, projects, settings, assignmentsByTeam, costItemsByTeam }) {
+// `settings` is now the slim settings.json (invoiceRecipient + autoBackup).
+// `categories`, `users`, `audit` are the new sibling files. If they are not
+// yet present (i.e. data from an older schema), `settings` is also probed
+// for the legacy fields so the merge still produces a complete state.
+function mergeSplitFiles({ employees, projects, settings, categories, users, audit,
+                          assignmentsByTeam, costItemsByTeam }) {
     const allAssignments = [];
     const allCostItems = [];
     Object.values(assignmentsByTeam || {}).forEach(arr => { if (arr) allAssignments.push(...arr); });
     Object.values(costItemsByTeam   || {}).forEach(arr => { if (arr) allCostItems.push(...arr); });
+    const cat = categories || settings || {};
+    const usr = users      || settings || {};
+    const aud = audit      || settings || {};
     return {
         employees:        employees || [],
         projects:         projects  || [],
         assignments:      allAssignments,
         costItems:        allCostItems,
         expenses:         [],
-        empCategories:      settings?.empCategories      || DEFAULT_TEAMS,
-        projCategories:     settings?.projCategories     || [],
-        basicTasks:         settings?.basicTasks         || [],
-        basicTasksMeta:     settings?.basicTasksMeta     || {},
-        inactiveBasicTasks:   settings?.inactiveBasicTasks   || [],
-        offtimeTasks:         settings?.offtimeTasks         || [],
-        inactiveOfftimeTasks: settings?.inactiveOfftimeTasks || [],
-        inactiveSupportTasks: settings?.inactiveSupportTasks || [],
-        inactiveTrainingTasks:settings?.inactiveTrainingTasks|| [],
-        customTrainingTasks:  settings?.customTrainingTasks  || [],
+        empCategories:      cat.empCategories      || DEFAULT_TEAMS,
+        projCategories:     cat.projCategories     || [],
+        basicTasks:         cat.basicTasks         || [],
+        basicTasksMeta:     cat.basicTasksMeta     || {},
+        inactiveBasicTasks:   cat.inactiveBasicTasks   || [],
+        offtimeTasks:         cat.offtimeTasks         || [],
+        inactiveOfftimeTasks: cat.inactiveOfftimeTasks || [],
+        inactiveSupportTasks: cat.inactiveSupportTasks || [],
+        inactiveTrainingTasks:cat.inactiveTrainingTasks|| [],
+        customTrainingTasks:  cat.customTrainingTasks  || [],
         invoiceRecipient:     settings?.invoiceRecipient     || '',
-        appUsers:             settings?.appUsers             || [],
-        auditLog:             settings?.auditLog             || []
+        autoBackup:           settings?.autoBackup           || null,
+        appUsers:             usr.appUsers             || [],
+        auditLog:             aud.auditLog             || []
     };
 }
 
@@ -139,6 +159,15 @@ async function migrateSpToTeamSplit(ctx) {
     const meta = await spLoadFile(ctx, 'meta.json').catch(() => null);
     if (meta?.schemaVersion >= SCHEMA_VERSION) return;
     await spEnsureFolder(ctx, PLANNER_DATA_DIR);
+    // If split files already exist, this install is already on >=v3; the
+    // categories/users/audit split (v4) is handled lazily by buildSplitFiles
+    // on the next save. Do NOT re-import the legacy monolith – it would
+    // overwrite live split data with stale backup contents.
+    const existingSettings = await spLoadFile(ctx, 'settings.json').catch(() => null);
+    if (existingSettings) {
+        await spSaveFile(ctx, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+        return;
+    }
     const old = await spLoad(ctx).catch(() => null);
     if (!old) {
         await spSaveFile(ctx, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
@@ -156,6 +185,14 @@ async function migrateSpToTeamSplit(ctx) {
 async function migrateFsToTeamSplit(dirHandle) {
     const metaResult = await fsLoadFile(dirHandle, 'meta.json').catch(() => null);
     if (metaResult?.data?.schemaVersion >= SCHEMA_VERSION) return;
+    // Same logic as the SP migration: if split files already exist, just
+    // bump the schema marker. The categories/users/audit split is created
+    // lazily on the next save.
+    const existingSettings = await fsLoadFile(dirHandle, 'settings.json').catch(() => null);
+    if (existingSettings) {
+        await fsSaveFile(dirHandle, 'meta.json', { schemaVersion: SCHEMA_VERSION, migratedAt: new Date().toISOString() });
+        return;
+    }
     const oldResult = await fsLoad(dirHandle).catch(() => null);
     const old = oldResult?.data;
     if (!old) {
@@ -173,8 +210,18 @@ async function migrateFsToTeamSplit(dirHandle) {
 // parsedData-shaped object. Also returns the folder timestamps for polling.
 async function loadSplitStateSp(ctx) {
     await migrateSpToTeamSplit(ctx);
-    const settingsData = (await spLoadFile(ctx, 'settings.json').catch(() => null)) || {};
-    const teams = settingsData.empCategories || DEFAULT_TEAMS;
+    // Load global files first (categories.json governs the team list).
+    const [settingsData, categoriesData, usersData, auditData] = await Promise.all([
+        spLoadFile(ctx, 'settings.json').catch(() => null),
+        spLoadFile(ctx, 'categories.json').catch(() => null),
+        spLoadFile(ctx, 'users.json').catch(() => null),
+        spLoadFile(ctx, 'audit.json').catch(() => null),
+    ]);
+    // Categories live in categories.json now; legacy settings.json still
+    // carries empCategories for un-migrated installs (fallback).
+    const teams = (categoriesData?.empCategories)
+               || (settingsData?.empCategories)
+               || DEFAULT_TEAMS;
 
     const [empFile, projFile, ...teamFiles] = await Promise.all([
         spLoadFile(ctx, 'employees.json').catch(() => null),
@@ -192,9 +239,12 @@ async function loadSplitStateSp(ctx) {
         costItemsByTeam[t]   = teamFiles[i * 2 + 1]?.costItems || [];
     });
     const state = mergeSplitFiles({
-        employees: empFile?.employees,
-        projects:  projFile?.projects,
-        settings:  settingsData,
+        employees:  empFile?.employees,
+        projects:   projFile?.projects,
+        settings:   settingsData   || {},
+        categories: categoriesData || null,
+        users:      usersData      || null,
+        audit:      auditData      || null,
         assignmentsByTeam,
         costItemsByTeam
     });
@@ -207,9 +257,17 @@ async function loadSplitStateSp(ctx) {
 
 async function loadSplitStateFs(dirHandle) {
     await migrateFsToTeamSplit(dirHandle);
-    const settingsResult = await fsLoadFile(dirHandle, 'settings.json').catch(() => null);
-    const settings = settingsResult?.data || {};
-    const teams = settings.empCategories || DEFAULT_TEAMS;
+    const [settingsResult, categoriesResult, usersResult, auditResult] = await Promise.all([
+        fsLoadFile(dirHandle, 'settings.json').catch(() => null),
+        fsLoadFile(dirHandle, 'categories.json').catch(() => null),
+        fsLoadFile(dirHandle, 'users.json').catch(() => null),
+        fsLoadFile(dirHandle, 'audit.json').catch(() => null),
+    ]);
+    const settings   = settingsResult?.data   || {};
+    const categories = categoriesResult?.data || null;
+    const users      = usersResult?.data      || null;
+    const audit      = auditResult?.data      || null;
+    const teams = (categories?.empCategories) || settings.empCategories || DEFAULT_TEAMS;
 
     const [empResult, projResult, ...teamResults] = await Promise.all([
         fsLoadFile(dirHandle, 'employees.json').catch(() => null),
@@ -229,7 +287,7 @@ async function loadSplitStateFs(dirHandle) {
     const state = mergeSplitFiles({
         employees: empResult?.data?.employees,
         projects:  projResult?.data?.projects,
-        settings,
+        settings, categories, users, audit,
         assignmentsByTeam,
         costItemsByTeam
     });
@@ -254,10 +312,36 @@ async function saveSplitState(state, lastSaved, writeFile) {
         }
     });
 
+    // Sanity guards: skip writes that would wipe critical data. A previous
+    // non-empty payload becoming empty is almost always a transient state-load
+    // race, not a deliberate "delete everything". Protects against the
+    // "settings.json plötzlich leer" failure mode.
+    const wouldWipe = (filename, payload) => {
+        const prev = lastSaved[filename];
+        if (!prev) return false; // never saved before – fine
+        try {
+            const prevObj = JSON.parse(prev);
+            if (filename === 'users.json') {
+                return (prevObj.appUsers?.length > 0) && !(payload.appUsers?.length > 0);
+            }
+            if (filename === 'categories.json') {
+                return (prevObj.empCategories?.length > 0) && !(payload.empCategories?.length > 0);
+            }
+            if (filename === 'employees.json') {
+                return (prevObj.employees?.length > 0) && !(payload.employees?.length > 0);
+            }
+        } catch(e) { /* corrupt prev – allow write */ }
+        return false;
+    };
+
     let wroteAny = false;
     for (const [filename, payload] of Object.entries(files)) {
         const serialised = JSON.stringify(payload);
         if (lastSaved[filename] === serialised) continue;
+        if (wouldWipe(filename, payload)) {
+            console.warn(`[saveSplitState] aborted potentially destructive write to ${filename} (would wipe data)`);
+            continue;
+        }
         await writeFile(filename, serialised);
         lastSaved[filename] = serialised;
         wroteAny = true;

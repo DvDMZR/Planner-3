@@ -1,7 +1,11 @@
 // ─── TEAM-SPLIT FILE LAYOUT ───────────────────────────────────────────────────
 const DEFAULT_TEAMS = ['AS', 'CMS', 'CSS', 'HM', 'I&C', 'Other'];
 const PLANNER_DATA_DIR = 'planner-data';
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
+// Names of the global (non-team) data files. Used by buildSplitFiles,
+// the SharePoint/FS loaders, and the polling code's full-reload check.
+const GLOBAL_DATA_FILES = ['employees.json', 'projects.json', 'settings.json',
+                            'categories.json', 'users.json', 'audit.json'];
 const teamAssignmentsFile = (team) => `assignments-${team}.json`;
 const teamCostItemsFile   = (team) => `cost-items-${team}.json`;
 

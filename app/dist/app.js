@@ -142,6 +142,13 @@ function App() {
     _needsSeed: true
   }]);
   const [auditLog, setAuditLog] = useState([]);
+  // Auto-backup config (persisted in settings.json). Default: every 60 min,
+  // enabled. Admins can change interval/enable via Verwaltung → Benutzer.
+  const [autoBackup, setAutoBackup] = useState({
+    enabled: true,
+    intervalMinutes: 60,
+    lastBackupAt: null
+  });
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem('plannerSession'));
@@ -433,6 +440,10 @@ function App() {
         if (parsedData.inactiveTrainingTasks) setInactiveTrainingTasks(parsedData.inactiveTrainingTasks);
         if (parsedData.customTrainingTasks) setCustomTrainingTasks(parsedData.customTrainingTasks);
         if (parsedData.invoiceRecipient) setInvoiceRecipient(parsedData.invoiceRecipient);
+        if (parsedData.autoBackup) setAutoBackup(prev => ({
+          ...prev,
+          ...parsedData.autoBackup
+        }));
         // Migrate plaintext PINs to hashes and seed admin if missing.
         // Async; result triggers a re-render and the normal save cycle
         // will persist the hashed records.
@@ -641,7 +652,8 @@ function App() {
       customTrainingTasks,
       invoiceRecipient,
       appUsers,
-      auditLog
+      auditLog,
+      autoBackup
     };
     if (localSaveTimer.current) clearTimeout(localSaveTimer.current);
     localSaveTimer.current = setTimeout(() => {
@@ -738,7 +750,73 @@ function App() {
         }
       }, 1500);
     }
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
+
+  // ── AUTO-BACKUP (periodic snapshot of all data to planner-data/backups/) ──
+  // Runs only when SharePoint is connected. One check per minute; writes a
+  // single timestamped JSON when `intervalMinutes` has elapsed since the last
+  // successful backup. Triggered manually via the "Jetzt sichern" button too.
+  const lastBackupTriedRef = useRef(0);
+  const runBackup = useCallback(async (reason = 'auto') => {
+    if (!SP_CONTEXT) return false;
+    // Build the same payload as exportData, sans user secrets.
+    const payload = {
+      employees,
+      projects,
+      assignments,
+      expenses,
+      costItems,
+      empCategories,
+      projCategories,
+      basicTasks,
+      basicTasksMeta,
+      inactiveBasicTasks,
+      offtimeTasks,
+      inactiveOfftimeTasks,
+      inactiveSupportTasks,
+      inactiveTrainingTasks,
+      customTrainingTasks,
+      invoiceRecipient,
+      appUsers: stripUserSecrets(appUsers),
+      auditLog,
+      backupReason: reason,
+      backupAt: new Date().toISOString(),
+      schemaVersion: SCHEMA_VERSION
+    };
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    try {
+      await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, JSON.stringify(payload));
+      setAutoBackup(prev => ({
+        ...prev,
+        lastBackupAt: new Date().toISOString()
+      }));
+      return true;
+    } catch (e) {
+      console.warn('[AUTO-BACKUP] failed', e);
+      return false;
+    }
   }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
+  useEffect(() => {
+    if (!SP_CONTEXT) return;
+    if (!autoBackup?.enabled) return;
+    const intervalMs = Math.max(5, autoBackup.intervalMinutes || 60) * 60 * 1000;
+    const tick = () => {
+      // Avoid hammering on tab focus; require a real elapsed interval.
+      const now = Date.now();
+      const last = autoBackup.lastBackupAt ? new Date(autoBackup.lastBackupAt).getTime() : 0;
+      if (now - last < intervalMs) return;
+      if (now - lastBackupTriedRef.current < 60 * 1000) return; // anti-flap
+      lastBackupTriedRef.current = now;
+      runBackup('auto');
+    };
+    // Initial check shortly after mount, then every minute.
+    const t1 = setTimeout(tick, 30 * 1000);
+    const t2 = setInterval(tick, 60 * 1000);
+    return () => {
+      clearTimeout(t1);
+      clearInterval(t2);
+    };
+  }, [autoBackup, runBackup]);
 
   // Keep latestStateRef current so the beforeunload flush always sees the
   // latest data without re-registering the event listener on every change.
@@ -761,9 +839,10 @@ function App() {
       customTrainingTasks,
       invoiceRecipient,
       appUsers,
-      auditLog
+      auditLog,
+      autoBackup
     };
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup]);
 
   // Flush pending local save before the page unloads so a fast tab close
   // doesn't drop the most recent edits.
@@ -798,6 +877,10 @@ function App() {
     setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
     if (data.customTrainingTasks) setCustomTrainingTasks(data.customTrainingTasks);
     if (data.invoiceRecipient !== undefined) setInvoiceRecipient(data.invoiceRecipient);
+    if (data.autoBackup) setAutoBackup(prev => ({
+      ...prev,
+      ...data.autoBackup
+    }));
     (async () => {
       const withAdmin = await ensureAdmin(data.appUsers || []);
       const {
@@ -855,7 +938,7 @@ function App() {
             return;
           }
           pendingReloadRef.current = false;
-          const needsFullReload = changedFiles.some(f => f === 'employees.json' || f === 'projects.json' || f === 'settings.json');
+          const needsFullReload = changedFiles.some(f => GLOBAL_DATA_FILES.includes(f));
 
           // A changed team file referring to an unknown team can happen when
           // an employee's team was renamed mid-air – fall back to full reload.
@@ -2128,7 +2211,8 @@ function App() {
     currentUser,
     appUsers,
     auditLog,
-    isLoginModalOpen
+    isLoginModalOpen,
+    autoBackup
   };
   const h = useMemo(() => ({
     setActiveTab,
@@ -2185,6 +2269,8 @@ function App() {
     setAppUsers,
     setAuditLog,
     setIsLoginModalOpen,
+    setAutoBackup,
+    runBackup,
     showToast,
     dismissToast,
     loginUser,
@@ -2210,7 +2296,7 @@ function App() {
   }), [
   // useState setters are stable – no deps needed for those.
   // Only useCallback refs with real deps need listing:
-  loginUser, logoutUser, getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById, handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries, handleDrop]);
+  loginUser, logoutUser, getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization, buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint, scrollToWeekById, handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries, handleDrop, runBackup]);
   return /*#__PURE__*/React.createElement("div", {
     className: "flex h-screen w-full font-sans text-slate-800 bg-white overflow-hidden"
   }, /*#__PURE__*/React.createElement(SidebarView, {

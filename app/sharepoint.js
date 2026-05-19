@@ -272,6 +272,40 @@ async function spSaveFile(ctx, filename, data, ifMatchEtag = null) {
     }
 }
 
+// Save a file into the planner-data/backups subfolder. Creates the subfolder
+// on demand. Backups are write-only from the app's perspective – the polling
+// code ignores files outside the top-level folder list.
+async function spSaveBackup(ctx, filename, data) {
+    const digest = await spGetDigest(ctx.siteUrl);
+    const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR + '/backups';
+    // Best-effort folder creation (ignore "already exists" errors).
+    try {
+        await spFetch(
+            `${ctx.siteUrl}/_api/web/folders/add('${SP_ENC(folder)}')`,
+            { method: 'POST', headers: {
+                'Accept': 'application/json;odata=verbose',
+                'X-RequestDigest': digest,
+                'Content-Type': 'application/json;odata=verbose'
+            } }
+        );
+    } catch(e) { if (e instanceof SpAuthError) throw e; }
+
+    const body = typeof data === 'string' ? data : JSON.stringify(data);
+    const r = await spFetch(
+        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json;odata=verbose',
+                'X-RequestDigest': digest,
+                'Content-Type': 'application/octet-stream',
+            },
+            body,
+        }
+    );
+    if (!r.ok) throw new Error('spSaveBackup ' + filename + ' ' + r.status);
+}
+
 // Fetch metadata (timestamp + ETag) for all files in the planner-data folder
 // in a SINGLE request.  Returns { [filename]: { ts, etag } }.
 // ETags are used for optimistic concurrency (If-Match on conditional writes).
