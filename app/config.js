@@ -67,6 +67,15 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.85 (2026-05-19)
+
+### Audit-Log (Verlauf)
+- Append-Merge: bei paralleler Bearbeitung gehen Audit-Einträge nicht
+  mehr verloren – lokales und Remote-Log werden per Eintrags-ID vereinigt,
+  nach Timestamp sortiert und auf 500 gekürzt.
+- Wipe-Schutz für \`audit.json\`: Schrumpfen auf 0 Einträge wird als
+  Korruption blockiert.
+
 ## v0.84 (2026-05-19)
 
 ### Auslastung

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.85 (2026-05-19)
+
+### Audit-Log (Verlauf)
+- **Append-Merge bei Sync**: wenn ein zweiter Client gleichzeitig einen
+  Audit-Eintrag schreibt, geht der eigene Eintrag nicht mehr verloren.
+  Beim Übernehmen einer Remote-Version wird das lokale Log mit dem
+  Remote-Log per Eintrags-ID vereinigt, nach Timestamp sortiert und auf
+  500 Einträge gekürzt. Beide Clients konvergieren auf die volle Liste.
+- Wipe-Schutz: ein Schrumpfen von `audit.json` auf 0 Einträge wird jetzt
+  als Korruption gewertet und der Write abgebrochen.
+
 ## v0.84 (2026-05-19)
 
 ### Auslastung

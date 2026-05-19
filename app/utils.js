@@ -275,3 +275,22 @@ const migrateUsersList = async (users) => {
 // Strip pin/pinHash/pinSalt for safe export / display.
 const stripUserSecrets = (users) =>
     (users || []).map(({ pin, pinHash, pinSalt, ...rest }) => rest);
+
+// Audit log is conceptually append-only across all clients. Replacing local
+// with remote (the default sync behaviour) drops entries that another client
+// added in the same save window. mergeAuditLogs unions two lists by id,
+// sorts newest-first, and trims to the 500-entry cap.
+const mergeAuditLogs = (a, b) => {
+    const seen = new Set();
+    const out = [];
+    for (const src of [a || [], b || []]) {
+        for (const entry of src) {
+            if (!entry || !entry.id) continue;
+            if (seen.has(entry.id)) continue;
+            seen.add(entry.id);
+            out.push(entry);
+        }
+    }
+    out.sort((x, y) => (y.timestamp || '').localeCompare(x.timestamp || ''));
+    return out.slice(0, 500);
+};

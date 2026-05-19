@@ -1038,7 +1038,10 @@ function App() {
       } = await migrateUsersList(withAdmin);
       setAppUsers(hashed);
     })();
-    if (data.auditLog) setAuditLog(data.auditLog);
+    // Audit log is append-only across clients – never replace local
+    // pending entries with a remote snapshot that doesn't have them.
+    // Union by id, newest first, capped at 500.
+    setAuditLog(prev => mergeAuditLogs(prev, data.auditLog || []));
     // Also re-seed the snapshots so the save cascade triggered by these
     // setStates doesn't rewrite identical data back to the server.
     try {

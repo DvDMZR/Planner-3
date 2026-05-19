@@ -360,6 +360,8 @@ async function saveSplitState(state, lastSaved, writeFile) {
         'tasks.json':         ['basicTasks', 'basicTasksMeta', 'offtimeTasks', 'customTrainingTasks'],
         'inactive.json':      ['inactiveBasicTasks', 'inactiveOfftimeTasks',
                                'inactiveSupportTasks', 'inactiveTrainingTasks'],
+        // Audit log is append-only; a shrink to empty indicates corruption.
+        'audit.json':         ['auditLog'],
         // legacy categories.json still possible during migration window
         'categories.json':    ['empCategories', 'basicTasks', 'offtimeTasks'],
     };
