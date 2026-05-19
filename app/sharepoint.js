@@ -272,6 +272,26 @@ async function spSaveFile(ctx, filename, data, ifMatchEtag = null) {
     }
 }
 
+// List files in the planner-data/backups subfolder. Used to determine when
+// the last auto-backup ran — keeps that timestamp OUT of settings.json so
+// backup writes don't conflict with concurrent settings edits.
+async function spListBackups(ctx) {
+    const folder = ctx.folderPath + '/' + PLANNER_DATA_DIR + '/backups';
+    try {
+        const r = await spFetch(
+            `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files?$select=Name,TimeLastModified`,
+            { headers: { 'Accept': 'application/json;odata=verbose' } }
+        );
+        if (r.status === 404) return [];
+        if (!r.ok) return [];
+        const json = await r.json();
+        return (json.d?.results || []).map(f => ({ name: f.Name, ts: f.TimeLastModified }));
+    } catch(e) {
+        if (e instanceof SpAuthError) throw e;
+        return [];
+    }
+}
+
 // Save a file into the planner-data/backups subfolder. Creates the subfolder
 // on demand. Backups are write-only from the app's perspective – the polling
 // code ignores files outside the top-level folder list.

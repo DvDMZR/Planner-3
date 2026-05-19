@@ -43,7 +43,7 @@ const _SidebarBase = ({ s, h }) => {
     const isAdmin = currentUser?.role === 'admin';
 
     // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
-    const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+    const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit'];
     const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
         try {
             const stored = localStorage.getItem('sidebar.verwaltungOpen');
@@ -84,7 +84,7 @@ const _SidebarBase = ({ s, h }) => {
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
-                            <span className="text-xs font-medium">Einsatzplanung v0.81</span>
+                            <span className="text-xs font-medium">Einsatzplanung v0.82</span>
                             <span className="changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
                         </button>
                     </div>
@@ -127,7 +127,6 @@ const _SidebarBase = ({ s, h }) => {
                         {tabBtn('setup_cats', 'Kategorien',     <IconTag size={18}/>)}
                         {tabBtn('data',       'System & Export',<IconSettings size={18}/>)}
                         {tabBtn('audit',      'Verlauf',        <IconHistory size={18}/>)}
-                        {tabBtn('setup_users', 'Benutzer', <IconShield size={18}/>)}
                     </>
                 ) : (
                     <>

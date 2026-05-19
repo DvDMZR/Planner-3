@@ -147,7 +147,7 @@ const _SidebarBase = ({
   const isAdmin = currentUser?.role === 'admin';
 
   // Verwaltung group: collapsible, persisted, auto-expand when navigating to a Verwaltung tab
-  const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit', 'setup_users'];
+  const VERWALTUNG_TABS = ['setup_emp', 'setup_proj', 'setup_cats', 'data', 'audit'];
   const [verwaltungOpen, setVerwaltungOpen] = React.useState(() => {
     try {
       const stored = localStorage.getItem('sidebar.verwaltungOpen');
@@ -199,7 +199,7 @@ const _SidebarBase = ({
     className: "flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-medium"
-  }, "Einsatzplanung v0.81"), /*#__PURE__*/React.createElement("span", {
+  }, "Einsatzplanung v0.82"), /*#__PURE__*/React.createElement("span", {
     className: "changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconHistory, {
     size: 12
@@ -274,8 +274,6 @@ const _SidebarBase = ({
   })), tabBtn('data', 'System & Export', /*#__PURE__*/React.createElement(IconSettings, {
     size: 18
   })), tabBtn('audit', 'Verlauf', /*#__PURE__*/React.createElement(IconHistory, {
-    size: 18
-  })), tabBtn('setup_users', 'Benutzer', /*#__PURE__*/React.createElement(IconShield, {
     size: 18
   }))) : /*#__PURE__*/React.createElement(React.Fragment, null, lockedTabBtn('Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
     size: 18

@@ -18,6 +18,7 @@ const AssignmentModal = ({
     getEmpWeeklyHours,
     setBasicTasks,
     setBasicTasksMeta,
+    emailTemplate,
     onClose,
     onSave,
     onDelete,
@@ -113,26 +114,26 @@ const AssignmentModal = ({
         const refLabel = refLabelFor(data);
         const typeLabel = typeLabelFor(data);
         const weekRange = lastWeek && lastWeek !== data.week ? `${data.week} – ${lastWeek}` : data.week;
-        const subject = `New assignment: ${refLabel} (${weekRange})`;
-        const lines = [
-            `Hi ${firstName},`,
-            ``,
-            `You have been scheduled for the following work:`,
-            ``,
-            `  ${typeLabel}: ${refLabel}`,
-            `  Calendar week: ${weekRange}`,
-        ];
-        if (data.comment) lines.push(`  Note: ${data.comment}`);
-        if (attachmentNote) {
-            lines.push(``, attachmentNote);
-        }
-        lines.push(
-            ``,
-            `Please review the entry in the planner and let me know if there are any conflicts or questions.`,
-            ``,
-            `Best regards`,
-        );
-        return { subject, body: lines.join('\n') };
+        const tpl = emailTemplate || DEFAULT_EMAIL_TEMPLATE;
+        // Replace {firstName}, {refLabel}, {typeLabel}, {weekRange}, {comment},
+        // {attachmentNote}. Empty optional blocks collapse cleanly.
+        const vars = {
+            firstName,
+            refLabel,
+            typeLabel,
+            weekRange,
+            comment: data.comment || '',
+            attachmentNote: attachmentNote || '',
+        };
+        const fillVars = (text) => text.replace(/\{(firstName|refLabel|typeLabel|weekRange|comment|attachmentNote)\}/g,
+            (_, k) => vars[k] || '');
+        // {{#comment}}…{{/comment}} blocks render only when the var is non-empty.
+        const fillBlocks = (text) => text
+            .replace(/\{\{#comment\}\}([\s\S]*?)\{\{\/comment\}\}/g, (_, body) => vars.comment ? fillVars(body) : '')
+            .replace(/\{\{#attachmentNote\}\}([\s\S]*?)\{\{\/attachmentNote\}\}/g, (_, body) => vars.attachmentNote ? fillVars(body) : '');
+        const subject = fillVars(tpl.subject || DEFAULT_EMAIL_TEMPLATE.subject);
+        const body = fillVars(fillBlocks(tpl.body || DEFAULT_EMAIL_TEMPLATE.body));
+        return { subject, body };
     };
 
     // Build a minimal RFC-5545 calendar invite. METHOD:REQUEST + ATTENDEE makes

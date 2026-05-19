@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.82 (2026-05-19)
+
+### Kategorien
+- Neue Sektion **Other Tasks** in Verwaltung → Kategorien. Trennt user-
+  erstellte Tasks (mit Meta, in Planung als „Other" sichtbar) sauber von
+  den hardcoded **Basic Tasks** (z. B. Office). Beide Sektionen mit
+  eigenem Hinzufügen/Inaktiv/Permanent-Toggle.
+
+### Sicherheit
+- **PIN-Hashing** (SHA-256 + per-User-Salt, Web Crypto). Bestehende
+  Plaintext-PINs werden beim nächsten Login transparent migriert.
+- **Admin nicht mehr hardcoded**: lebt jetzt in `users.json` mit gehashtem
+  PIN. Default-PIN `1397` wird einmalig beim ersten Start gesetzt und kann
+  im UI geändert werden.
+
+### Synchronisation
+- `settings.json` aufgeteilt in vier Dateien: `settings.json`,
+  `categories.json`, `users.json`, `audit.json`. Hochfrequente Audit-Writes
+  blockieren keine Kategorien-Edits mehr → drastisch weniger ETag-Konflikte.
+- **Sanity-Guard** in `saveSplitState`: ein Save, der zuvor nicht-leere
+  Listen (Kategorien/User/Mitarbeiter) auf leer setzen würde, wird
+  abgebrochen. Schützt vor dem „settings.json plötzlich leer"-Fall.
+
+### Backup
+- **Auto-Backup** nach `planner-data/backups/` mit zeitgestempelten JSONs
+  (vollständiger Snapshot, ohne PIN-Hashes). Intervall in Verwaltung →
+  Benutzer einstellbar (Default 60 Min), manueller „Jetzt sichern"-Button.
+- Der Backup-Status (letzter Lauf) wird aus dem Folder-Listing gelesen,
+  **nicht** in `settings.json` geschrieben → kein zusätzlicher
+  Konflikt-Vektor.
+
+### Export
+- Backup-Export enthält jetzt **alle** persistierten Felder (inkl.
+  `inactiveOfftime/Support/TrainingTasks`, `appUsers`, `auditLog`). PIN-
+  Hashes werden konsequent gestrippt.
+
+### Personalisierung
+- **Per-User-Einstellungen**: Kompaktansicht wird pro Nutzer gespeichert
+  (`user.preferences.compactView`) und beim Login wiederhergestellt.
+
+### Planungs-Chips
+- Kommentar-Symbol (Sprechblase) wird jetzt **auch im Kompaktmodus** und
+  in der **Projekte-Ansicht** (Timeline) angezeigt; Sichtbarkeit erhöht
+  (größeres Icon, höhere Opazität).
+
+### Email-Vorlage
+- Text der Planungs-Benachrichtigungs-Email ist jetzt in Verwaltung →
+  Benutzer (Admin) editierbar. Platzhalter: `{firstName}`, `{refLabel}`,
+  `{typeLabel}`, `{weekRange}`, `{comment}`, `{attachmentNote}`; optionale
+  Blöcke via `{{#comment}}…{{/comment}}`.
+
 ## v0.6.1 (2026-04-15)
 
 ### Bug Fixes

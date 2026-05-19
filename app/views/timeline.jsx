@@ -342,6 +342,7 @@ const TimelineView = ({ s, h }) => {
                                                                                 onClick={(e) => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
                                                                                 className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`}>
                                                                                 <span className="truncate font-medium">{emp?.name || 'Unbekannt'}</span>
+                                                                                {a.comment && <IconMessageSquare size={10} className="flex-shrink-0 ml-1 opacity-70"/>}
                                                                                 <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                                                                     <span className="opacity-90 font-medium">{chipHours}h</span>
                                                                                     {!isDeleteMode && (
