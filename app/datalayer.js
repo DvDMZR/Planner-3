@@ -356,6 +356,7 @@ async function saveSplitState(state, lastSaved, writeFile) {
     const GUARDED = {
         'users.json':         ['appUsers'],
         'employees.json':     ['employees'],
+        'projects.json':      ['projects'],
         'category-defs.json': ['empCategories', 'projCategories'],
         'tasks.json':         ['basicTasks', 'basicTasksMeta', 'offtimeTasks', 'customTrainingTasks'],
         'inactive.json':      ['inactiveBasicTasks', 'inactiveOfftimeTasks',

@@ -67,6 +67,18 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.86 (2026-05-19)
+
+### Synchronisations- und Datensicherheits-Audit
+- \`projects.json\` jetzt im Wipe-Schutz; ein non-empty→empty Write wird
+  abgebrochen.
+- \`basicTasksMeta\`-Guard korrigiert: leere Map ist legitim (nur
+  hardcoded Basic-Tasks) und propagiert wieder.
+- PIN-Migrations-Mutex: parallele \`applyRemoteSnapshot\`-Aufrufe können
+  Hash-Migration nicht mehr in sich selbst verschachteln.
+- Login-Backup wartet auf Abschluss des initialen Loads, kein halb-leerer
+  Snapshot mehr im Backup-Ordner.
+
 ## v0.85 (2026-05-19)
 
 ### Audit-Log (Verlauf)

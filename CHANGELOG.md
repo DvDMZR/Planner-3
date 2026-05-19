@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.86 (2026-05-19)
+
+### Synchronisations- und Datensicherheits-Audit
+- **`projects.json` jetzt im Wipe-Schutz**: ein Save, der die Projekt-Liste
+  von nicht-leer auf leer setzen würde, wird abgebrochen (vorher nur
+  Employees/Users/Kategorien geschützt).
+- **`basicTasksMeta`-Guard korrigiert**: eine leere Meta-Map ist legitim
+  (alle Basic-Tasks hardcoded, keine Other-Tasks). Wird jetzt nur noch
+  ignoriert, wenn das Feld komplett fehlt; ein bewusstes Leeren propagiert.
+- **PIN-Migrations-Mutex**: `migrateAndSetUsers` serialisiert das Hashen,
+  zwei parallele `applyRemoteSnapshot`/Polling-Aufrufe rennen nicht mehr
+  in überlappende `setAppUsers`-Updates. Defensives Filtern von
+  `_needsSeed`-Resten beim Speichern.
+- **Login-Backup gated**: das beim Login ausgelöste Recovery-Backup
+  wartet jetzt auf den Abschluss des initialen Loads, sodass keine
+  halb-initialisierten Snapshots in den Backup-Ordner geschrieben werden.
+
 ## v0.85 (2026-05-19)
 
 ### Audit-Log (Verlauf)

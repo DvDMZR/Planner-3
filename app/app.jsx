@@ -169,6 +169,26 @@ function App() {
     // Ref so loginUser can fire a backup without re-creating the callback
     // each time runBackup's deps change.
     const runBackupRef = useRef(null);
+    // Flipped true once the initial loadData() finishes. loginUser uses this
+    // to avoid backing up a half-initialised state when the user logs in
+    // during a slow SP load.
+    const initialLoadDoneRef = useRef(false);
+    // Serialises PIN-migration so two near-simultaneous applyRemoteSnapshot
+    // calls (or initial-load + polling) can't race to setAppUsers with
+    // overlapping migration results.
+    const userMigrationInFlightRef = useRef(false);
+    const migrateAndSetUsers = useCallback(async (rawUsers) => {
+        if (userMigrationInFlightRef.current) return;
+        userMigrationInFlightRef.current = true;
+        try {
+            const withAdmin = await ensureAdmin(rawUsers || []);
+            const { users: hashed } = await migrateUsersList(withAdmin);
+            // Defensive: strip any _needsSeed placeholders that survived.
+            setAppUsers(hashed.filter(u => !u._needsSeed));
+        } finally {
+            userMigrationInFlightRef.current = false;
+        }
+    }, []);
 
     const loginUser = useCallback((user) => {
         const session = { id: user.id, name: user.name, role: user.role };
@@ -181,9 +201,12 @@ function App() {
         if (prefs && typeof prefs.compactView === 'boolean') {
             setCompactView(prefs.compactView);
         }
-        // Best-effort recovery backup. Rate-limited via spListBackups so
-        // multiple rapid logins don't spam the backups folder.
+        // Best-effort recovery backup. Skipped when the initial load hasn't
+        // populated state yet – we'd otherwise persist a near-empty snapshot.
+        // Rate-limited via spListBackups so rapid logins don't spam the
+        // backups folder.
         (async () => {
+            if (!initialLoadDoneRef.current) return;
             if (!SP_CONTEXT && !dirHandleRef.current) return;
             try {
                 if (SP_CONTEXT) {
@@ -386,11 +409,7 @@ function App() {
                 // Migrate plaintext PINs to hashes and seed admin if missing.
                 // Async; result triggers a re-render and the normal save cycle
                 // will persist the hashed records.
-                (async () => {
-                    const withAdmin = await ensureAdmin(parsedData.appUsers || []);
-                    const { users: hashed } = await migrateUsersList(withAdmin);
-                    setAppUsers(hashed);
-                })();
+                migrateAndSetUsers(parsedData.appUsers);
                 if (parsedData.auditLog) setAuditLog(parsedData.auditLog);
 
                 // Seed diff snapshots so the first save cycle is a no-op for
@@ -406,10 +425,7 @@ function App() {
                 setAssignments(init.assignments);
                 setExpenses(init.expenses);
                 // Fresh install: seed the admin with the default hashed PIN.
-                (async () => {
-                    const withAdmin = await ensureAdmin([]);
-                    setAppUsers(withAdmin);
-                })();
+                migrateAndSetUsers([]);
             }
 
             const w = [];
@@ -435,6 +451,7 @@ function App() {
                 });
             }
             setWeeks(w);
+            initialLoadDoneRef.current = true;
             setEmpForm(prev => ({...prev, category: currentEmpCats[0] || ''}));
             setProjForm(prev => ({...prev, startWeek: w[0].id, ibnWeek: w[10]?.id || w[w.length-1].id}));
         };
@@ -778,10 +795,10 @@ function App() {
         if (data.empCategories?.length) setEmpCategories(data.empCategories);
         setProjCategories(prev => data.projCategories?.length > 0 ? data.projCategories : prev);
         setBasicTasks(prev => data.basicTasks?.length > 0 ? data.basicTasks : prev);
-        // Meta is a map – treat "non-empty map" as the truth signal.
-        if (data.basicTasksMeta && Object.keys(data.basicTasksMeta).length > 0) {
-            setBasicTasksMeta(data.basicTasksMeta);
-        }
+        // Meta is a map that can legitimately be empty (all Basic Tasks
+        // hardcoded, no user-created Other Tasks). Only skip when the remote
+        // didn't even include the field – `undefined` means "no signal".
+        if (data.basicTasksMeta !== undefined) setBasicTasksMeta(data.basicTasksMeta);
         setInactiveBasicTasks(prev => data.inactiveBasicTasks?.length > 0 ? data.inactiveBasicTasks : prev);
         setOfftimeTasks(prev => data.offtimeTasks?.length > 0 ? data.offtimeTasks : prev);
         setInactiveOfftimeTasks(prev => data.inactiveOfftimeTasks?.length > 0 ? data.inactiveOfftimeTasks : prev);
@@ -794,11 +811,7 @@ function App() {
             setAutoBackup(prev => ({ ...prev, ...rest }));
         }
         if (data.emailTemplate) setEmailTemplate(prev => ({ ...prev, ...data.emailTemplate }));
-        (async () => {
-            const withAdmin = await ensureAdmin(data.appUsers || []);
-            const { users: hashed } = await migrateUsersList(withAdmin);
-            setAppUsers(hashed);
-        })();
+        migrateAndSetUsers(data.appUsers);
         // Audit log is append-only across clients – never replace local
         // pending entries with a remote snapshot that doesn't have them.
         // Union by id, newest first, capped at 500.
