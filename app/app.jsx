@@ -854,23 +854,6 @@ function App() {
         };
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
 
-    // Cross-tab sync: when another tab on the same origin writes the local
-    // snapshot, react to it instead of letting both tabs clobber each other.
-    // The browser only fires this event for OTHER tabs, so we never echo our
-    // own writes.
-    useEffect(() => {
-        const onStorage = (e) => {
-            if (e.key !== 'teamMasterProData') return;
-            if (!e.newValue) return;
-            try {
-                const data = JSON.parse(e.newValue);
-                applyRemoteSnapshot(data, { notify: true });
-            } catch (err) { /* malformed write from another tab – ignore */ }
-        };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, [applyRemoteSnapshot]);
-
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
     useEffect(() => {
@@ -932,6 +915,23 @@ function App() {
             setTimeout(() => { if (syncStatusRef.current === 'updated') setSyncStatus('idle'); }, 2000);
         }
     }, []);
+
+    // Cross-tab sync: when another tab on the same origin writes the local
+    // snapshot, react to it instead of letting both tabs clobber each other.
+    // The browser only fires this event for OTHER tabs, so we never echo our
+    // own writes.
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (e.key !== 'teamMasterProData') return;
+            if (!e.newValue) return;
+            try {
+                const data = JSON.parse(e.newValue);
+                applyRemoteSnapshot(data, { notify: true });
+            } catch (err) { /* malformed write from another tab – ignore */ }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [applyRemoteSnapshot]);
 
     // SharePoint polling – pick up changes from other users every 5 seconds.
     // One folder-list call returns timestamps+etags for all files; if only team
