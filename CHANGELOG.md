@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.86 (2026-05-19)
+
+### Synchronisations- und Datensicherheits-Audit
+- **`projects.json` jetzt im Wipe-Schutz**: ein Save, der die Projekt-Liste
+  von nicht-leer auf leer setzen würde, wird abgebrochen (vorher nur
+  Employees/Users/Kategorien geschützt).
+- **`basicTasksMeta`-Guard korrigiert**: eine leere Meta-Map ist legitim
+  (alle Basic-Tasks hardcoded, keine Other-Tasks). Wird jetzt nur noch
+  ignoriert, wenn das Feld komplett fehlt; ein bewusstes Leeren propagiert.
+- **PIN-Migrations-Mutex**: `migrateAndSetUsers` serialisiert das Hashen,
+  zwei parallele `applyRemoteSnapshot`/Polling-Aufrufe rennen nicht mehr
+  in überlappende `setAppUsers`-Updates. Defensives Filtern von
+  `_needsSeed`-Resten beim Speichern.
+- **Login-Backup gated**: das beim Login ausgelöste Recovery-Backup
+  wartet jetzt auf den Abschluss des initialen Loads, sodass keine
+  halb-initialisierten Snapshots in den Backup-Ordner geschrieben werden.
+
+## v0.85 (2026-05-19)
+
+### Audit-Log (Verlauf)
+- **Append-Merge bei Sync**: wenn ein zweiter Client gleichzeitig einen
+  Audit-Eintrag schreibt, geht der eigene Eintrag nicht mehr verloren.
+  Beim Übernehmen einer Remote-Version wird das lokale Log mit dem
+  Remote-Log per Eintrags-ID vereinigt, nach Timestamp sortiert und auf
+  500 Einträge gekürzt. Beide Clients konvergieren auf die volle Liste.
+- Wipe-Schutz: ein Schrumpfen von `audit.json` auf 0 Einträge wird jetzt
+  als Korruption gewertet und der Write abgebrochen.
+
 ## v0.84 (2026-05-19)
 
 ### Auslastung

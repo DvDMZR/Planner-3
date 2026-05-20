@@ -132,7 +132,8 @@ const SetupProjView = ({
     importData,
     buildInvoiceData,
     openInvoiceModal,
-    scrollToCurrentWeek
+    scrollToCurrentWeek,
+    requestDeleteProject
   } = h;
   if (selectedProjectDetails) {
     return /*#__PURE__*/React.createElement(ProjectDetailsView, {
@@ -155,9 +156,9 @@ const SetupProjView = ({
     setIsProjFormOpen(true);
   };
   const now = getWeekString(new Date());
-  const byStartWeek = (a, b) => (a.startWeek || '').localeCompare(b.startWeek || '');
-  const activeProjects = projects.filter(p => p.ibnWeek >= now).slice().sort(byStartWeek);
-  const pastProjects = projects.filter(p => p.ibnWeek < now).slice().sort(byStartWeek);
+  const byStartWeek = (a, b) => compareWeekIds(a.startWeek || '', b.startWeek || '');
+  const activeProjects = projects.filter(p => compareWeekIds(p.ibnWeek, now) >= 0).slice().sort(byStartWeek);
+  const pastProjects = projects.filter(p => compareWeekIds(p.ibnWeek, now) < 0).slice().sort(byStartWeek);
   const activeCats = [...new Set(activeProjects.map(p => p.category))];
   const ProjectRow = ({
     p
@@ -197,14 +198,7 @@ const SetupProjView = ({
       onClick: () => handleEditProject(p),
       className: "text-gea-600 text-xs font-medium hover:text-gea-700"
     }, "Bearbeiten"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        const assCount = (assignmentsByProject.get(p.id) || []).length;
-        const msg = assCount > 0 ? `Projekt „${p.name}" wirklich löschen?\n\n${assCount} Einsatz-Planung(en) werden ebenfalls gelöscht.` : `Projekt „${p.name}" wirklich löschen?`;
-        if (window.confirm(msg)) {
-          setProjects(projects.filter(x => x.id !== p.id));
-          setAssignments(assignments.filter(a => a.reference !== p.id));
-        }
-      },
+      onClick: () => requestDeleteProject(p.id),
       className: "text-rose-600 text-xs font-medium hover:text-rose-700"
     }, "L\xF6schen"))));
   };

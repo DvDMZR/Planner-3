@@ -34,7 +34,7 @@ const ProjectDetailsView = ({ s, h }) => {
         toggleCategory, toggleProjCategory, toggleEmpSetup,
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
-        scrollToCurrentWeek } = h;
+        scrollToCurrentWeek, showToast } = h;
         const proj = projectById.get(selectedProjectDetails);
         const projId = proj?.id;
 
@@ -323,6 +323,7 @@ const ProjectDetailsView = ({ s, h }) => {
                         employees={employees}
                         costItems={costItems}
                         setCostItems={setCostItems}
+                        showToast={showToast}
                         onClose={() => { setIsCostItemModalOpen(false); setEditingCostItem(null); }}
                     />
                 )}

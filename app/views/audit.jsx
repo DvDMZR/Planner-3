@@ -2,7 +2,7 @@
 const AuditView = ({ s, h }) => {
     const { useState } = React;
     const { currentUser, auditLog, employees, projects } = s;
-    const { setAssignments, setEmployees, setProjects, setAuditLog } = h;
+    const { setAssignments, setEmployees, setProjects, setCostItems, setAuditLog } = h;
 
     const [filter, setFilter] = useState('all'); // 'all' | '7d' | '24h'
     const [undoConfirm, setUndoConfirm] = useState(null); // id of entry being confirmed
@@ -62,6 +62,36 @@ const AuditView = ({ s, h }) => {
                 if (exists) return prev.map(p => p.id === undoData.prev.id ? undoData.prev : p);
                 return [...prev, undoData.prev];
             });
+        } else if (type === 'restore_project_cascade') {
+            if (!undoData.prev) return;
+            setProjects(prev => prev.some(p => p.id === undoData.prev.id) ? prev : [...prev, undoData.prev]);
+            if (Array.isArray(undoData.assignments) && undoData.assignments.length > 0) {
+                setAssignments(prev => {
+                    const ids = new Set(prev.map(a => a.id));
+                    return [...prev, ...undoData.assignments.filter(a => !ids.has(a.id))];
+                });
+            }
+            if (Array.isArray(undoData.costItems) && undoData.costItems.length > 0 && setCostItems) {
+                setCostItems(prev => {
+                    const ids = new Set(prev.map(c => c.id));
+                    return [...prev, ...undoData.costItems.filter(c => !ids.has(c.id))];
+                });
+            }
+        } else if (type === 'restore_employee_cascade') {
+            if (!undoData.prev) return;
+            setEmployees(prev => prev.some(e => e.id === undoData.prev.id) ? prev : [...prev, undoData.prev]);
+            if (Array.isArray(undoData.assignments) && undoData.assignments.length > 0) {
+                setAssignments(prev => {
+                    const ids = new Set(prev.map(a => a.id));
+                    return [...prev, ...undoData.assignments.filter(a => !ids.has(a.id))];
+                });
+            }
+            if (Array.isArray(undoData.costItems) && undoData.costItems.length > 0 && setCostItems) {
+                setCostItems(prev => {
+                    const ids = new Set(prev.map(c => c.id));
+                    return [...prev, ...undoData.costItems.filter(c => !ids.has(c.id))];
+                });
+            }
         }
 
         // Remove this entry from the log after undo

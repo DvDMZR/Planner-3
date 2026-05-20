@@ -18,7 +18,12 @@ const migrateExpensesToCostItems = (expenses) =>
 // Migrate a costItem from the legacy single-amount/extras shape to the
 // line-items shape used by the redesigned modal.
 const migrateCostItem = (ci) => {
-    if (!ci || Array.isArray(ci.lines)) return ci;
+    if (!ci) return ci;
+    // Already in line-items shape: leave untouched. Without this guard, a
+    // second migration pass would re-emit lines from the legacy fields that
+    // are no longer present, but ANY object that already has a `lines` array
+    // is by definition post-migration.
+    if (Array.isArray(ci.lines)) return ci;
 
     const oldTypeMap = {
         'Reisekosten':    'travel',
@@ -356,10 +361,13 @@ async function saveSplitState(state, lastSaved, writeFile) {
     const GUARDED = {
         'users.json':         ['appUsers'],
         'employees.json':     ['employees'],
+        'projects.json':      ['projects'],
         'category-defs.json': ['empCategories', 'projCategories'],
         'tasks.json':         ['basicTasks', 'basicTasksMeta', 'offtimeTasks', 'customTrainingTasks'],
         'inactive.json':      ['inactiveBasicTasks', 'inactiveOfftimeTasks',
                                'inactiveSupportTasks', 'inactiveTrainingTasks'],
+        // Audit log is append-only; a shrink to empty indicates corruption.
+        'audit.json':         ['auditLog'],
         // legacy categories.json still possible during migration window
         'categories.json':    ['empCategories', 'basicTasks', 'offtimeTasks'],
     };

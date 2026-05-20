@@ -132,7 +132,8 @@ const ProjectDetailsView = ({
     importData,
     buildInvoiceData,
     openInvoiceModal,
-    scrollToCurrentWeek
+    scrollToCurrentWeek,
+    showToast
   } = h;
   const proj = projectById.get(selectedProjectDetails);
   const projId = proj?.id;
@@ -496,6 +497,7 @@ const ProjectDetailsView = ({
     employees: employees,
     costItems: costItems,
     setCostItems: setCostItems,
+    showToast: showToast,
     onClose: () => {
       setIsCostItemModalOpen(false);
       setEditingCostItem(null);
