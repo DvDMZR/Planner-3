@@ -276,6 +276,99 @@ const migrateUsersList = async (users) => {
 const stripUserSecrets = (users) =>
     (users || []).map(({ pin, pinHash, pinSalt, ...rest }) => rest);
 
+// Compare two ISO week ids "YYYY-Www" semantically: lex compare breaks down
+// across 53-week years ("2026-W53" < "2027-W01" only by coincidence; the
+// recurring-series loop in AssignmentModal must walk it numerically).
+// Returns <0 / 0 / >0 like a regular comparator. Falsy/invalid → 0.
+const compareWeekIds = (a, b) => {
+    if (!a || !b) return 0;
+    const ma = /^(\d{4})-W(\d{1,2})$/.exec(a);
+    const mb = /^(\d{4})-W(\d{1,2})$/.exec(b);
+    if (!ma || !mb) return 0;
+    const ya = parseInt(ma[1], 10), wa = parseInt(ma[2], 10);
+    const yb = parseInt(mb[1], 10), wb = parseInt(mb[2], 10);
+    if (ya !== yb) return ya - yb;
+    return wa - wb;
+};
+
+// Restore-from-sessionStorage guard. The raw JSON came from sessionStorage
+// which any user can edit via DevTools, so we never trust the parsed object —
+// only a minimally-correct shape passes. The orphan-check in App ultimately
+// decides whether the referenced user still exists.
+const validateRestoredSession = (raw) => {
+    if (!raw || typeof raw !== 'object') return null;
+    if (typeof raw.id !== 'string' || !raw.id) return null;
+    if (typeof raw.name !== 'string') return null;
+    if (raw.role !== 'admin' && raw.role !== 'active') return null;
+    return { id: raw.id, name: raw.name, role: raw.role };
+};
+
+// Backup-import sanitiser. Backups can carry an `appUsers` array with
+// attacker-controlled pinHash/pinSalt; we DROP appUsers wholesale (the local
+// account store is the source of truth, restoring from a backup must not
+// rewrite it). Unknown top-level keys are stripped so injected fields can't
+// leak into render paths. Per-collection: only objects/arrays of the expected
+// shape survive; everything else falls back to an empty list.
+const ALLOWED_IMPORT_KEYS = new Set([
+    'employees', 'projects', 'assignments', 'costItems', 'expenses',
+    'empCategories', 'projCategories',
+    'basicTasks', 'basicTasksMeta', 'inactiveBasicTasks',
+    'offtimeTasks', 'inactiveOfftimeTasks',
+    'inactiveSupportTasks', 'inactiveTrainingTasks', 'customTrainingTasks',
+    'invoiceRecipient', 'auditLog',
+    'schemaVersion', 'exportedAt', 'backupReason', 'backupAt',
+]);
+const validateImportedState = (parsed) => {
+    if (!parsed || typeof parsed !== 'object') {
+        return { ok: false, reason: 'empty' };
+    }
+    const out = {};
+    const droppedKeys = [];
+    for (const key of Object.keys(parsed)) {
+        if (!ALLOWED_IMPORT_KEYS.has(key)) { droppedKeys.push(key); continue; }
+        out[key] = parsed[key];
+    }
+    // Array fields must be arrays. Reject (drop) when they aren't.
+    const arrayFields = ['employees', 'projects', 'assignments', 'costItems',
+        'expenses', 'empCategories', 'projCategories', 'basicTasks',
+        'inactiveBasicTasks', 'offtimeTasks', 'inactiveOfftimeTasks',
+        'inactiveSupportTasks', 'inactiveTrainingTasks',
+        'customTrainingTasks', 'auditLog'];
+    for (const f of arrayFields) {
+        if (out[f] !== undefined && !Array.isArray(out[f])) delete out[f];
+    }
+    // Cap absurd sizes so a malformed file can't lock the app for minutes.
+    const cap = (f, n) => { if (Array.isArray(out[f]) && out[f].length > n) out[f] = out[f].slice(0, n); };
+    cap('assignments', 50000);
+    cap('costItems', 20000);
+    cap('auditLog', 500);
+    // basicTasksMeta is a plain object map.
+    if (out.basicTasksMeta !== undefined && (typeof out.basicTasksMeta !== 'object' || Array.isArray(out.basicTasksMeta))) {
+        delete out.basicTasksMeta;
+    }
+    if (out.invoiceRecipient !== undefined && typeof out.invoiceRecipient !== 'string') {
+        delete out.invoiceRecipient;
+    }
+    // Per-row guards: assignments must have empId + week + type.
+    if (Array.isArray(out.assignments)) {
+        out.assignments = out.assignments.filter(a =>
+            a && typeof a === 'object'
+            && typeof a.empId === 'string'
+            && typeof a.week === 'string'
+            && typeof a.type === 'string');
+    }
+    if (Array.isArray(out.costItems)) {
+        out.costItems = out.costItems.filter(c => c && typeof c === 'object' && typeof c.projectId === 'string');
+    }
+    if (Array.isArray(out.employees)) {
+        out.employees = out.employees.filter(e => e && typeof e === 'object' && typeof e.id === 'string' && typeof e.name === 'string');
+    }
+    if (Array.isArray(out.projects)) {
+        out.projects = out.projects.filter(p => p && typeof p === 'object' && typeof p.id === 'string' && typeof p.name === 'string');
+    }
+    return { ok: true, data: out, droppedKeys };
+};
+
 // Audit log is conceptually append-only across all clients. Replacing local
 // with remote (the default sync behaviour) drops entries that another client
 // added in the same save window. mergeAuditLogs unions two lists by id,

@@ -34,7 +34,7 @@ const SetupProjView = ({ s, h }) => {
         toggleCategory, toggleProjCategory, toggleEmpSetup,
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
-        scrollToCurrentWeek } = h;
+        scrollToCurrentWeek, requestDeleteProject } = h;
         if (selectedProjectDetails) {
             return <ProjectDetailsView s={s} h={h}/>;
         }
@@ -46,9 +46,9 @@ const SetupProjView = ({ s, h }) => {
         };
 
         const now = getWeekString(new Date());
-        const byStartWeek = (a, b) => (a.startWeek || '').localeCompare(b.startWeek || '');
-        const activeProjects = projects.filter(p => p.ibnWeek >= now).slice().sort(byStartWeek);
-        const pastProjects = projects.filter(p => p.ibnWeek < now).slice().sort(byStartWeek);
+        const byStartWeek = (a, b) => compareWeekIds(a.startWeek || '', b.startWeek || '');
+        const activeProjects = projects.filter(p => compareWeekIds(p.ibnWeek, now) >= 0).slice().sort(byStartWeek);
+        const pastProjects = projects.filter(p => compareWeekIds(p.ibnWeek, now) < 0).slice().sort(byStartWeek);
         const activeCats = [...new Set(activeProjects.map(p => p.category))];
 
         const ProjectRow = ({ p }) => {
@@ -72,16 +72,8 @@ const SetupProjView = ({ s, h }) => {
                     <td className="p-4 text-right">
                         <div className="flex justify-end gap-3">
                             <button onClick={() => handleEditProject(p)} className="text-gea-600 text-xs font-medium hover:text-gea-700">Bearbeiten</button>
-                            <button onClick={() => {
-                                const assCount = (assignmentsByProject.get(p.id) || []).length;
-                                const msg = assCount > 0
-                                    ? `Projekt „${p.name}" wirklich löschen?\n\n${assCount} Einsatz-Planung(en) werden ebenfalls gelöscht.`
-                                    : `Projekt „${p.name}" wirklich löschen?`;
-                                if (window.confirm(msg)) {
-                                    setProjects(projects.filter(x => x.id !== p.id));
-                                    setAssignments(assignments.filter(a => a.reference !== p.id));
-                                }
-                            }} className="text-rose-600 text-xs font-medium hover:text-rose-700">Löschen</button>
+                            <button onClick={() => requestDeleteProject(p.id)}
+                                className="text-rose-600 text-xs font-medium hover:text-rose-700">Löschen</button>
                         </div>
                     </td>
                 </tr>

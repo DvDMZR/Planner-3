@@ -18,7 +18,12 @@ const migrateExpensesToCostItems = (expenses) =>
 // Migrate a costItem from the legacy single-amount/extras shape to the
 // line-items shape used by the redesigned modal.
 const migrateCostItem = (ci) => {
-    if (!ci || Array.isArray(ci.lines)) return ci;
+    if (!ci) return ci;
+    // Already in line-items shape: leave untouched. Without this guard, a
+    // second migration pass would re-emit lines from the legacy fields that
+    // are no longer present, but ANY object that already has a `lines` array
+    // is by definition post-migration.
+    if (Array.isArray(ci.lines)) return ci;
 
     const oldTypeMap = {
         'Reisekosten':    'travel',

@@ -9,6 +9,8 @@ const {
 } = React;
 const AssignmentModal = ({
   assignContext,
+  assignmentsRef,
+  showToast,
   employeeById,
   basicTasks,
   basicTasksMeta,
@@ -179,6 +181,17 @@ const AssignmentModal = ({
     window.open(url, '_blank');
   };
   const handleSave = () => {
+    // Race guard: the entry we're editing may have been deleted by another
+    // tab/user between modal-open and save. Adding it back as a new row
+    // would resurrect a deleted assignment with the old id.
+    if (formData.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === formData.id)) {
+      showToast?.('Eintrag wurde von einem Kollegen gelöscht – Bearbeitung verworfen.', {
+        type: 'warning',
+        duration: 5000
+      });
+      onClose();
+      return;
+    }
     let data = {
       ...formData
     };
@@ -229,11 +242,13 @@ const AssignmentModal = ({
       onSave(series);
       return;
     }
-    if (recurRule.enabled && !data.id && recurRule.endWeek > formData.week) {
+    if (recurRule.enabled && !data.id && compareWeekIds(recurRule.endWeek, formData.week) > 0) {
       const ruleId = makeId('rule');
       const series = [];
       let cur = formData.week;
-      while (cur <= recurRule.endWeek) {
+      // Hard safety cap so a malformed endWeek can't spin forever.
+      let guard = 520;
+      while (compareWeekIds(cur, recurRule.endWeek) <= 0 && guard-- > 0) {
         series.push({
           ...data,
           week: cur,
@@ -527,6 +542,8 @@ const AssignmentModal = ({
 };
 const CopyModal = ({
   copyContext,
+  assignmentsRef,
+  showToast,
   employees,
   activeEmps,
   empsByCategory,
@@ -607,6 +624,16 @@ const CopyModal = ({
     label = p ? p.name : assignment.reference;
   }
   const handleCopy = () => {
+    // Race guard: source assignment may have been deleted while the modal
+    // was open; copying it would resurrect deleted data on every target.
+    if (assignment.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === assignment.id)) {
+      showToast?.('Quell-Eintrag wurde gelöscht – Kopieren abgebrochen.', {
+        type: 'warning',
+        duration: 5000
+      });
+      onClose();
+      return;
+    }
     const targetWeeks = weeks.filter(w => selWeeks[w.id]).map(w => w.id);
     const targetEmps = activeEmps.filter(e => selEmps[e.id]).map(e => e.id);
     if (targetEmps.length === 0 && targetWeeks.length === 0) {
@@ -783,8 +810,16 @@ const CostItemModal = ({
   employees,
   costItems,
   setCostItems,
+  showToast,
   onClose
 }) => {
+  // Coerce a free-text number to a finite, non-negative float. parseFloat
+  // alone returns NaN for '' / undefined which then gets serialised into
+  // the persisted state; this keeps the JSON safe to re-import.
+  const safeNum = v => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
   const projAssignments = assignments.filter(a => a.reference === projectId);
   const empIds = [...new Set(projAssignments.map(a => a.empId))];
   const projEmployees = employees.filter(e => empIds.includes(e.id));
@@ -828,14 +863,23 @@ const CostItemModal = ({
     [field]: val
   } : l));
   const removeLine = id => setLines(prev => prev.filter(l => l.id !== id));
-  const lineAmount = l => l.type === 'hours' ? (parseFloat(l.hours) || 0) * (parseFloat(l.hourlyRate) || 0) : parseFloat(l.amount) || 0;
+  const lineAmount = l => l.type === 'hours' ? safeNum(l.hours) * safeNum(l.hourlyRate) : safeNum(l.amount);
   const total = lines.reduce((s, l) => s + lineAmount(l), 0);
   const handleSave = () => {
     if (!form.empId || lines.length === 0) return;
+    // Race guard: the cost item we're editing may have been removed.
+    if (existingItem?.id && Array.isArray(costItems) && !costItems.some(c => c.id === existingItem.id)) {
+      showToast?.('Kostenpunkt wurde gelöscht – Bearbeitung verworfen.', {
+        type: 'warning',
+        duration: 5000
+      });
+      onClose();
+      return;
+    }
     const cleanedLines = lines.map(l => {
       if (l.type === 'hours') {
-        const hrs = parseFloat(l.hours) || 0;
-        const rate = parseFloat(l.hourlyRate) || 0;
+        const hrs = safeNum(l.hours);
+        const rate = safeNum(l.hourlyRate);
         return {
           id: l.id,
           type: 'hours',
@@ -848,7 +892,7 @@ const CostItemModal = ({
       return {
         id: l.id,
         type: l.type,
-        amount: parseFloat(l.amount) || 0,
+        amount: safeNum(l.amount),
         comment: l.comment || ''
       };
     });
@@ -1172,6 +1216,8 @@ const DepsSection = () => {
 };
 
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
+const LOGIN_LOCK_THRESHOLD = 5;
+const LOGIN_LOCK_DURATION_MS = 60 * 1000;
 const LoginModal = ({
   appUsers,
   onLogin,
@@ -1185,11 +1231,36 @@ const LoginModal = ({
   const [selectedUserId, setSelectedUserId] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    try {
+      return parseInt(sessionStorage.getItem('plannerLoginFails') || '0', 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+  const [lockUntil, setLockUntil] = useState(() => {
+    try {
+      return parseInt(sessionStorage.getItem('plannerLoginLockUntil') || '0', 10) || 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+  const [now, setNow] = useState(Date.now());
   const pinRef = useRef(null);
   useEffect(() => {
     if (selectedUserId) pinRef.current?.focus();
   }, [selectedUserId]);
+
+  // Tick once a second while locked so the countdown UI updates.
+  useEffect(() => {
+    if (lockUntil <= Date.now()) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [lockUntil]);
+  const isLocked = lockUntil > now;
+  const secondsLeft = isLocked ? Math.ceil((lockUntil - now) / 1000) : 0;
   const handleLogin = async () => {
+    if (isLocked) return;
     const user = appUsers.find(u => u.id === selectedUserId);
     if (!user) {
       setError('Bitte einen Nutzer auswählen.');
@@ -1209,10 +1280,31 @@ const LoginModal = ({
       ok = user.pin === pin;
     }
     if (!ok) {
-      setError('Falscher PIN.');
+      const next = failedAttempts + 1;
+      setFailedAttempts(next);
+      try {
+        sessionStorage.setItem('plannerLoginFails', String(next));
+      } catch (e) {}
+      if (next >= LOGIN_LOCK_THRESHOLD) {
+        const until = Date.now() + LOGIN_LOCK_DURATION_MS;
+        setLockUntil(until);
+        setNow(Date.now());
+        try {
+          sessionStorage.setItem('plannerLoginLockUntil', String(until));
+        } catch (e) {}
+        setError(`Zu viele Fehlversuche – ${Math.ceil(LOGIN_LOCK_DURATION_MS / 1000)} Sekunden gesperrt.`);
+      } else {
+        setError(`Falscher PIN. Noch ${LOGIN_LOCK_THRESHOLD - next} Versuche.`);
+      }
       setPin('');
       return;
     }
+    setFailedAttempts(0);
+    setLockUntil(0);
+    try {
+      sessionStorage.removeItem('plannerLoginFails');
+      sessionStorage.removeItem('plannerLoginLockUntil');
+    } catch (e) {}
     onLogin(user);
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -1246,25 +1338,133 @@ const LoginModal = ({
     ref: pinRef,
     type: "password",
     value: pin,
+    disabled: isLocked,
     onChange: e => {
       setPin(e.target.value);
       setError('');
     },
-    onKeyDown: e => e.key === 'Enter' && handleLogin(),
-    className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
+    onKeyDown: e => e.key === 'Enter' && !isLocked && handleLogin(),
+    className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 disabled:bg-slate-100",
     placeholder: "PIN eingeben"
   })), error && /*#__PURE__*/React.createElement("p", {
     className: "text-rose-600 text-sm"
-  }, error), /*#__PURE__*/React.createElement("div", {
+  }, error), isLocked && /*#__PURE__*/React.createElement("p", {
+    className: "text-amber-700 text-sm"
+  }, "Gesperrt \u2013 noch ", secondsLeft, "s."), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
   }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogin,
-    disabled: !selectedUserId,
+    disabled: !selectedUserId || isLocked,
     className: "flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-  }, "Anmelden")))));
+  }, isLocked ? `Gesperrt (${secondsLeft}s)` : 'Anmelden')))));
+};
+
+// ─── CASCADE DELETE CONFIRMATION ─────────────────────────────────────────────
+// Modal that shows which assignments + cost items would be deleted alongside
+// a project or employee. Triggered from app.requestDeleteProject /
+// requestDeleteEmployee whenever the entity has dependents. Confirming runs
+// a single batched delete with full Undo from the audit log.
+const CascadeDeleteModal = ({
+  entityKind,
+  entityName,
+  dependents,
+  employees,
+  projects,
+  onConfirm,
+  onCancel
+}) => {
+  const empById = useMemo(() => {
+    const m = new Map();
+    (employees || []).forEach(e => m.set(e.id, e));
+    return m;
+  }, [employees]);
+  const projById = useMemo(() => {
+    const m = new Map();
+    (projects || []).forEach(p => m.set(p.id, p));
+    return m;
+  }, [projects]);
+  const formatKW = weekId => {
+    if (!weekId || typeof weekId !== 'string') return weekId || '';
+    const [y, w] = weekId.split('-W');
+    if (!y || !w) return weekId;
+    return `KW ${parseInt(w, 10)}/${y.slice(-2)}`;
+  };
+  const describeAssignment = a => {
+    if (a.type === 'project') {
+      const p = projById.get(a.reference);
+      return p ? `Projekt „${p.name}"` : `Projekt ${a.reference || '?'}`;
+    }
+    const labels = {
+      basic: 'Task',
+      other: 'Task',
+      support: 'Support',
+      training: 'Training',
+      offtime: 'Abwesenheit'
+    };
+    const lbl = labels[a.type] || a.type;
+    return a.reference ? `${lbl} „${a.reference}"` : lbl;
+  };
+  const total = (dependents.assignments?.length || 0) + (dependents.costItems?.length || 0);
+  const kindLabel = entityKind === 'project' ? 'Projekt' : 'Mitarbeiter';
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement(ModalHeader, {
+    title: `${kindLabel} löschen?`,
+    subtitle: entityName,
+    onClose: onCancel
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "p-6 space-y-4 overflow-y-auto"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-slate-700"
+  }, kindLabel, " ", /*#__PURE__*/React.createElement("strong", null, "\u201E", entityName, "\""), " wird gel\xF6scht. Folgende abh\xE4ngige Eintr\xE4ge werden mitgel\xF6scht:"), dependents.assignments?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2"
+  }, dependents.assignments.length, " Zuweisung", dependents.assignments.length !== 1 ? 'en' : ''), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1 max-h-48 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50"
+  }, dependents.assignments.slice(0, 50).map(a => {
+    const emp = empById.get(a.empId);
+    return /*#__PURE__*/React.createElement("li", {
+      key: a.id,
+      className: "text-xs text-slate-700 flex justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, describeAssignment(a), " \xB7 ", emp?.name || '?'), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400 shrink-0 tabular-nums"
+    }, formatKW(a.week)));
+  }), dependents.assignments.length > 50 && /*#__PURE__*/React.createElement("li", {
+    className: "text-xs text-slate-400"
+  }, "\u2026 und ", dependents.assignments.length - 50, " weitere"))), dependents.costItems?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2"
+  }, dependents.costItems.length, " Kostenpunkt", dependents.costItems.length !== 1 ? 'e' : ''), /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1 max-h-40 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50"
+  }, dependents.costItems.slice(0, 50).map(c => {
+    const emp = empById.get(c.empId);
+    const proj = projById.get(c.projectId);
+    return /*#__PURE__*/React.createElement("li", {
+      key: c.id,
+      className: "text-xs text-slate-700 flex justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, c.description || 'Kostenpunkt', entityKind === 'employee' && proj ? ` · ${proj.name}` : '', entityKind === 'project' && emp ? ` · ${emp.name}` : ''), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 shrink-0 tabular-nums"
+    }, (c.amount || 0).toFixed(2), " \u20AC"));
+  }), dependents.costItems.length > 50 && /*#__PURE__*/React.createElement("li", {
+    className: "text-xs text-slate-400"
+  }, "\u2026 und ", dependents.costItems.length - 50, " weitere"))), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-500"
+  }, "\xDCber den Verlauf (Audit-Log) kannst Du diese Aktion innerhalb der n\xE4chsten 500 Eintr\xE4ge r\xFCckg\xE4ngig machen.")), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onCancel,
+    className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
+  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+    onClick: onConfirm,
+    className: "px-4 py-2 text-sm text-white bg-rose-600 rounded-md hover:bg-rose-700 font-medium"
+  }, "L\xF6schen inkl. ", total, " abh\xE4ngiger Eintr", total === 1 ? 'ag' : 'äge'))));
 };
 
 // --- MAIN APP ---

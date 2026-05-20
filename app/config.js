@@ -67,6 +67,46 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.87 (2026-05-20)
+
+### Datensicherheit & Privilege-Escalation
+- Backup-Import validiert das Schema, verwirft unbekannte Felder und
+  ignoriert \`appUsers\` komplett – ein präpariertes Backup kann keinen
+  Angreifer-PIN-Hash mehr einschleusen.
+- \`sessionStorage\`-Session wird beim Restore gegen das erwartete Schema
+  geprüft; manipulierte Rollen führen zu \`null\` (Login erforderlich).
+- Orphan-Check: ist der eingeloggte User nach einem Sync nicht mehr in
+  \`appUsers\`, wird er ausgeloggt mit Hinweis.
+
+### Konsistenz beim Löschen
+- Projekt- und Mitarbeiter-Delete zeigen ein eigenes Modal mit allen
+  abhängigen Zuweisungen und Kostenpunkten; Bestätigung löscht alles
+  in einem Schritt, Undo stellt komplett wieder her.
+- Modal-vs-Polling-Race: AssignmentModal/CopyModal/CostItemModal prüfen
+  vor dem Speichern, ob der bearbeitete Eintrag noch existiert – kein
+  Resurrect gelöschter Daten mehr.
+
+### Wochen-Logik & Sync-Hygiene
+- Neuer ISO-Wochen-Comparator \`compareWeekIds\` – Reihen über
+  53-Wochen-Jahre erzeugen jetzt die korrekte Instanz-Zahl, IBN-Filter
+  und Projekt-Status nutzen denselben Vergleich.
+- \`weeks\`-Array refresht stündlich, wenn der heutige Montag nicht mehr
+  am Anfang steht – kein Drift mehr über den Jahreswechsel.
+- Cross-Tab-Sync: \`storage\`-Event übernimmt Änderungen aus anderen
+  Tabs derselben Origin ohne Clobber.
+- SpConflictError-Cap: nach 3 Konflikten in Folge stoppt der Auto-Reload
+  und der Status flippt auf \`conflict-loop\` mit Reload-Hinweis.
+
+### Login & Eingabe-Hygiene
+- PIN-Lockout: 5 Fehlversuche → 60 Sekunden gesperrt, Countdown wird
+  angezeigt.
+- CostItem-Lines normalisieren NaN/leere Eingaben zu 0 – kein
+  \`amount: NaN\` mehr im persistenten State.
+- \`migrateCostItem\` ist idempotent: erneute Migrationen verdoppeln
+  keine Lines mehr.
+- \`fsSaveFile\`-\`SecurityError\` flippt \`fsStatus\` auf
+  \`needs-permission\` statt stillem Fail.
+
 ## v0.86 (2026-05-19)
 
 ### Synchronisations- und Datensicherheits-Audit

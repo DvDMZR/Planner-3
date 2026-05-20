@@ -119,7 +119,7 @@ function App() {
     const [lastBackupAt, setLastBackupAt] = useState(null); // ISO string, never persisted
     const [emailTemplate, setEmailTemplate] = useState(DEFAULT_EMAIL_TEMPLATE);
     const [currentUser, setCurrentUser] = useState(() => {
-        try { return JSON.parse(sessionStorage.getItem('plannerSession')); }
+        try { return validateRestoredSession(JSON.parse(sessionStorage.getItem('plannerSession'))); }
         catch { return null; }
     });
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -147,6 +147,24 @@ function App() {
     useEffect(() => { assignmentsRef.current = assignments; }, [assignments]);
     const projectsRef = useRef([]);
     useEffect(() => { projectsRef.current = projects; }, [projects]);
+    const costItemsRef = useRef([]);
+    useEffect(() => { costItemsRef.current = costItems; }, [costItems]);
+
+    // Cascade-delete prompt state: { entityKind, entityName, entityId, dependents, onConfirm }.
+    // null = no prompt visible. The modal lives at the bottom of the App render
+    // tree so it overlays the active view.
+    const [cascadeConfirm, setCascadeConfirm] = useState(null);
+
+    // Conflict-loop cap: each SpConflictError increments; on >=3 we stop
+    // auto-reloading and tell the user to refresh.
+    const conflictRetryRef = useRef(0);
+
+    // The cascade-delete handlers below already write a richer audit entry
+    // (with the dependents bundled into undoData). The legacy length-diff
+    // watchers would otherwise log a second, less-informative entry — set
+    // this ref to skip the next watcher emit per entity.
+    const suppressEmployeeAuditRef = useRef(false);
+    const suppressProjectAuditRef = useRef(false);
 
     // Audit-log helpers
     const formatKW = (weekId) => {
@@ -462,6 +480,39 @@ function App() {
     useEffect(() => { employeesRef.current = employees; }, [employees]);
     useEffect(() => { empCategoriesRef.current = empCategories; }, [empCategories]);
 
+    // Refresh the rolling `weeks` window once a day so a tab left open past
+    // midnight of New Year's doesn't keep showing last year's KW1 as "today".
+    // Cheap: getWeekString() of today vs weeks[0].id once per hour.
+    useEffect(() => {
+        const tick = () => {
+            if (weeks.length === 0) return;
+            const today = new Date();
+            const todayDow = today.getDay() || 7;
+            const thisMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - todayDow + 1);
+            const expectedFirst = getWeekString(thisMonday);
+            if (weeks[0].id === expectedFirst) return;
+            const w = [];
+            const seenIds = new Set();
+            for (let i = 0; i < 54; i++) {
+                const d = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() + (i * 7));
+                const weekId = getWeekString(d);
+                if (seenIds.has(weekId)) continue;
+                seenIds.add(weekId);
+                if (w.length >= 54) break;
+                const kw = parseInt(weekId.split('-W')[1], 10);
+                w.push({
+                    id: weekId,
+                    label: `KW ${kw}`,
+                    sub: `${d.getDate()}.${d.getMonth() + 1}.`,
+                    month: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
+                });
+            }
+            setWeeks(w);
+        };
+        const interval = setInterval(tick, 60 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [weeks]);
+
     // ── AUDIT WATCH: employees ─────────────────────────────────────────────────
     // Must run BEFORE the save effect so isRemoteUpdateRef is still true for
     // remote-sync updates when this effect checks it.
@@ -473,6 +524,7 @@ function App() {
         if (prev === employees || isRemoteUpdateRef.current) return;
         const user = currentUserRef.current;
         if (!user) return;
+        if (suppressEmployeeAuditRef.current) { suppressEmployeeAuditRef.current = false; return; }
         if (employees.length > prev.length) {
             const added = employees.find(e => !prev.some(p => p.id === e.id));
             if (added) logAudit('employee_create', `Mitarbeiter angelegt: ${added.name}`, { type: 'del_employee', id: added.id });
@@ -503,6 +555,7 @@ function App() {
         if (prev === projects || isRemoteUpdateRef.current) return;
         const user = currentUserRef.current;
         if (!user) return;
+        if (suppressProjectAuditRef.current) { suppressProjectAuditRef.current = false; return; }
         if (projects.length > prev.length) {
             const added = projects.find(p => !prev.some(q => q.id === p.id));
             if (added) logAudit('project_create', `Projekt angelegt: ${added.name}`, { type: 'del_project', id: added.id });
@@ -559,6 +612,13 @@ function App() {
                     fsFileTimestampsRef.current = await fsGetFolderTimestamps(dirHandleRef.current);
                 }).catch(err => {
                     console.warn('[FS] save failed', err);
+                    // The user revoked the folder permission (browser settings
+                    // → site permissions). Surface it so the existing
+                    // "Aktivieren"-CTA pops up instead of silently failing
+                    // every subsequent save.
+                    if (err && (err.name === 'SecurityError' || err.name === 'NotAllowedError')) {
+                        setFsStatus('needs-permission');
+                    }
                 });
             }
         }, 400);
@@ -587,9 +647,17 @@ function App() {
                 setSyncStatus('syncing');
                 try {
                     await runSave();
+                    conflictRetryRef.current = 0;
                     setSyncStatus('idle');
                 } catch(e) {
                     if (e instanceof SpConflictError) {
+                        conflictRetryRef.current += 1;
+                        if (conflictRetryRef.current >= 3) {
+                            spFileEtagsRef.current = {};
+                            setSyncStatus('conflict-loop');
+                            showToast('Wiederholte Sync-Konflikte – bitte Seite neu laden.', { type: 'warning', duration: 8000 });
+                            return;
+                        }
                         // Another client modified the file while we were editing.
                         // Reload the remote snapshot and let the user see a toast.
                         setSyncStatus('reconnecting');
@@ -629,6 +697,26 @@ function App() {
             }, 1500);
         }
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
+
+    // Force logout if the session user no longer exists in appUsers (deleted
+    // between sessions, or role downgraded). Only fires once appUsers has
+    // actually been populated to avoid logging out during the initial load
+    // race when the user list is still the seed placeholder.
+    const orphanCheckedRef = useRef(false);
+    useEffect(() => {
+        if (!currentUser) { orphanCheckedRef.current = false; return; }
+        if (!appUsers || appUsers.length === 0) return;
+        if (appUsers.some(u => u._needsSeed)) return; // still seeding
+        if (orphanCheckedRef.current) return;
+        const match = appUsers.find(u => u.id === currentUser.id);
+        if (!match || match.role !== currentUser.role) {
+            orphanCheckedRef.current = true;
+            showToast('Konto wurde entfernt oder geändert – bitte neu anmelden.', { type: 'warning', duration: 6000 });
+            logoutUser();
+            return;
+        }
+        orphanCheckedRef.current = true;
+    }, [appUsers, currentUser, logoutUser, showToast]);
 
     // On page reload, the session is restored from sessionStorage *before*
     // appUsers loads from SP. Once appUsers arrives, re-apply the stored
@@ -765,6 +853,23 @@ function App() {
             customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate
         };
     }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
+
+    // Cross-tab sync: when another tab on the same origin writes the local
+    // snapshot, react to it instead of letting both tabs clobber each other.
+    // The browser only fires this event for OTHER tabs, so we never echo our
+    // own writes.
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (e.key !== 'teamMasterProData') return;
+            if (!e.newValue) return;
+            try {
+                const data = JSON.parse(e.newValue);
+                applyRemoteSnapshot(data, { notify: true });
+            } catch (err) { /* malformed write from another tab – ignore */ }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [applyRemoteSnapshot]);
 
     // Flush pending local save before the page unloads so a fast tab close
     // doesn't drop the most recent edits.
@@ -1104,8 +1209,8 @@ function App() {
             else {
                 const projCosts = costItemsByProject.get(p.id) || [];
                 const projAss = assignmentsByProject.get(p.id) || [];
-                if (p.ibnWeek < now && projAss.length > 0 && projCosts.length === 0) status = 'missing_costs';
-                else if (p.startWeek <= now) status = 'active';
+                if (compareWeekIds(p.ibnWeek, now) < 0 && projAss.length > 0 && projCosts.length === 0) status = 'missing_costs';
+                else if (compareWeekIds(p.startWeek, now) <= 0) status = 'active';
                 else status = 'planned';
             }
             m.set(p.id, status);
@@ -1195,7 +1300,7 @@ function App() {
             arr.push(p);
         });
         for (const arr of m.values()) {
-            arr.sort((a, b) => (a.startWeek || '').localeCompare(b.startWeek || ''));
+            arr.sort((a, b) => compareWeekIds(a.startWeek || '', b.startWeek || ''));
         }
         return m;
     }, [projects, projectStatusById]);
@@ -1283,6 +1388,136 @@ function App() {
         }
         setIsAssignModalOpen(false);
     }, [logAudit]);
+
+    // Build the dependent-records bundle for a project or employee delete.
+    // Used both for the cascade-confirm preview and the actual cascade.
+    const computeDeleteDependents = useCallback((kind, id) => {
+        if (kind === 'project') {
+            return {
+                assignments: assignmentsRef.current.filter(a => a.type === 'project' && a.reference === id),
+                costItems: costItemsRef.current.filter(c => c.projectId === id),
+            };
+        }
+        if (kind === 'employee') {
+            return {
+                assignments: assignmentsRef.current.filter(a => a.empId === id),
+                costItems: costItemsRef.current.filter(c => c.empId === id),
+            };
+        }
+        return { assignments: [], costItems: [] };
+    }, []);
+
+    const performProjectDelete = useCallback((projectId, dependents) => {
+        const prev = projectsRef.current.find(p => p.id === projectId);
+        if (!prev) return;
+        const assIds = new Set(dependents.assignments.map(a => a.id));
+        const ciIds = new Set(dependents.costItems.map(c => c.id));
+        suppressProjectAuditRef.current = true;
+        setProjects(p => p.filter(x => x.id !== projectId));
+        if (assIds.size > 0) setAssignments(prevA => prevA.filter(a => !assIds.has(a.id)));
+        if (ciIds.size > 0) setCostItems(prevC => prevC.filter(c => !ciIds.has(c.id)));
+        const cascadeNote = (assIds.size || ciIds.size)
+            ? ` (Kaskade: ${assIds.size} Einsätze, ${ciIds.size} Kosten)` : '';
+        logAudit('project_delete',
+            `Projekt gelöscht: ${prev.name}${cascadeNote}`,
+            { type: 'restore_project_cascade', prev,
+              assignments: dependents.assignments, costItems: dependents.costItems });
+        showToast(`Projekt „${prev.name}" gelöscht${cascadeNote}`, {
+            type: 'success', duration: 6000,
+            action: { label: 'Rückgängig', onClick: () => {
+                setProjects(p => p.some(q => q.id === prev.id) ? p : [...p, prev]);
+                if (dependents.assignments.length > 0) {
+                    setAssignments(prevA => {
+                        const ids = new Set(prevA.map(a => a.id));
+                        return [...prevA, ...dependents.assignments.filter(a => !ids.has(a.id))];
+                    });
+                }
+                if (dependents.costItems.length > 0) {
+                    setCostItems(prevC => {
+                        const ids = new Set(prevC.map(c => c.id));
+                        return [...prevC, ...dependents.costItems.filter(c => !ids.has(c.id))];
+                    });
+                }
+            } }
+        });
+    }, [logAudit, showToast]);
+
+    const performEmployeeDelete = useCallback((empId, dependents) => {
+        const prev = employeesRef.current.find(e => e.id === empId);
+        if (!prev) return;
+        const assIds = new Set(dependents.assignments.map(a => a.id));
+        const ciIds = new Set(dependents.costItems.map(c => c.id));
+        suppressEmployeeAuditRef.current = true;
+        setEmployees(p => p.filter(x => x.id !== empId));
+        if (assIds.size > 0) setAssignments(prevA => prevA.filter(a => !assIds.has(a.id)));
+        if (ciIds.size > 0) setCostItems(prevC => prevC.filter(c => !ciIds.has(c.id)));
+        const cascadeNote = (assIds.size || ciIds.size)
+            ? ` (Kaskade: ${assIds.size} Einsätze, ${ciIds.size} Kosten)` : '';
+        logAudit('employee_delete',
+            `Mitarbeiter gelöscht: ${prev.name}${cascadeNote}`,
+            { type: 'restore_employee_cascade', prev,
+              assignments: dependents.assignments, costItems: dependents.costItems });
+        showToast(`Mitarbeiter „${prev.name}" gelöscht${cascadeNote}`, {
+            type: 'success', duration: 6000,
+            action: { label: 'Rückgängig', onClick: () => {
+                setEmployees(p => p.some(q => q.id === prev.id) ? p : [...p, prev]);
+                if (dependents.assignments.length > 0) {
+                    setAssignments(prevA => {
+                        const ids = new Set(prevA.map(a => a.id));
+                        return [...prevA, ...dependents.assignments.filter(a => !ids.has(a.id))];
+                    });
+                }
+                if (dependents.costItems.length > 0) {
+                    setCostItems(prevC => {
+                        const ids = new Set(prevC.map(c => c.id));
+                        return [...prevC, ...dependents.costItems.filter(c => !ids.has(c.id))];
+                    });
+                }
+            } }
+        });
+    }, [logAudit, showToast]);
+
+    // Public delete-with-cascade entry points. If there are no dependents,
+    // delete straight away; otherwise pop the confirm modal.
+    const requestDeleteProject = useCallback((projectId) => {
+        const proj = projectsRef.current.find(p => p.id === projectId);
+        if (!proj) return;
+        const dependents = computeDeleteDependents('project', projectId);
+        if (dependents.assignments.length === 0 && dependents.costItems.length === 0) {
+            performProjectDelete(projectId, dependents);
+            return;
+        }
+        setCascadeConfirm({
+            entityKind: 'project',
+            entityName: proj.name,
+            entityId: projectId,
+            dependents,
+        });
+    }, [computeDeleteDependents, performProjectDelete]);
+
+    const requestDeleteEmployee = useCallback((empId) => {
+        const emp = employeesRef.current.find(e => e.id === empId);
+        if (!emp) return;
+        const dependents = computeDeleteDependents('employee', empId);
+        if (dependents.assignments.length === 0 && dependents.costItems.length === 0) {
+            performEmployeeDelete(empId, dependents);
+            return;
+        }
+        setCascadeConfirm({
+            entityKind: 'employee',
+            entityName: emp.name,
+            entityId: empId,
+            dependents,
+        });
+    }, [computeDeleteDependents, performEmployeeDelete]);
+
+    const confirmCascadeDelete = useCallback(() => {
+        const c = cascadeConfirm;
+        if (!c) return;
+        setCascadeConfirm(null);
+        if (c.entityKind === 'project') performProjectDelete(c.entityId, c.dependents);
+        else if (c.entityKind === 'employee') performEmployeeDelete(c.entityId, c.dependents);
+    }, [cascadeConfirm, performProjectDelete, performEmployeeDelete]);
 
     const handleDeleteAssignment = useCallback((id) => {
         const deleted = assignmentsRef.current.find(a => a.id === id);
@@ -1418,7 +1653,13 @@ function App() {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const parsed = JSON.parse(event.target.result);
+                const rawParsed = JSON.parse(event.target.result);
+                const result = validateImportedState(rawParsed);
+                if (!result.ok) {
+                    alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+                    return;
+                }
+                const parsed = result.data;
                 if (parsed.employees) setEmployees(parsed.employees);
                 if (parsed.projects) setProjects(parsed.projects);
                 if (parsed.assignments) setAssignments(parsed.assignments);
@@ -1440,8 +1681,10 @@ function App() {
                 if (parsed.customTrainingTasks) setCustomTrainingTasks(parsed.customTrainingTasks);
                 if (parsed.invoiceRecipient !== undefined) setInvoiceRecipient(parsed.invoiceRecipient);
                 if (parsed.auditLog) setAuditLog(parsed.auditLog);
-                // Note: appUsers from an export are imported without PINs (stripped on export);
-                // existing users keep their hashed credentials.
+                // appUsers is deliberately NOT imported: a backup can otherwise
+                // inject attacker-controlled pinHash/pinSalt records. Local user
+                // accounts remain unchanged across import.
+                showToast('Backup importiert – Nutzerkonten und PINs bleiben unverändert.', { type: 'success', duration: 5000 });
             } catch (err) {
                 alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
             }
@@ -1928,6 +2171,7 @@ function App() {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek, scrollToWeekById, reconnectSharePoint,
+        requestDeleteProject, requestDeleteEmployee,
     }), [
         // useState setters are stable – no deps needed for those.
         // Only useCallback refs with real deps need listing:
@@ -1936,6 +2180,7 @@ function App() {
         buildInvoiceData, openInvoiceModal, exportData, reconnectSharePoint,
         scrollToWeekById, handleSaveAssignment, handleDeleteAssignment,
         handleDeleteAssignmentSeries, handleDrop, runBackup,
+        requestDeleteProject, requestDeleteEmployee,
     ]);
 
     return (
@@ -1959,6 +2204,8 @@ function App() {
             {isAssignModalOpen && assignContext && currentUser && (
                 <AssignmentModal
                     assignContext={assignContext}
+                    assignmentsRef={assignmentsRef}
+                    showToast={showToast}
                     employeeById={employeeById}
                     basicTasks={basicTasks}
                     basicTasksMeta={basicTasksMeta}
@@ -1983,6 +2230,8 @@ function App() {
             {isCopyModalOpen && copyContext && currentUser && (
                 <CopyModal
                     copyContext={copyContext}
+                    assignmentsRef={assignmentsRef}
+                    showToast={showToast}
                     employees={employees}
                     activeEmps={activeEmployees}
                     empsByCategory={activeEmpsByCategory}
@@ -2037,6 +2286,19 @@ function App() {
                     appUsers={appUsers}
                     onLogin={loginUser}
                     onClose={() => setIsLoginModalOpen(false)}
+                />
+            )}
+
+            {/* Cascade-Delete Confirmation */}
+            {cascadeConfirm && (
+                <CascadeDeleteModal
+                    entityKind={cascadeConfirm.entityKind}
+                    entityName={cascadeConfirm.entityName}
+                    dependents={cascadeConfirm.dependents}
+                    employees={employees}
+                    projects={projects}
+                    onConfirm={confirmCascadeDelete}
+                    onCancel={() => setCascadeConfirm(null)}
                 />
             )}
 
