@@ -647,13 +647,15 @@ function App() {
       return;
     }
     if (employees.length > prev.length) {
-      const added = employees.find(e => !prev.some(p => p.id === e.id));
+      const prevIds = new Set(prev.map(p => p.id));
+      const added = employees.find(e => !prevIds.has(e.id));
       if (added) logAudit('employee_create', `Mitarbeiter angelegt: ${added.name}`, {
         type: 'del_employee',
         id: added.id
       });
     } else if (employees.length < prev.length) {
-      const removed = prev.find(e => !employees.some(p => p.id === e.id));
+      const currIds = new Set(employees.map(e => e.id));
+      const removed = prev.find(e => !currIds.has(e.id));
       if (removed) {
         logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, {
           type: 'restore_employee',
@@ -669,12 +671,18 @@ function App() {
         });
       }
     } else {
-      const changed = employees.find(e => {
-        const p = prev.find(p => p.id === e.id);
-        return p && JSON.stringify(e) !== JSON.stringify(p);
-      });
+      const prevById = new Map(prev.map(p => [p.id, p]));
+      let changed = null,
+        prevEmp = null;
+      for (const e of employees) {
+        const p = prevById.get(e.id);
+        if (p && JSON.stringify(e) !== JSON.stringify(p)) {
+          changed = e;
+          prevEmp = p;
+          break;
+        }
+      }
       if (changed) {
-        const prevEmp = prev.find(p => p.id === changed.id);
         logAudit('employee_update', `Mitarbeiter bearbeitet: ${changed.name}`, {
           type: 'restore_employee',
           prev: prevEmp
@@ -700,13 +708,15 @@ function App() {
       return;
     }
     if (projects.length > prev.length) {
-      const added = projects.find(p => !prev.some(q => q.id === p.id));
+      const prevIds = new Set(prev.map(q => q.id));
+      const added = projects.find(p => !prevIds.has(p.id));
       if (added) logAudit('project_create', `Projekt angelegt: ${added.name}`, {
         type: 'del_project',
         id: added.id
       });
     } else if (projects.length < prev.length) {
-      const removed = prev.find(p => !projects.some(q => q.id === p.id));
+      const currIds = new Set(projects.map(q => q.id));
+      const removed = prev.find(p => !currIds.has(p.id));
       if (removed) {
         logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, {
           type: 'restore_project',
@@ -722,12 +732,18 @@ function App() {
         });
       }
     } else {
-      const changed = projects.find(p => {
-        const q = prev.find(q => q.id === p.id);
-        return q && JSON.stringify(p) !== JSON.stringify(q);
-      });
+      const prevById = new Map(prev.map(q => [q.id, q]));
+      let changed = null,
+        prevProj = null;
+      for (const p of projects) {
+        const q = prevById.get(p.id);
+        if (q && JSON.stringify(p) !== JSON.stringify(q)) {
+          changed = p;
+          prevProj = q;
+          break;
+        }
+      }
       if (changed) {
-        const prevProj = prev.find(q => q.id === changed.id);
         logAudit('project_update', `Projekt bearbeitet: ${changed.name}`, {
           type: 'restore_project',
           prev: prevProj

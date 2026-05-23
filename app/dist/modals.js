@@ -69,7 +69,7 @@ const AssignmentModal = ({
   const [recurRule, setRecurRule] = useState({
     enabled: false,
     everyXWeeks: 1,
-    endWeek: addWeeks(assignContext.week || formData.week, 4)
+    endWeek: addWeeks(assignContext.week || formData.week || getWeekString(new Date()), 4)
   });
   const [planWeeks, setPlanWeeks] = useState(1);
   const [notifyByEmail, setNotifyByEmail] = useState(false);
