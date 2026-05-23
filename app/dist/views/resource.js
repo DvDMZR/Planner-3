@@ -248,24 +248,41 @@ const ResourceView = ({
   const searchTerms = React.useMemo(() => {
     return empSearch.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
   }, [empSearch]);
+
+  // Pre-lowercase category names and employee names once per category
+  // change. Keystroke-driven filtering below would otherwise call
+  // toLowerCase() on every employee for every render.
+  const searchIndex = React.useMemo(() => {
+    const out = new Map();
+    activeCategories.forEach(cat => {
+      const emps = activeEmpsByCategory.get(cat) || [];
+      out.set(cat, {
+        catLower: cat.toLowerCase(),
+        emps,
+        empNamesLower: emps.map(e => (e.name || '').toLowerCase())
+      });
+    });
+    return out;
+  }, [activeCategories, activeEmpsByCategory]);
   const displayCategories = React.useMemo(() => {
     if (searchTerms.length === 0) return activeCategories;
     return activeCategories.filter(cat => {
-      const emps = activeEmpsByCategory.get(cat) || [];
-      const catLower = cat.toLowerCase();
-      return searchTerms.some(q => catLower.includes(q) || emps.some(e => e.name.toLowerCase().includes(q)));
+      const idx = searchIndex.get(cat);
+      if (!idx) return false;
+      return searchTerms.some(q => idx.catLower.includes(q) || idx.empNamesLower.some(n => n.includes(q)));
     });
-  }, [searchTerms, activeCategories, activeEmpsByCategory]);
+  }, [searchTerms, activeCategories, searchIndex]);
   const getFilteredEmps = React.useCallback(cat => {
-    const emps = activeEmpsByCategory.get(cat) || [];
+    const idx = searchIndex.get(cat);
+    const emps = idx ? idx.emps : activeEmpsByCategory.get(cat) || [];
     if (searchTerms.length === 0) return emps;
-    const catLower = cat.toLowerCase();
-    if (searchTerms.some(q => catLower.includes(q))) return emps;
-    return emps.filter(e => {
-      const nameLower = e.name.toLowerCase();
+    if (idx && searchTerms.some(q => idx.catLower.includes(q))) return emps;
+    if (!idx) return emps;
+    return emps.filter((_, i) => {
+      const nameLower = idx.empNamesLower[i];
       return searchTerms.some(q => nameLower.includes(q));
     });
-  }, [searchTerms, activeEmpsByCategory]);
+  }, [searchTerms, searchIndex, activeEmpsByCategory]);
   const monthGroups = React.useMemo(() => {
     const groups = [];
     let cur = null;

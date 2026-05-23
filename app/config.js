@@ -590,6 +590,17 @@ const WEEKS_IN_YEAR = 52;
 const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 52;
 
+// Login lockout (used by LoginModal)
+const LOGIN_LOCK_THRESHOLD = 5;
+const LOGIN_LOCK_DURATION_MS = 60 * 1000;
+
+// Timeline view column geometry
+const TIMELINE_WEEK_W = 120;    // matches min-w-[120px]
+const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
+
+// Project status sort order used by Overview
+const STATUS_ORDER = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
+
 const COST_LINE_TYPES = {
     travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',    example: 'Flug/Auto', chip: 'bg-amber-100 text-amber-700 border-amber-200',         dot: 'bg-amber-500'   },
     accommodation: { label: 'Accommodation', invoiceLabel: 'Unterkunft',     example: 'Hotel',     chip: 'bg-indigo-100 text-indigo-700 border-indigo-200',      dot: 'bg-indigo-500'  },

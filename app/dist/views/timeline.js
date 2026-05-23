@@ -1,6 +1,4 @@
-const TIMELINE_WEEK_W = 120; // matches min-w-[120px]
-const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
-
+// TIMELINE_WEEK_W and TIMELINE_STICKY_W live in config.js
 const TimelineView = ({
   s,
   h

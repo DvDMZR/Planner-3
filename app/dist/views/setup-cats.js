@@ -46,6 +46,16 @@ const SetupCatsView = ({
   // Separate hardcoded Basic Tasks (no meta) from user-created Other Tasks (with meta).
   const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
   const otherTasks = basicTasks.filter(t => basicTasksMeta?.[t]);
+
+  // O(1) membership checks for the inactive lists; the source arrays are
+  // hit by .filter() in multiple places below.
+  const inactiveSupportSet = React.useMemo(() => new Set(inactiveSupportTasks || []), [inactiveSupportTasks]);
+  const inactiveTrainingSet = React.useMemo(() => new Set(inactiveTrainingTasks || []), [inactiveTrainingTasks]);
+  const inactiveOfftimeSet = React.useMemo(() => new Set((inactiveOfftimeTasks || []).map(x => x.name)), [inactiveOfftimeTasks]);
+  const activeSupportTasks = React.useMemo(() => SUPPORT_TASKS.filter(t => !inactiveSupportSet.has(t)), [inactiveSupportSet]);
+  const activeTrainingTasks = React.useMemo(() => TRAINING_TASKS.filter(t => !inactiveTrainingSet.has(t)), [inactiveTrainingSet]);
+  const activeCustomTraining = React.useMemo(() => (customTrainingTasks || []).filter(t => !inactiveTrainingSet.has(t)), [customTrainingTasks, inactiveTrainingSet]);
+  const activeOfftimeTasks = React.useMemo(() => offtimeTasks.filter(t => !inactiveOfftimeSet.has(t)), [offtimeTasks, inactiveOfftimeSet]);
   const addOtherTask = () => {
     const t = newOtherTask.trim();
     if (!t) return;
@@ -236,7 +246,7 @@ const SetupCatsView = ({
     className: "p-6 text-sm text-slate-400 text-center"
   }, "Keine aktiven Other Tasks.")))), section('support', 'Support', /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
-  }, SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)).map(task => {
+  }, activeSupportTasks.map(task => {
     const sc = SUPPORT_CHIP_COLORS[task] || {};
     return /*#__PURE__*/React.createElement("li", {
       key: task,
@@ -255,7 +265,7 @@ const SetupCatsView = ({
       onClick: () => setInactiveSupportTasks(prev => [...(prev || []), task]),
       className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
     }, "Inaktiv setzen"));
-  }), SUPPORT_TASKS.filter(t => !(inactiveSupportTasks || []).includes(t)).length === 0 && /*#__PURE__*/React.createElement("li", {
+  }), activeSupportTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
   }, "Alle Support-Tasks sind inaktiv."))), section('training', 'Trainings', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
@@ -285,7 +295,7 @@ const SetupCatsView = ({
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
   }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
-  }, TRAINING_TASKS.filter(t => !(inactiveTrainingTasks || []).includes(t)).map(task => /*#__PURE__*/React.createElement("li", {
+  }, activeTrainingTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "p-4 flex justify-between items-center text-sm"
   }, /*#__PURE__*/React.createElement("div", {
@@ -301,7 +311,7 @@ const SetupCatsView = ({
   }), "Permanent")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveTrainingTasks(prev => [...(prev || []), task]),
     className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-  }, "Inaktiv setzen"))), (customTrainingTasks || []).filter(t => !(inactiveTrainingTasks || []).includes(t)).map(task => /*#__PURE__*/React.createElement("li", {
+  }, "Inaktiv setzen"))), activeCustomTraining.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "p-4 flex justify-between items-center text-sm"
   }, /*#__PURE__*/React.createElement("div", {
@@ -344,7 +354,7 @@ const SetupCatsView = ({
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
   }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
-  }, offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(x => x.name === t)).map(task => /*#__PURE__*/React.createElement("li", {
+  }, activeOfftimeTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "p-4 flex justify-between items-center text-sm"
   }, /*#__PURE__*/React.createElement("span", {
@@ -361,7 +371,7 @@ const SetupCatsView = ({
     className: "text-rose-500 hover:text-rose-700"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 16
-  }))))), offtimeTasks.filter(t => !(inactiveOfftimeTasks || []).some(x => x.name === t)).length === 0 && /*#__PURE__*/React.createElement("li", {
+  }))))), activeOfftimeTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
   }, "Keine aktiven Abwesenheitsarten.")))), section('empCats', 'Mitarbeiter-Kategorien', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"

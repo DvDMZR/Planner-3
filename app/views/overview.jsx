@@ -1,5 +1,4 @@
-const STATUS_ORDER = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
-
+// STATUS_ORDER lives in config.js
 const OverviewView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,

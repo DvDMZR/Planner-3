@@ -821,8 +821,8 @@ const CostItemModal = ({
     return Number.isFinite(n) && n >= 0 ? n : 0;
   };
   const projAssignments = assignments.filter(a => a.reference === projectId);
-  const empIds = [...new Set(projAssignments.map(a => a.empId))];
-  const projEmployees = employees.filter(e => empIds.includes(e.id));
+  const empIds = new Set(projAssignments.map(a => a.empId));
+  const projEmployees = employees.filter(e => empIds.has(e.id));
   const kwRangeFromDates = (from, to) => {
     if (!from) return null;
     const kwFrom = parseInt(getWeekString(new Date(from)).split('-W')[1]);
@@ -944,7 +944,7 @@ const CostItemModal = ({
   }, "Bitte w\xE4hlen\u2026"), projEmployees.map(e => /*#__PURE__*/React.createElement("option", {
     key: e.id,
     value: e.id
-  }, e.name)), employees.filter(e => !empIds.includes(e.id)).map(e => /*#__PURE__*/React.createElement("option", {
+  }, e.name)), employees.filter(e => !empIds.has(e.id)).map(e => /*#__PURE__*/React.createElement("option", {
     key: e.id,
     value: e.id
   }, e.name, " (nicht verplant)")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
@@ -1216,8 +1216,7 @@ const DepsSection = () => {
 };
 
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
-const LOGIN_LOCK_THRESHOLD = 5;
-const LOGIN_LOCK_DURATION_MS = 60 * 1000;
+// LOGIN_LOCK_THRESHOLD and LOGIN_LOCK_DURATION_MS live in config.js
 const LoginModal = ({
   appUsers,
   onLogin,

@@ -721,8 +721,8 @@ const CostItemModal = ({
         return Number.isFinite(n) && n >= 0 ? n : 0;
     };
     const projAssignments = assignments.filter(a => a.reference === projectId);
-    const empIds = [...new Set(projAssignments.map(a => a.empId))];
-    const projEmployees = employees.filter(e => empIds.includes(e.id));
+    const empIds = new Set(projAssignments.map(a => a.empId));
+    const projEmployees = employees.filter(e => empIds.has(e.id));
 
     const kwRangeFromDates = (from, to) => {
         if (!from) return null;
@@ -831,7 +831,7 @@ const CostItemModal = ({
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm">
                                 <option value="">Bitte wählen…</option>
                                 {projEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                {employees.filter(e => !empIds.includes(e.id)).map(e =>
+                                {employees.filter(e => !empIds.has(e.id)).map(e =>
                                     <option key={e.id} value={e.id}>{e.name} (nicht verplant)</option>
                                 )}
                             </select>
@@ -1054,8 +1054,7 @@ const DepsSection = () => {
 };
 
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
-const LOGIN_LOCK_THRESHOLD = 5;
-const LOGIN_LOCK_DURATION_MS = 60 * 1000;
+// LOGIN_LOCK_THRESHOLD and LOGIN_LOCK_DURATION_MS live in config.js
 const LoginModal = ({ appUsers, onLogin, onClose }) => {
     const { useState, useEffect, useRef } = React;
     const [selectedUserId, setSelectedUserId] = useState('');
