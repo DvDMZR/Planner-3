@@ -86,6 +86,7 @@ const DataView = ({
       name: newName.trim(),
       pinHash,
       pinSalt,
+      pinAlgo: PIN_PBKDF2_ALGO,
       role: 'active'
     };
     setAppUsers(prev => [...prev, user]);
@@ -136,7 +137,8 @@ const DataView = ({
       ...rest,
       name: isAdmin ? editName.trim() : user.name,
       pinHash,
-      pinSalt
+      pinSalt,
+      pinAlgo: PIN_PBKDF2_ALGO
     };
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
     if (currentUser.id === user.id) loginUser(updated);

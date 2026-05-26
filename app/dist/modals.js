@@ -1271,7 +1271,7 @@ const LoginModal = ({
     let ok = false;
     if (user.pinHash && user.pinSalt) {
       try {
-        ok = await verifyPin(pin, user.pinHash, user.pinSalt);
+        ok = await verifyPin(pin, user.pinHash, user.pinSalt, user.pinAlgo);
       } catch (e) {
         ok = false;
       }
@@ -1304,7 +1304,26 @@ const LoginModal = ({
       sessionStorage.removeItem('plannerLoginFails');
       sessionStorage.removeItem('plannerLoginLockUntil');
     } catch (e) {}
-    onLogin(user);
+    // Opportunistically upgrade legacy SHA-256 / plaintext-pin records to
+    // PBKDF2 on a successful login. The next save persists the new hash.
+    let upgraded = user;
+    if (user.pinAlgo !== PIN_PBKDF2_ALGO) {
+      try {
+        const newSalt = generatePinSalt();
+        const newHash = await hashPin(pin, newSalt);
+        const {
+          pin: _plain,
+          ...rest
+        } = user;
+        upgraded = {
+          ...rest,
+          pinHash: newHash,
+          pinSalt: newSalt,
+          pinAlgo: PIN_PBKDF2_ALGO
+        };
+      } catch (e) {/* fall back to original user on crypto failure */}
+    }
+    onLogin(upgraded);
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"

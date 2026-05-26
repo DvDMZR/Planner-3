@@ -43,7 +43,7 @@ const ADMIN_SEED = { id: 'admin', name: 'Admin', role: 'admin' };
 const buildAdminSeed = async () => {
     const salt = generatePinSalt();
     const pinHash = await hashPin(DEFAULT_ADMIN_PIN, salt);
-    return { ...ADMIN_SEED, pinHash, pinSalt: salt };
+    return { ...ADMIN_SEED, pinHash, pinSalt: salt, pinAlgo: PIN_PBKDF2_ALGO };
 };
 
 // Ensure an admin exists in the user list. If missing, prepend a seeded one

@@ -53,7 +53,7 @@ const DataView = ({ s, h }) => {
         }
         const pinSalt = generatePinSalt();
         const pinHash = await hashPin(newPin, pinSalt);
-        const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, role: 'active' };
+        const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, pinAlgo: PIN_PBKDF2_ALGO, role: 'active' };
         setAppUsers(prev => [...prev, user]);
         setNewName(''); setNewPin(''); setNewPinConfirm(''); setNewError('');
         showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
@@ -83,7 +83,7 @@ const DataView = ({ s, h }) => {
         const updated = {
             ...rest,
             name: isAdmin ? editName.trim() : user.name,
-            pinHash, pinSalt,
+            pinHash, pinSalt, pinAlgo: PIN_PBKDF2_ALGO,
         };
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
         if (currentUser.id === user.id) loginUser(updated);

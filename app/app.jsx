@@ -213,6 +213,18 @@ function App() {
         try { sessionStorage.setItem('plannerSession', JSON.stringify(session)); } catch(e) {}
         setCurrentUser(session);
         setIsLoginModalOpen(false);
+        // If LoginModal rehashed the PIN to the strong algo, splice the
+        // upgraded record into appUsers so the next save persists it.
+        if (user.pinAlgo === PIN_PBKDF2_ALGO && user.pinHash) {
+            setAppUsers(prev => {
+                const i = prev.findIndex(u => u.id === user.id);
+                if (i < 0) return prev;
+                if (prev[i].pinHash === user.pinHash && prev[i].pinAlgo === user.pinAlgo) return prev;
+                const next = [...prev];
+                next[i] = user;
+                return next;
+            });
+        }
         // Restore the user's UI preferences (currently only compactView).
         // Missing preferences mean "use last value" – nothing to apply.
         const prefs = user?.preferences;

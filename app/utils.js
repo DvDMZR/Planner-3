@@ -221,11 +221,23 @@ const generateInitialData = (empCats) => {
     return { employees: emps, projects: [], assignments: [], expenses: [] };
 };
 
-// ─── PIN HASHING (Web Crypto, SHA-256 + per-user salt) ───────────────────────
-// Stored on user records as { pinHash, pinSalt } – never the raw PIN.
+// ─── PIN HASHING (Web Crypto, PBKDF2-SHA256 + per-user salt) ─────────────────
+// Stored on user records as { pinHash, pinSalt, pinAlgo } – never the raw PIN.
+// Records without `pinAlgo` are legacy single-round SHA-256 and verify against
+// the legacy hash; they get re-hashed automatically on the next successful
+// login (see LoginModal → loginUser).
+
+const PIN_PBKDF2_ITERS = 100_000;
+const PIN_PBKDF2_ALGO  = 'pbkdf2-100k';
 
 const _bufToHex = (buf) =>
     [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+const _hexToBytes = (hex) => {
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i*2, 2), 16);
+    return out;
+};
 
 const generatePinSalt = () => {
     const arr = new Uint8Array(16);
@@ -233,30 +245,48 @@ const generatePinSalt = () => {
     return _bufToHex(arr);
 };
 
-const hashPin = async (pin, salt) => {
+// Current (strong) hash. PBKDF2-SHA256 with 100k iterations and the user salt.
+// Callers should also store pinAlgo: PIN_PBKDF2_ALGO alongside the hash.
+const hashPin = async (pin, saltHex) => {
+    const keyMat = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: _hexToBytes(saltHex), iterations: PIN_PBKDF2_ITERS, hash: 'SHA-256' },
+        keyMat, 256
+    );
+    return _bufToHex(bits);
+};
+
+// Legacy single-round SHA-256. Kept only so existing pinHash records still
+// verify after the upgrade — never used to produce new hashes.
+const _hashPinLegacy = async (pin, salt) => {
     const data = new TextEncoder().encode(`${salt}:${pin}`);
     const buf = await crypto.subtle.digest('SHA-256', data);
     return _bufToHex(buf);
 };
 
-const verifyPin = async (pin, hash, salt) => {
+const verifyPin = async (pin, hash, salt, algo) => {
     if (!hash || !salt) return false;
-    const computed = await hashPin(pin, salt);
+    const computed = algo === PIN_PBKDF2_ALGO
+        ? await hashPin(pin, salt)
+        : await _hashPinLegacy(pin, salt);
     return computed === hash;
 };
 
 // Migrate a single user record:
-//  - { pin: '1234', ... }                 → { pinHash, pinSalt, ... } (plain pin removed)
-//  - { pinHash, pinSalt, ... }            → unchanged
+//  - { pin: '1234', ... }                            → PBKDF2 hash + pinAlgo
+//  - { pinHash, pinSalt } without pinAlgo (legacy)   → left as-is, rehash on next login
+//  - { pinHash, pinSalt, pinAlgo: 'pbkdf2-100k' }    → unchanged
 // Returns { user, changed } so callers can mark dirty and persist.
 const migrateUserPin = async (user) => {
     if (!user) return { user, changed: false };
-    if (user.pinHash && user.pinSalt) return { user, changed: false };
+    if (user.pinHash && user.pinSalt && user.pinAlgo === PIN_PBKDF2_ALGO) return { user, changed: false };
     if (user.pin) {
         const salt = generatePinSalt();
         const pinHash = await hashPin(user.pin, salt);
         const { pin, ...rest } = user;
-        return { user: { ...rest, pinHash, pinSalt: salt }, changed: true };
+        return { user: { ...rest, pinHash, pinSalt: salt, pinAlgo: PIN_PBKDF2_ALGO }, changed: true };
     }
     return { user, changed: false };
 };

@@ -1092,7 +1092,7 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
         // the next save will migrate them to a hash.
         let ok = false;
         if (user.pinHash && user.pinSalt) {
-            try { ok = await verifyPin(pin, user.pinHash, user.pinSalt); }
+            try { ok = await verifyPin(pin, user.pinHash, user.pinSalt, user.pinAlgo); }
             catch(e) { ok = false; }
         } else if (typeof user.pin === 'string') {
             ok = user.pin === pin;
@@ -1119,7 +1119,18 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
             sessionStorage.removeItem('plannerLoginFails');
             sessionStorage.removeItem('plannerLoginLockUntil');
         } catch(e) {}
-        onLogin(user);
+        // Opportunistically upgrade legacy SHA-256 / plaintext-pin records to
+        // PBKDF2 on a successful login. The next save persists the new hash.
+        let upgraded = user;
+        if (user.pinAlgo !== PIN_PBKDF2_ALGO) {
+            try {
+                const newSalt = generatePinSalt();
+                const newHash = await hashPin(pin, newSalt);
+                const { pin: _plain, ...rest } = user;
+                upgraded = { ...rest, pinHash: newHash, pinSalt: newSalt, pinAlgo: PIN_PBKDF2_ALGO };
+            } catch(e) { /* fall back to original user on crypto failure */ }
+        }
+        onLogin(upgraded);
     };
 
     return (
