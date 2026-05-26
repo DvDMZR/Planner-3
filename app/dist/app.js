@@ -794,6 +794,12 @@ function App() {
         localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
       } catch (e) {
         console.warn('[LS] save failed', e);
+        // Quota exceeded or storage disabled – warn the user instead
+        // of silently dropping data on the next reload.
+        showToast('Lokaler Speicher voll – bitte Browserdaten freigeben oder Snapshot exportieren.', {
+          type: 'error',
+          duration: 8000
+        });
       }
       if (FS_MODE && dirHandleRef.current) {
         saveSplitState(stateData, lastSavedFsRef.current, (filename, payload) => fsSaveFile(dirHandleRef.current, filename, payload)).then(async () => {

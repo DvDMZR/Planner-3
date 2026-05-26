@@ -977,6 +977,7 @@ const Tooltip = ({
 }) => {
   const [show, setShow] = React.useState(false);
   const timer = React.useRef(null);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
   if (!text) return children;
   const onEnter = () => {
     timer.current = setTimeout(() => setShow(true), delay);

@@ -257,7 +257,7 @@ async function spSaveFile(ctx, filename, data, ifMatchEtag = null) {
         if (!r.ok) throw new Error('spSaveFile ' + filename + ' ' + r.status);
     } else {
         const r = await spFetch(
-            `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
+            `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${SP_ENC(filename)}',overwrite=true)`,
             {
                 method: 'POST',
                 headers: {
@@ -312,7 +312,7 @@ async function spSaveBackup(ctx, filename, data) {
 
     const body = typeof data === 'string' ? data : JSON.stringify(data);
     const r = await spFetch(
-        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${filename}',overwrite=true)`,
+        `${ctx.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_ENC(folder)}')/Files/Add(url='${SP_ENC(filename)}',overwrite=true)`,
         {
             method: 'POST',
             headers: {

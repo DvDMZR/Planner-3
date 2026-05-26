@@ -170,7 +170,7 @@ const AssignmentModal = ({
             `SUMMARY:${summary}`,
             `DESCRIPTION:${description}`,
             'TRANSP:OPAQUE',
-            `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${empEmail}`,
+            `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${(empEmail || '').replace(/[\r\n,;:]/g, '').trim()}`,
             'END:VEVENT',
             'END:VCALENDAR',
         ];

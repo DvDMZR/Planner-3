@@ -146,7 +146,7 @@ const AssignmentModal = ({
     const summary = escape(`${typeLabel}: ${refLabel}`);
     const description = escape(data.comment ? `${refLabel}\n${data.comment}` : refLabel);
     const uid = `${makeId('cal')}@planner-3`;
-    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Planner-3//Assignment//EN', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST', 'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${fmtStamp}`, `DTSTART;VALUE=DATE:${fmtDate(start)}`, `DTEND;VALUE=DATE:${fmtDate(endExclusive)}`, `SUMMARY:${summary}`, `DESCRIPTION:${description}`, 'TRANSP:OPAQUE', `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${empEmail}`, 'END:VEVENT', 'END:VCALENDAR'];
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Planner-3//Assignment//EN', 'CALSCALE:GREGORIAN', 'METHOD:REQUEST', 'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${fmtStamp}`, `DTSTART;VALUE=DATE:${fmtDate(start)}`, `DTEND;VALUE=DATE:${fmtDate(endExclusive)}`, `SUMMARY:${summary}`, `DESCRIPTION:${description}`, 'TRANSP:OPAQUE', `ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${(empEmail || '').replace(/[\r\n,;:]/g, '').trim()}`, 'END:VEVENT', 'END:VCALENDAR'];
     // RFC 5545 mandates CRLF line endings.
     return lines.join('\r\n');
   };
