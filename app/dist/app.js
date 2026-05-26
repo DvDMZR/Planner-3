@@ -2195,7 +2195,7 @@ function App() {
     });
     const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
     const body = encodeURIComponent(`Guten Tag,\n\nanbei sende ich die Rechnung fuer folgendes Projekt:\n\n` + `Projekt: ${proj.name}\n` + `Projektnummer: ${proj.projectNumber || '-'}\n` + `Datum: ${new Date().toLocaleDateString('de-DE')}\n\n` + `Positionen:\n${rows.join('\n')}\n\n` + `Gesamtsumme (Netto): ${total.toFixed(2)} EUR\n\n` + `Mit freundlichen Gruessen`);
-    window.location.href = `mailto:${invoiceRecipient}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${encodeURIComponent(invoiceRecipient)}?subject=${subject}&body=${body}`;
   };
 
   // --- SUB-COMPONENTS ---

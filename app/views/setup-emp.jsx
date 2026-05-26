@@ -144,7 +144,7 @@ const SetupEmpView = ({ s, h }) => {
                                                             </td>
                                                             <td className="p-4 text-slate-600 text-sm">
                                                                 {e.email
-                                                                    ? <a href={`mailto:${e.email}`} className="text-gea-600 hover:text-gea-700">{e.email}</a>
+                                                                    ? <a href={`mailto:${encodeURIComponent(e.email)}`} className="text-gea-600 hover:text-gea-700">{e.email}</a>
                                                                     : <span className="text-slate-300">—</span>}
                                                             </td>
                                                             <td className="p-4 text-center">

@@ -1876,7 +1876,7 @@ function App() {
             `Gesamtsumme (Netto): ${total.toFixed(2)} EUR\n\n` +
             `Mit freundlichen Gruessen`
         );
-        window.location.href = `mailto:${invoiceRecipient}?subject=${subject}&body=${body}`;
+        window.location.href = `mailto:${encodeURIComponent(invoiceRecipient)}?subject=${subject}&body=${body}`;
     };
 
     // --- SUB-COMPONENTS ---
