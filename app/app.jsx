@@ -787,12 +787,41 @@ function App() {
         };
         const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         const body = JSON.stringify(payload);
+        // Prune auto-backups older than the keep-count. Manual snapshots are
+        // left untouched so user-triggered safety copies don't disappear.
+        const pruneSp = async () => {
+            if (reason !== 'auto') return;
+            try {
+                const files = await spListBackups(SP_CONTEXT);
+                const autos = files
+                    .filter(f => f.name?.startsWith('backup-'))
+                    .sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+                const excess = autos.length - BACKUP_KEEP_COUNT;
+                for (let i = 0; i < excess; i++) {
+                    await spDeleteBackup(SP_CONTEXT, autos[i].name).catch(() => {});
+                }
+            } catch(e) { console.warn('[BACKUP] SP prune failed', e); }
+        };
+        const pruneFs = async () => {
+            if (reason !== 'auto') return;
+            try {
+                const files = await fsListBackups(dirHandleRef.current);
+                const autos = files
+                    .filter(f => f.name?.startsWith('backup-'))
+                    .sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+                const excess = autos.length - BACKUP_KEEP_COUNT;
+                for (let i = 0; i < excess; i++) {
+                    await fsDeleteBackup(dirHandleRef.current, autos[i].name).catch(() => {});
+                }
+            } catch(e) { console.warn('[BACKUP] FS prune failed', e); }
+        };
         // Prefer SharePoint when connected; fall back to local FS if a folder
         // handle is available. If neither is reachable, surface why.
         if (SP_CONTEXT) {
             try {
                 await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, body);
                 setLastBackupAt(new Date().toISOString());
+                await pruneSp();
                 return { ok: true, target: 'sp' };
             } catch(e) {
                 console.error('[BACKUP] SharePoint write failed', e);
@@ -803,6 +832,7 @@ function App() {
             try {
                 await fsSaveBackup(dirHandleRef.current, `backup-${ts}.json`, body);
                 setLastBackupAt(new Date().toISOString());
+                await pruneFs();
                 return { ok: true, target: 'fs' };
             } catch(e) {
                 console.error('[BACKUP] FS write failed', e);

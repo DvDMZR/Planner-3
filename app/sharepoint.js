@@ -326,6 +326,22 @@ async function spSaveBackup(ctx, filename, data) {
     if (!r.ok) throw new Error('spSaveBackup ' + filename + ' ' + r.status);
 }
 
+// Delete a single backup file. Caller is responsible for choosing which file
+// to delete (e.g. trimming the oldest entries from spListBackups).
+async function spDeleteBackup(ctx, filename) {
+    const digest = await spGetDigest(ctx.siteUrl);
+    const path = ctx.folderPath + '/' + PLANNER_DATA_DIR + '/backups/' + filename;
+    const r = await spFetch(
+        `${ctx.siteUrl}/_api/web/GetFileByServerRelativeUrl('${SP_ENC(path)}')`,
+        { method: 'POST', headers: {
+            'X-RequestDigest': digest,
+            'X-HTTP-Method': 'DELETE',
+            'IF-MATCH': '*',
+        } }
+    );
+    if (!r.ok && r.status !== 404) throw new Error('spDeleteBackup ' + filename + ' ' + r.status);
+}
+
 // Fetch metadata (timestamp + ETag) for all files in the planner-data folder
 // in a SINGLE request.  Returns { [filename]: { ts, etag } }.
 // ETags are used for optimistic concurrency (If-Match on conditional writes).

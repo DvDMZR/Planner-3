@@ -594,6 +594,10 @@ const DEFAULT_WEEKS_AHEAD = 52;
 const LOGIN_LOCK_THRESHOLD = 5;
 const LOGIN_LOCK_DURATION_MS = 60 * 1000;
 
+// Auto-backup retention. Only auto-backups are pruned; manual snapshots are
+// kept as-is so user-triggered safety copies don't silently disappear.
+const BACKUP_KEEP_COUNT = 50;
+
 // Timeline view column geometry
 const TIMELINE_WEEK_W = 120;    // matches min-w-[120px]
 const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
