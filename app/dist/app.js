@@ -186,6 +186,20 @@ function App() {
     return id;
   }, []);
 
+  // Loaded meta.schemaVersion if it is *newer* than this build understands.
+  // Filled during loadData and read by a one-shot effect below.
+  const [futureSchemaSeen, setFutureSchemaSeen] = useState(null);
+  // One-shot warning when the data on disk was written by a newer build.
+  // Saving still works but downgrades meta.schemaVersion and silently drops
+  // any unknown fields the newer client added.
+  useEffect(() => {
+    if (futureSchemaSeen == null) return;
+    showToast(`Achtung: Diese Daten wurden mit einer neueren App-Version gespeichert (Schema v${futureSchemaSeen}, diese App: v${SCHEMA_VERSION}). Bitte aktualisiere die App, bevor du speicherst – sonst gehen neue Felder verloren.`, {
+      type: 'error',
+      duration: 0
+    });
+  }, [futureSchemaSeen, showToast]);
+
   // Stable ref so audit handlers see current assignments without deps
   const assignmentsRef = useRef([]);
   useEffect(() => {
@@ -393,8 +407,12 @@ function App() {
             try {
               const {
                 state,
-                timestamps
+                timestamps,
+                loadedSchemaVersion
               } = await loadSplitStateFs(handle);
+              if (Number.isFinite(loadedSchemaVersion) && loadedSchemaVersion > SCHEMA_VERSION) {
+                setFutureSchemaSeen(loadedSchemaVersion);
+              }
               if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                 parsedData = state;
                 fsFileTimestampsRef.current = timestamps;
@@ -418,8 +436,12 @@ function App() {
           const {
             state,
             timestamps,
-            etags
+            etags,
+            loadedSchemaVersion
           } = await loadSplitStateSp(SP_CONTEXT);
+          if (Number.isFinite(loadedSchemaVersion) && loadedSchemaVersion > SCHEMA_VERSION) {
+            setFutureSchemaSeen(loadedSchemaVersion);
+          }
           // Treat "all empty" as fresh install → fall through to
           // localStorage / generateInitialData so the app has
           // sensible defaults to seed the new files.
@@ -1014,6 +1036,11 @@ function App() {
       schemaVersion: SCHEMA_VERSION
     };
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    // Random suffix prevents same-second filename collisions when two
+    // clients hit the auto-backup tick simultaneously – SP overwrite=true
+    // would otherwise silently clobber the first write.
+    const rand = Math.random().toString(16).slice(2, 6);
+    const backupName = `backup-${ts}-${rand}.json`;
     const body = JSON.stringify(payload);
     // Prune auto-backups older than the keep-count. Manual snapshots are
     // left untouched so user-triggered safety copies don't disappear.
@@ -1047,7 +1074,7 @@ function App() {
     // handle is available. If neither is reachable, surface why.
     if (SP_CONTEXT) {
       try {
-        await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, body);
+        await spSaveBackup(SP_CONTEXT, backupName, body);
         setLastBackupAt(new Date().toISOString());
         await pruneSp();
         return {
@@ -1065,7 +1092,7 @@ function App() {
     }
     if (dirHandleRef.current) {
       try {
-        await fsSaveBackup(dirHandleRef.current, `backup-${ts}.json`, body);
+        await fsSaveBackup(dirHandleRef.current, backupName, body);
         setLastBackupAt(new Date().toISOString());
         await pruneFs();
         return {
@@ -2024,7 +2051,11 @@ function App() {
         const rawParsed = JSON.parse(event.target.result);
         const result = validateImportedState(rawParsed);
         if (!result.ok) {
-          alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+          if (result.reason === 'futureVersion') {
+            alert(`Diese Datei wurde mit einer neueren App-Version gespeichert (Schema v${result.version}, diese App nutzt v${SCHEMA_VERSION}). Bitte die App aktualisieren, bevor du sie importierst.`);
+          } else {
+            alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+          }
           return;
         }
         const parsed = result.data;
@@ -2968,5 +2999,44 @@ function App() {
     onDismiss: dismissToast
   }));
 }
+
+// Top-level error boundary. Without this, a single render-time exception in
+// any view blanks the whole app to React's default empty screen with no way
+// back. We catch here, log to the console for diagnosis, and offer a reload
+// CTA — SharePoint data is unaffected because saves go through onClick / save
+// effects, not render.
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: null
+    };
+  }
+  static getDerivedStateFromError(error) {
+    return {
+      error
+    };
+  }
+  componentDidCatch(error, info) {
+    console.error('[FATAL] React tree crashed:', error, info?.componentStack);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-h-screen flex items-center justify-center bg-slate-50 p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "max-w-md w-full bg-white border border-red-300 rounded-xl shadow-lg p-6 space-y-4"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-semibold text-red-700"
+    }, "Anwendung ist abgest\xFCrzt"), /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-slate-700"
+    }, "Ein interner Fehler hat das Render gestoppt. Daten in SharePoint sind nicht betroffen. Lade die Seite neu, um es erneut zu versuchen."), /*#__PURE__*/React.createElement("pre", {
+      className: "text-xs bg-slate-100 text-slate-600 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap break-words"
+    }, String(this.state.error?.message || this.state.error)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => window.location.reload(),
+      className: "w-full bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700"
+    }, "Seite neu laden")));
+  }
+}
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(/*#__PURE__*/React.createElement(App, null));
+root.render(/*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(App, null)));

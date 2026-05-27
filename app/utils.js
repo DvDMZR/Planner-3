@@ -352,6 +352,14 @@ const validateImportedState = (parsed) => {
     if (!parsed || typeof parsed !== 'object') {
         return { ok: false, reason: 'empty' };
     }
+    // Reject snapshots from a newer schema. validate would otherwise drop the
+    // unknown fields silently and restore a half-converted state; on next save
+    // the meta.json would also get downgraded to the current SCHEMA_VERSION.
+    // Older snapshots remain accepted – migrateCostItems / fallback selectors
+    // handle the forward path.
+    if (Number.isFinite(parsed.schemaVersion) && parsed.schemaVersion > SCHEMA_VERSION) {
+        return { ok: false, reason: 'futureVersion', version: parsed.schemaVersion };
+    }
     const out = {};
     const droppedKeys = [];
     for (const key of Object.keys(parsed)) {

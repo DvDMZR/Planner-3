@@ -234,7 +234,7 @@ async function loadSplitStateSp(ctx) {
     // categories.json; we still read the legacy categories.json as a fallback
     // for installs that haven't migrated yet.
     const [settingsData, categoryDefsData, tasksData, inactiveData,
-           categoriesData, usersData, auditData] = await Promise.all([
+           categoriesData, usersData, auditData, metaData] = await Promise.all([
         spLoadFile(ctx, 'settings.json').catch(() => null),
         spLoadFile(ctx, 'category-defs.json').catch(() => null),
         spLoadFile(ctx, 'tasks.json').catch(() => null),
@@ -242,6 +242,7 @@ async function loadSplitStateSp(ctx) {
         spLoadFile(ctx, 'categories.json').catch(() => null),
         spLoadFile(ctx, 'users.json').catch(() => null),
         spLoadFile(ctx, 'audit.json').catch(() => null),
+        spLoadFile(ctx, 'meta.json').catch(() => null),
     ]);
     const teams = (categoryDefsData?.empCategories)
                || (categoriesData?.empCategories)
@@ -280,13 +281,14 @@ async function loadSplitStateSp(ctx) {
     const timestamps = {};
     const etags = {};
     Object.entries(fileMeta).forEach(([f, v]) => { timestamps[f] = v.ts; etags[f] = v.etag; });
-    return { state, timestamps, etags };
+    const loadedSchemaVersion = Number.isFinite(metaData?.schemaVersion) ? metaData.schemaVersion : null;
+    return { state, timestamps, etags, loadedSchemaVersion };
 }
 
 async function loadSplitStateFs(dirHandle) {
     await migrateFsToTeamSplit(dirHandle);
     const [settingsResult, categoryDefsResult, tasksResult, inactiveResult,
-           categoriesResult, usersResult, auditResult] = await Promise.all([
+           categoriesResult, usersResult, auditResult, metaResult] = await Promise.all([
         fsLoadFile(dirHandle, 'settings.json').catch(() => null),
         fsLoadFile(dirHandle, 'category-defs.json').catch(() => null),
         fsLoadFile(dirHandle, 'tasks.json').catch(() => null),
@@ -294,6 +296,7 @@ async function loadSplitStateFs(dirHandle) {
         fsLoadFile(dirHandle, 'categories.json').catch(() => null),
         fsLoadFile(dirHandle, 'users.json').catch(() => null),
         fsLoadFile(dirHandle, 'audit.json').catch(() => null),
+        fsLoadFile(dirHandle, 'meta.json').catch(() => null),
     ]);
     const settings     = settingsResult?.data     || {};
     const categoryDefs = categoryDefsResult?.data || null;
@@ -330,7 +333,8 @@ async function loadSplitStateFs(dirHandle) {
         costItemsByTeam
     });
     const timestamps = await fsGetFolderTimestamps(dirHandle).catch(() => ({}));
-    return { state, timestamps };
+    const loadedSchemaVersion = Number.isFinite(metaResult?.data?.schemaVersion) ? metaResult.data.schemaVersion : null;
+    return { state, timestamps, loadedSchemaVersion };
 }
 
 // Save split files, writing ONLY those whose serialised payload differs from
