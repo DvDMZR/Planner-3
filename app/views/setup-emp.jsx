@@ -36,6 +36,9 @@ const SetupEmpView = ({ s, h }) => {
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
 
+    const closeEmpForm = React.useCallback(() => setIsEmpFormOpen(false), [setIsEmpFormOpen]);
+    useEscapeToClose(isEmpFormOpen ? closeEmpForm : null);
+
         const emptyForm = { name: '', category: empCategories[0] || '', weeklyHours: HOURS_PER_WEEK, email: '', role: '', notes: '' };
         const isValidEmail = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 

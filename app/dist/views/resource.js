@@ -171,9 +171,8 @@ const ResourceView = ({
         progress,
         label
       });
-      const BUFFER = 8;
-      const newStart = Math.max(0, firstIdx - BUFFER);
-      const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+      const newStart = Math.max(0, firstIdx - VIRT_BUFFER);
+      const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + VIRT_BUFFER);
       setVisibleRange(prev => prev.start === newStart && prev.end === newEnd ? prev : {
         start: newStart,
         end: newEnd

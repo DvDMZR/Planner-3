@@ -897,6 +897,23 @@ const IconSunset = ({
 }));
 
 // --- SHARED UI COMPONENTS (module scope) ---
+// Bind window-keydown so pressing Escape closes the current modal. Pass the
+// same onClose the modal already uses for its X button. Several modals open
+// at once nest naturally: every level installs its own listener, all of them
+// fire on a single keystroke, the topmost one's onClose runs last (or its
+// parent re-renders without it before this listener's setState commits –
+// which is fine, idempotent).
+const useEscapeToClose = onClose => {
+  React.useEffect(() => {
+    if (typeof onClose !== 'function') return;
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+};
+
 // Defined outside App() so they keep a stable component identity across
 // App re-renders; otherwise any internal useState inside a modal would
 // reset whenever the parent re-renders (e.g. from remote sync polling).

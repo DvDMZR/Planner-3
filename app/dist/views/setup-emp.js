@@ -136,6 +136,8 @@ const SetupEmpView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
+  const closeEmpForm = React.useCallback(() => setIsEmpFormOpen(false), [setIsEmpFormOpen]);
+  useEscapeToClose(isEmpFormOpen ? closeEmpForm : null);
   const emptyForm = {
     name: '',
     category: empCategories[0] || '',

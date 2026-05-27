@@ -601,6 +601,9 @@ const BACKUP_KEEP_COUNT = 50;
 // Timeline view column geometry
 const TIMELINE_WEEK_W = 120;    // matches min-w-[120px]
 const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
+// Rows / weeks rendered outside the viewport before virtualisation kicks in.
+// Same value in resource and timeline scroll handlers.
+const VIRT_BUFFER = 8;
 
 // Project status sort order used by Overview
 const STATUS_ORDER = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };

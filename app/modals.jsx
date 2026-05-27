@@ -25,7 +25,9 @@ const AssignmentModal = ({
     onSave,
     onDelete,
     onDeleteSeries,
+    requestConfirm,
 }) => {
+    useEscapeToClose(onClose);
     // Guard against weeklyHours = 0 / negative – would otherwise produce
     // NaN / Infinity in the percent calculations and freeze the slider.
     const rawWeeklyHours = employeeById.get(assignContext.empId)?.weeklyHours;
@@ -471,7 +473,19 @@ const AssignmentModal = ({
                         <div className="flex gap-1">
                             <button onClick={() => onDelete(formData.id)} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">Löschen</button>
                             {formData.ruleId && onDeleteSeries && (
-                                <button onClick={() => onDeleteSeries(formData.id)} className="text-rose-500 text-xs hover:bg-rose-50 px-2 py-1 rounded font-medium border border-rose-200 flex items-center gap-1" title="Diese und alle späteren Instanzen der Serie löschen">
+                                <button
+                                    onClick={() => {
+                                        const seriesCount = (assignmentsRef?.current || []).filter(a => a.ruleId === formData.ruleId && a.week >= formData.week).length;
+                                        requestConfirm({
+                                            title: 'Serie löschen?',
+                                            message: `Diese und alle späteren Instanzen der Serie (${seriesCount} Zuweisung${seriesCount === 1 ? '' : 'en'}) werden entfernt.`,
+                                            confirmLabel: 'Serie löschen',
+                                            danger: true,
+                                            onConfirm: () => onDeleteSeries(formData.id)
+                                        });
+                                    }}
+                                    className="text-rose-500 text-xs hover:bg-rose-50 px-2 py-1 rounded font-medium border border-rose-200 flex items-center gap-1"
+                                    title="Diese und alle späteren Instanzen der Serie löschen">
                                     <IconRepeat size={11}/> Serie ab hier löschen
                                 </button>
                             )}
@@ -502,6 +516,7 @@ const CopyModal = ({
     setAssignments,
     onClose,
 }) => {
+    useEscapeToClose(onClose);
     const { assignment } = copyContext;
 
     // Lookup of ALL employees (not just active) so the source weeklyHours is
@@ -713,6 +728,7 @@ const CostItemModal = ({
     showToast,
     onClose,
 }) => {
+    useEscapeToClose(onClose);
     // Coerce a free-text number to a finite, non-negative float. parseFloat
     // alone returns NaN for '' / undefined which then gets serialised into
     // the persisted state; this keeps the JSON safe to re-import.
@@ -1057,6 +1073,7 @@ const DepsSection = () => {
 // LOGIN_LOCK_THRESHOLD and LOGIN_LOCK_DURATION_MS live in config.js
 const LoginModal = ({ appUsers, onLogin, onClose }) => {
     const { useState, useEffect, useRef } = React;
+    useEscapeToClose(onClose);
     const [selectedUserId, setSelectedUserId] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
@@ -1194,7 +1211,30 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
 // a project or employee. Triggered from app.requestDeleteProject /
 // requestDeleteEmployee whenever the entity has dependents. Confirming runs
 // a single batched delete with full Undo from the audit log.
+// Generic two-button confirmation. Used for destructive actions that don't
+// have their own dependency-cascade modal: logout, delete app-user, delete a
+// recurring assignment series. Body is a plain string; pass `\n` for line
+// breaks. `danger` swaps the confirm button to a rose accent.
+const ConfirmModal = ({ title, message, confirmLabel = 'Bestätigen', danger = false, onConfirm, onCancel }) => {
+    useEscapeToClose(onCancel);
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+                <ModalHeader title={title} onClose={onCancel}/>
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{message}</p>
+                    <div className="flex gap-2 pt-1">
+                        <button onClick={onCancel} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">Abbrechen</button>
+                        <button onClick={onConfirm} className={`flex-1 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-gea-600 hover:bg-gea-700'} text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors`}>{confirmLabel}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, projects, onConfirm, onCancel }) => {
+    useEscapeToClose(onCancel);
     const empById = useMemo(() => {
         const m = new Map();
         (employees || []).forEach(e => m.set(e.id, e));
@@ -1206,21 +1246,8 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
         return m;
     }, [projects]);
 
-    const formatKW = (weekId) => {
-        if (!weekId || typeof weekId !== 'string') return weekId || '';
-        const [y, w] = weekId.split('-W');
-        if (!y || !w) return weekId;
-        return `KW ${parseInt(w, 10)}/${y.slice(-2)}`;
-    };
-    const describeAssignment = (a) => {
-        if (a.type === 'project') {
-            const p = projById.get(a.reference);
-            return p ? `Projekt „${p.name}"` : `Projekt ${a.reference || '?'}`;
-        }
-        const labels = { basic: 'Task', other: 'Task', support: 'Support', training: 'Training', offtime: 'Abwesenheit' };
-        const lbl = labels[a.type] || a.type;
-        return a.reference ? `${lbl} „${a.reference}"` : lbl;
-    };
+    // formatKW + describeAssignment live in utils.js; bind the lookup here.
+    const describeAss = (a) => describeAssignment(a, id => projById.get(id));
 
     const total = (dependents.assignments?.length || 0) + (dependents.costItems?.length || 0);
     const kindLabel = entityKind === 'project' ? 'Projekt' : 'Mitarbeiter';
@@ -1243,7 +1270,7 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
                                     const emp = empById.get(a.empId);
                                     return (
                                         <li key={a.id} className="text-xs text-slate-700 flex justify-between gap-2">
-                                            <span className="truncate">{describeAssignment(a)} · {emp?.name || '?'}</span>
+                                            <span className="truncate">{describeAss(a)} · {emp?.name || '?'}</span>
                                             <span className="text-slate-400 shrink-0 tabular-nums">{formatKW(a.week)}</span>
                                         </li>
                                     );

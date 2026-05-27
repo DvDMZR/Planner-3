@@ -221,6 +221,29 @@ const generateInitialData = (empCats) => {
     return { employees: emps, projects: [], assignments: [], expenses: [] };
 };
 
+// ─── DISPLAY FORMATTERS ──────────────────────────────────────────────────────
+// Format an ISO week id (e.g. "2026-W05") as "KW 5/26" for German UI.
+const formatKW = (weekId) => {
+    if (!weekId || typeof weekId !== 'string') return weekId || '?';
+    const [y, w] = weekId.split('-W');
+    if (!y || !w) return weekId;
+    return `KW ${parseInt(w, 10)}/${y.slice(-2)}`;
+};
+
+// Build a short human label for an assignment ("Projekt „X"", "Support „Y"", …).
+// `projectLookup` resolves a project id to the project record – pass
+// e.g. id => projectsRef.current.find(x => x.id === id) or projById.get.
+const describeAssignment = (ass, projectLookup) => {
+    if (!ass) return '?';
+    if (ass.type === 'project') {
+        const p = projectLookup?.(ass.reference);
+        return p ? `Projekt „${p.name}"` : `Projekt ${ass.reference || '?'}`;
+    }
+    const typeLabels = { basic: 'Task', other: 'Task', support: 'Support', training: 'Training', offtime: 'Abwesenheit' };
+    const label = typeLabels[ass.type] || 'Eintrag';
+    return ass.reference ? `${label} „${ass.reference}"` : label;
+};
+
 // ─── PIN HASHING (Web Crypto, PBKDF2-SHA256 + per-user salt) ─────────────────
 // Stored on user records as { pinHash, pinSalt, pinAlgo } – never the raw PIN.
 // Records without `pinAlgo` are legacy single-round SHA-256 and verify against

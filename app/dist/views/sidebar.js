@@ -141,7 +141,8 @@ const _SidebarBase = ({
     reconnectSharePoint,
     loginUser,
     logoutUser,
-    setIsLoginModalOpen
+    setIsLoginModalOpen,
+    requestConfirm
   } = h;
   const isActive = !!currentUser;
   const isAdmin = currentUser?.role === 'admin';
@@ -301,7 +302,12 @@ const _SidebarBase = ({
     text: "Abmelden",
     side: "top"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: logoutUser,
+    onClick: () => requestConfirm({
+      title: 'Abmelden?',
+      message: 'Du wirst zur Login-Seite zurückgeleitet. Nicht-gespeicherte Änderungen können verloren gehen.',
+      confirmLabel: 'Abmelden',
+      onConfirm: logoutUser
+    }),
     className: "text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
   }, /*#__PURE__*/React.createElement(IconLogOut, {
     size: 15

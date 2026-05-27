@@ -142,6 +142,27 @@ function App() {
         return id;
     }, []);
 
+    // Open the generic confirm dialog. The onConfirm callback fires only when
+    // the user clicks the primary action; Cancel/Escape/backdrop dismiss
+    // without calling it. Dialog auto-closes on either path.
+    const requestConfirm = useCallback(({ title, message, confirmLabel = 'Bestätigen', danger = false, onConfirm }) => {
+        setConfirmDialog({
+            title, message, confirmLabel, danger,
+            onConfirm: () => { setConfirmDialog(null); onConfirm?.(); }
+        });
+    }, []);
+
+    // Escape-to-close for the inline modals that App renders directly (the
+    // self-contained modals in modals.jsx call useEscapeToClose themselves).
+    const closeProjForm    = useCallback(() => setIsProjFormOpen(false), []);
+    const closeHelp        = useCallback(() => setIsHelpModalOpen(false), []);
+    const closeInvoice     = useCallback(() => setIsInvoiceModalOpen(false), []);
+    const closeChangelog   = useCallback(() => setIsChangelogOpen(false), []);
+    useEscapeToClose(isProjFormOpen    ? closeProjForm  : null);
+    useEscapeToClose(isHelpModalOpen   ? closeHelp      : null);
+    useEscapeToClose(isInvoiceModalOpen ? closeInvoice  : null);
+    useEscapeToClose(isChangelogOpen   ? closeChangelog : null);
+
     // Loaded meta.schemaVersion if it is *newer* than this build understands.
     // Filled during loadData and read by a one-shot effect below.
     const [futureSchemaSeen, setFutureSchemaSeen] = useState(null);
@@ -168,6 +189,10 @@ function App() {
     // null = no prompt visible. The modal lives at the bottom of the App render
     // tree so it overlays the active view.
     const [cascadeConfirm, setCascadeConfirm] = useState(null);
+    // Generic confirm dialog: { title, message, confirmLabel, danger, onConfirm }.
+    // Used for destructive actions without entity dependents (logout, app-user
+    // delete, series delete). Set via requestConfirm().
+    const [confirmDialog, setConfirmDialog] = useState(null);
 
     // Conflict-loop cap: each SpConflictError increments; on >=3 we stop
     // auto-reloading and tell the user to refresh.
@@ -180,23 +205,11 @@ function App() {
     const suppressEmployeeAuditRef = useRef(false);
     const suppressProjectAuditRef = useRef(false);
 
-    // Audit-log helpers
-    const formatKW = (weekId) => {
-        if (!weekId || typeof weekId !== 'string') return weekId || '?';
-        const [y, w] = weekId.split('-W');
-        if (!y || !w) return weekId;
-        return `KW ${parseInt(w)}/${y.slice(-2)}`;
-    };
-    const describeAssignment = (ass) => {
-        if (!ass) return '?';
-        if (ass.type === 'project') {
-            const p = projectsRef.current.find(x => x.id === ass.reference);
-            return p ? `Projekt „${p.name}"` : `Projekt ${ass.reference || '?'}`;
-        }
-        const typeLabels = { basic: 'Task', other: 'Task', support: 'Support', training: 'Training', offtime: 'Abwesenheit' };
-        const label = typeLabels[ass.type] || 'Eintrag';
-        return ass.reference ? `${label} „${ass.reference}"` : label;
-    };
+    // Audit-log helpers. formatKW + describeAssignment now live in utils.js;
+    // describeAssignment needs a project-lookup callback bound to projectsRef
+    // so audit entries see the latest names without re-creating the closure.
+    const describeAssignmentLocal = (ass) =>
+        describeAssignment(ass, id => projectsRef.current.find(x => x.id === id));
 
     // Ref so loginUser can fire a backup without re-creating the callback
     // each time runBackup's deps change.
@@ -1447,7 +1460,7 @@ function App() {
                 : formatKW(weeks[0]);
             const emp = employeesRef.current.find(e => e.id === first?.empId);
             logAudit('assignment_copy',
-                `${data.length}× ${describeAssignment(first)} für ${emp?.name || '?'} (${weekRange})`,
+                `${data.length}× ${describeAssignmentLocal(first)} für ${emp?.name || '?'} (${weekRange})`,
                 { type: 'del_assignments', ids: data.map(a => a.id) });
         } else if (data.id) {
             const oldAss = assignmentsRef.current.find(a => a.id === data.id);
@@ -1458,14 +1471,14 @@ function App() {
                 ? `${formatKW(oldAss.week)} → ${formatKW(data.week)}`
                 : formatKW(data.week);
             logAudit('assignment_update',
-                `${describeAssignment(data)} – ${emp?.name || '?'} (${weekPart})`,
+                `${describeAssignmentLocal(data)} – ${emp?.name || '?'} (${weekPart})`,
                 { type: 'restore_assignment', prev: oldAss });
         } else {
             const newId = makeId('ass');
             setAssignments(prev => [...prev, { ...data, id: newId }]);
             const emp = employeesRef.current.find(e => e.id === data.empId);
             logAudit('assignment_create',
-                `${describeAssignment(data)} – ${emp?.name || '?'} (${formatKW(data.week)})`,
+                `${describeAssignmentLocal(data)} – ${emp?.name || '?'} (${formatKW(data.week)})`,
                 { type: 'del_assignment', ids: [newId] });
         }
         setIsAssignModalOpen(false);
@@ -1607,7 +1620,7 @@ function App() {
         if (deleted) {
             const emp = employeesRef.current.find(e => e.id === deleted.empId);
             logAudit('assignment_delete',
-                `${describeAssignment(deleted)} – ${emp?.name || '?'} (${formatKW(deleted.week)})`,
+                `${describeAssignmentLocal(deleted)} – ${emp?.name || '?'} (${formatKW(deleted.week)})`,
                 { type: 'restore_assignment', prev: deleted });
         }
         setIsAssignModalOpen(false);
@@ -1624,7 +1637,7 @@ function App() {
             ? `${formatKW(weeks[0])} – ${formatKW(weeks[weeks.length - 1])}`
             : formatKW(weeks[0]);
         logAudit('assignment_delete_series',
-            `Terminserie ${describeAssignment(ass)} – ${emp?.name || '?'} (${toDelete.length}× ${weekRange})`,
+            `Terminserie ${describeAssignmentLocal(ass)} – ${emp?.name || '?'} (${toDelete.length}× ${weekRange})`,
             { type: 'restore_assignments', prevItems: toDelete });
         setIsAssignModalOpen(false);
     }, [logAudit]);
@@ -1674,8 +1687,8 @@ function App() {
                     : formatKW(targetWeek);
                 // For project drops, also describe the new project if it changed
                 const draggedTask = (!isResourceView && origAss.type === 'project' && targetEmpIdOrProjId !== origAss.reference)
-                    ? `${describeAssignment(origAss)} → ${describeAssignment({ ...origAss, reference: targetEmpIdOrProjId })}`
-                    : describeAssignment(origAss);
+                    ? `${describeAssignmentLocal(origAss)} → ${describeAssignmentLocal({ ...origAss, reference: targetEmpIdOrProjId })}`
+                    : describeAssignmentLocal(origAss);
                 logAudit('assignment_drop',
                     `${draggedTask} – ${empPart} (${weekPart})`,
                     { type: 'restore_assignment', prev: origAss });
@@ -2250,7 +2263,7 @@ function App() {
         setCompactView, setScrollTarget,
         setAppUsers, setAuditLog, setIsLoginModalOpen,
         setAutoBackup, runBackup, setEmailTemplate,
-        showToast, dismissToast,
+        showToast, dismissToast, requestConfirm,
         loginUser, logoutUser,
         getEmpWeeklyHours, computeAutoStatus, getWeeksForYear, getUtilization,
         toggleCategory, toggleProjCategory, toggleEmpSetup,
@@ -2311,6 +2324,7 @@ function App() {
                     onSave={handleSaveAssignment}
                     onDelete={handleDeleteAssignment}
                     onDeleteSeries={handleDeleteAssignmentSeries}
+                    requestConfirm={requestConfirm}
                 />
             )}
             {isCopyModalOpen && copyContext && currentUser && (
@@ -2385,6 +2399,18 @@ function App() {
                     projects={projects}
                     onConfirm={confirmCascadeDelete}
                     onCancel={() => setCascadeConfirm(null)}
+                />
+            )}
+
+            {/* Generic Confirm Dialog (logout, app-user delete, series delete). */}
+            {confirmDialog && (
+                <ConfirmModal
+                    title={confirmDialog.title}
+                    message={confirmDialog.message}
+                    confirmLabel={confirmDialog.confirmLabel}
+                    danger={confirmDialog.danger}
+                    onConfirm={confirmDialog.onConfirm}
+                    onCancel={() => setConfirmDialog(null)}
                 />
             )}
 

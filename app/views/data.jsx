@@ -7,7 +7,7 @@ const DataView = ({ s, h }) => {
     const { currentUser, appUsers, autoBackup, lastBackupAt, emailTemplate,
             invoiceRecipient } = s;
     const { setAppUsers, loginUser, setAutoBackup, runBackup, setEmailTemplate,
-            setInvoiceRecipient, exportData, importData, showToast } = h;
+            setInvoiceRecipient, exportData, importData, showToast, requestConfirm } = h;
 
     const isAdmin = currentUser?.role === 'admin';
 
@@ -62,9 +62,16 @@ const DataView = ({ s, h }) => {
     const handleDelete = (id) => {
         const user = appUsers.find(u => u.id === id);
         if (!user) return;
-        if (!window.confirm(`Nutzer „${user.name}" wirklich löschen?`)) return;
-        setAppUsers(prev => prev.filter(u => u.id !== id));
-        showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+        requestConfirm({
+            title: 'Nutzer löschen?',
+            message: `Nutzer „${user.name}" wird endgültig entfernt. Mitarbeiter-Datensätze und Zuweisungen sind davon nicht betroffen.`,
+            confirmLabel: 'Löschen',
+            danger: true,
+            onConfirm: () => {
+                setAppUsers(prev => prev.filter(u => u.id !== id));
+                showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+            }
+        });
     };
 
     const startEdit = (user) => {
