@@ -37,7 +37,7 @@ const _SidebarBase = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek, reconnectSharePoint,
-        loginUser, logoutUser, setIsLoginModalOpen } = h;
+        loginUser, logoutUser, setIsLoginModalOpen, requestConfirm } = h;
 
     const isActive = !!currentUser;
     const isAdmin = currentUser?.role === 'admin';
@@ -152,7 +152,12 @@ const _SidebarBase = ({ s, h }) => {
                         </div>
                         <Tooltip text="Abmelden" side="top">
                             <button
-                                onClick={logoutUser}
+                                onClick={() => requestConfirm({
+                                    title: 'Abmelden?',
+                                    message: 'Du wirst zur Login-Seite zurückgeleitet. Nicht-gespeicherte Änderungen können verloren gehen.',
+                                    confirmLabel: 'Abmelden',
+                                    onConfirm: logoutUser
+                                })}
                                 className="text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
                             >
                                 <IconLogOut size={15}/>

@@ -1,6 +1,4 @@
-const TIMELINE_WEEK_W = 120;   // matches min-w-[120px]
-const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
-
+// TIMELINE_WEEK_W and TIMELINE_STICKY_W live in config.js
 const TimelineView = ({ s, h }) => {
     const { activeTab, employees, projects, assignments, expenses, costItems,
         empCategories, projCategories, basicTasks, basicTasksMeta,
@@ -91,9 +89,8 @@ const TimelineView = ({ s, h }) => {
                     ? `${timelineWeeks[firstIdx].label} – ${timelineWeeks[lastIdx].label}`
                     : '';
                 setScrollInfo({ progress, label });
-                const BUFFER = 8;
-                const newStart = Math.max(0, firstIdx - BUFFER);
-                const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + BUFFER);
+                const newStart = Math.max(0, firstIdx - VIRT_BUFFER);
+                const newEnd = Math.min(timelineWeeks.length - 1, lastIdx + VIRT_BUFFER);
                 setVisibleRange(prev =>
                     prev.start === newStart && prev.end === newEnd
                         ? prev

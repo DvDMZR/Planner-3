@@ -108,6 +108,17 @@ async function fsListBackups(dirHandle) {
     } catch(e) { return []; }
 }
 
+// Delete a single backup file from planner-data/backups/.
+async function fsDeleteBackup(dirHandle, filename) {
+    const dataDir = await fsGetDataDir(dirHandle, false);
+    if (!dataDir) return;
+    const backups = await dataDir.getDirectoryHandle('backups', { create: false }).catch(() => null);
+    if (!backups) return;
+    try { await backups.removeEntry(filename); } catch(e) {
+        if (e.name !== 'NotFoundError') throw e;
+    }
+}
+
 async function fsGetFolderTimestamps(dirHandle) {
     const dataDir = await fsGetDataDir(dirHandle, false);
     if (!dataDir) return {};

@@ -26,7 +26,8 @@ const DataView = ({
     setInvoiceRecipient,
     exportData,
     importData,
-    showToast
+    showToast,
+    requestConfirm
   } = h;
   const isAdmin = currentUser?.role === 'admin';
 
@@ -86,6 +87,7 @@ const DataView = ({
       name: newName.trim(),
       pinHash,
       pinSalt,
+      pinAlgo: PIN_PBKDF2_ALGO,
       role: 'active'
     };
     setAppUsers(prev => [...prev, user]);
@@ -98,9 +100,16 @@ const DataView = ({
   const handleDelete = id => {
     const user = appUsers.find(u => u.id === id);
     if (!user) return;
-    if (!window.confirm(`Nutzer „${user.name}" wirklich löschen?`)) return;
-    setAppUsers(prev => prev.filter(u => u.id !== id));
-    showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+    requestConfirm({
+      title: 'Nutzer löschen?',
+      message: `Nutzer „${user.name}" wird endgültig entfernt. Mitarbeiter-Datensätze und Zuweisungen sind davon nicht betroffen.`,
+      confirmLabel: 'Löschen',
+      danger: true,
+      onConfirm: () => {
+        setAppUsers(prev => prev.filter(u => u.id !== id));
+        showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+      }
+    });
   };
   const startEdit = user => {
     setEditingId(user.id);
@@ -136,7 +145,8 @@ const DataView = ({
       ...rest,
       name: isAdmin ? editName.trim() : user.name,
       pinHash,
-      pinSalt
+      pinSalt,
+      pinAlgo: PIN_PBKDF2_ALGO
     };
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
     if (currentUser.id === user.id) loginUser(updated);

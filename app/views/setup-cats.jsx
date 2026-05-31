@@ -21,6 +21,17 @@ const SetupCatsView = ({ s, h }) => {
     const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
     const otherTasks          = basicTasks.filter(t =>  basicTasksMeta?.[t]);
 
+    // O(1) membership checks for the inactive lists; the source arrays are
+    // hit by .filter() in multiple places below.
+    const inactiveSupportSet  = React.useMemo(() => new Set(inactiveSupportTasks  || []), [inactiveSupportTasks]);
+    const inactiveTrainingSet = React.useMemo(() => new Set(inactiveTrainingTasks || []), [inactiveTrainingTasks]);
+    const inactiveOfftimeSet  = React.useMemo(() => new Set((inactiveOfftimeTasks || []).map(x => x.name)), [inactiveOfftimeTasks]);
+
+    const activeSupportTasks  = React.useMemo(() => SUPPORT_TASKS.filter(t => !inactiveSupportSet.has(t)), [inactiveSupportSet]);
+    const activeTrainingTasks = React.useMemo(() => TRAINING_TASKS.filter(t => !inactiveTrainingSet.has(t)), [inactiveTrainingSet]);
+    const activeCustomTraining = React.useMemo(() => (customTrainingTasks || []).filter(t => !inactiveTrainingSet.has(t)), [customTrainingTasks, inactiveTrainingSet]);
+    const activeOfftimeTasks  = React.useMemo(() => offtimeTasks.filter(t => !inactiveOfftimeSet.has(t)), [offtimeTasks, inactiveOfftimeSet]);
+
     const addOtherTask = () => {
         const t = newOtherTask.trim();
         if (!t) return;
@@ -184,7 +195,7 @@ const SetupCatsView = ({ s, h }) => {
                 {/* ── Support Tasks ───────────────────────────────────── */}
                 {section('support', 'Support', (
                     <ul className="divide-y divide-slate-200">
-                        {SUPPORT_TASKS.filter(t => !(inactiveSupportTasks||[]).includes(t)).map(task => {
+                        {activeSupportTasks.map(task => {
                             const sc = SUPPORT_CHIP_COLORS[task] || {};
                             return (
                                 <li key={task} className="p-4 flex justify-between items-center text-sm">
@@ -200,7 +211,7 @@ const SetupCatsView = ({ s, h }) => {
                                 </li>
                             );
                         })}
-                        {SUPPORT_TASKS.filter(t => !(inactiveSupportTasks||[]).includes(t)).length === 0 &&
+                        {activeSupportTasks.length === 0 &&
                             <li className="p-6 text-sm text-slate-400 text-center">Alle Support-Tasks sind inaktiv.</li>}
                     </ul>
                 ))}
@@ -220,7 +231,7 @@ const SetupCatsView = ({ s, h }) => {
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
-                            {TRAINING_TASKS.filter(t => !(inactiveTrainingTasks||[]).includes(t)).map(task => (
+                            {activeTrainingTasks.map(task => (
                                 <li key={task} className="p-4 flex justify-between items-center text-sm">
                                     <div className="flex items-center gap-2">
                                         <span className="w-3 h-3 rounded-full bg-sky-500"></span>
@@ -233,7 +244,7 @@ const SetupCatsView = ({ s, h }) => {
                                     </button>
                                 </li>
                             ))}
-                            {(customTrainingTasks||[]).filter(t => !(inactiveTrainingTasks||[]).includes(t)).map(task => (
+                            {activeCustomTraining.map(task => (
                                 <li key={task} className="p-4 flex justify-between items-center text-sm">
                                     <div className="flex items-center gap-2">
                                         <span className="w-3 h-3 rounded-full bg-sky-500"></span>
@@ -268,7 +279,7 @@ const SetupCatsView = ({ s, h }) => {
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
-                            {offtimeTasks.filter(t => !(inactiveOfftimeTasks||[]).some(x => x.name === t)).map(task => (
+                            {activeOfftimeTasks.map(task => (
                                 <li key={task} className="p-4 flex justify-between items-center text-sm">
                                     <span className="text-slate-800">{task}</span>
                                     <div className="flex gap-2">
@@ -281,7 +292,7 @@ const SetupCatsView = ({ s, h }) => {
                                     </div>
                                 </li>
                             ))}
-                            {offtimeTasks.filter(t => !(inactiveOfftimeTasks||[]).some(x => x.name === t)).length === 0 &&
+                            {activeOfftimeTasks.length === 0 &&
                                 <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Abwesenheitsarten.</li>}
                         </ul>
                     </div>

@@ -136,6 +136,8 @@ const SetupEmpView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
+  const closeEmpForm = React.useCallback(() => setIsEmpFormOpen(false), [setIsEmpFormOpen]);
+  useEscapeToClose(isEmpFormOpen ? closeEmpForm : null);
   const emptyForm = {
     name: '',
     category: empCategories[0] || '',
@@ -259,7 +261,7 @@ const SetupEmpView = ({
     }, e.role)), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-600 text-sm"
     }, e.email ? /*#__PURE__*/React.createElement("a", {
-      href: `mailto:${e.email}`,
+      href: `mailto:${encodeURIComponent(e.email)}`,
       className: "text-gea-600 hover:text-gea-700"
     }, e.email) : /*#__PURE__*/React.createElement("span", {
       className: "text-slate-300"

@@ -43,7 +43,7 @@ const ADMIN_SEED = { id: 'admin', name: 'Admin', role: 'admin' };
 const buildAdminSeed = async () => {
     const salt = generatePinSalt();
     const pinHash = await hashPin(DEFAULT_ADMIN_PIN, salt);
-    return { ...ADMIN_SEED, pinHash, pinSalt: salt };
+    return { ...ADMIN_SEED, pinHash, pinSalt: salt, pinAlgo: PIN_PBKDF2_ALGO };
 };
 
 // Ensure an admin exists in the user list. If missing, prepend a seeded one
@@ -589,6 +589,24 @@ const HOURS_PER_WEEK = 40;
 const WEEKS_IN_YEAR = 52;
 const BASIC_TASK_EXPIRY_WEEKS = 12;
 const DEFAULT_WEEKS_AHEAD = 52;
+
+// Login lockout (used by LoginModal)
+const LOGIN_LOCK_THRESHOLD = 5;
+const LOGIN_LOCK_DURATION_MS = 60 * 1000;
+
+// Auto-backup retention. Only auto-backups are pruned; manual snapshots are
+// kept as-is so user-triggered safety copies don't silently disappear.
+const BACKUP_KEEP_COUNT = 50;
+
+// Timeline view column geometry
+const TIMELINE_WEEK_W = 120;    // matches min-w-[120px]
+const TIMELINE_STICKY_W = 1152; // matches w-[72rem] (project name column)
+// Rows / weeks rendered outside the viewport before virtualisation kicks in.
+// Same value in resource and timeline scroll handlers.
+const VIRT_BUFFER = 8;
+
+// Project status sort order used by Overview
+const STATUS_ORDER = { active: 0, missing_costs: 1, planned: 2, completed: 3, costs_submitted: 4 };
 
 const COST_LINE_TYPES = {
     travel:        { label: 'Travel',        invoiceLabel: 'Reisekosten',    example: 'Flug/Auto', chip: 'bg-amber-100 text-amber-700 border-amber-200',         dot: 'bg-amber-500'   },

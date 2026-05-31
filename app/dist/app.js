@@ -186,6 +186,53 @@ function App() {
     return id;
   }, []);
 
+  // Open the generic confirm dialog. The onConfirm callback fires only when
+  // the user clicks the primary action; Cancel/Escape/backdrop dismiss
+  // without calling it. Dialog auto-closes on either path.
+  const requestConfirm = useCallback(({
+    title,
+    message,
+    confirmLabel = 'Bestätigen',
+    danger = false,
+    onConfirm
+  }) => {
+    setConfirmDialog({
+      title,
+      message,
+      confirmLabel,
+      danger,
+      onConfirm: () => {
+        setConfirmDialog(null);
+        onConfirm?.();
+      }
+    });
+  }, []);
+
+  // Escape-to-close for the inline modals that App renders directly (the
+  // self-contained modals in modals.jsx call useEscapeToClose themselves).
+  const closeProjForm = useCallback(() => setIsProjFormOpen(false), []);
+  const closeHelp = useCallback(() => setIsHelpModalOpen(false), []);
+  const closeInvoice = useCallback(() => setIsInvoiceModalOpen(false), []);
+  const closeChangelog = useCallback(() => setIsChangelogOpen(false), []);
+  useEscapeToClose(isProjFormOpen ? closeProjForm : null);
+  useEscapeToClose(isHelpModalOpen ? closeHelp : null);
+  useEscapeToClose(isInvoiceModalOpen ? closeInvoice : null);
+  useEscapeToClose(isChangelogOpen ? closeChangelog : null);
+
+  // Loaded meta.schemaVersion if it is *newer* than this build understands.
+  // Filled during loadData and read by a one-shot effect below.
+  const [futureSchemaSeen, setFutureSchemaSeen] = useState(null);
+  // One-shot warning when the data on disk was written by a newer build.
+  // Saving still works but downgrades meta.schemaVersion and silently drops
+  // any unknown fields the newer client added.
+  useEffect(() => {
+    if (futureSchemaSeen == null) return;
+    showToast(`Achtung: Diese Daten wurden mit einer neueren App-Version gespeichert (Schema v${futureSchemaSeen}, diese App: v${SCHEMA_VERSION}). Bitte aktualisiere die App, bevor du speicherst – sonst gehen neue Felder verloren.`, {
+      type: 'error',
+      duration: 0
+    });
+  }, [futureSchemaSeen, showToast]);
+
   // Stable ref so audit handlers see current assignments without deps
   const assignmentsRef = useRef([]);
   useEffect(() => {
@@ -204,6 +251,10 @@ function App() {
   // null = no prompt visible. The modal lives at the bottom of the App render
   // tree so it overlays the active view.
   const [cascadeConfirm, setCascadeConfirm] = useState(null);
+  // Generic confirm dialog: { title, message, confirmLabel, danger, onConfirm }.
+  // Used for destructive actions without entity dependents (logout, app-user
+  // delete, series delete). Set via requestConfirm().
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Conflict-loop cap: each SpConflictError increments; on >=3 we stop
   // auto-reloading and tell the user to refresh.
@@ -216,29 +267,10 @@ function App() {
   const suppressEmployeeAuditRef = useRef(false);
   const suppressProjectAuditRef = useRef(false);
 
-  // Audit-log helpers
-  const formatKW = weekId => {
-    if (!weekId || typeof weekId !== 'string') return weekId || '?';
-    const [y, w] = weekId.split('-W');
-    if (!y || !w) return weekId;
-    return `KW ${parseInt(w)}/${y.slice(-2)}`;
-  };
-  const describeAssignment = ass => {
-    if (!ass) return '?';
-    if (ass.type === 'project') {
-      const p = projectsRef.current.find(x => x.id === ass.reference);
-      return p ? `Projekt „${p.name}"` : `Projekt ${ass.reference || '?'}`;
-    }
-    const typeLabels = {
-      basic: 'Task',
-      other: 'Task',
-      support: 'Support',
-      training: 'Training',
-      offtime: 'Abwesenheit'
-    };
-    const label = typeLabels[ass.type] || 'Eintrag';
-    return ass.reference ? `${label} „${ass.reference}"` : label;
-  };
+  // Audit-log helpers. formatKW + describeAssignment now live in utils.js;
+  // describeAssignment needs a project-lookup callback bound to projectsRef
+  // so audit entries see the latest names without re-creating the closure.
+  const describeAssignmentLocal = ass => describeAssignment(ass, id => projectsRef.current.find(x => x.id === id));
 
   // Ref so loginUser can fire a backup without re-creating the callback
   // each time runBackup's deps change.
@@ -276,6 +308,18 @@ function App() {
     } catch (e) {}
     setCurrentUser(session);
     setIsLoginModalOpen(false);
+    // If LoginModal rehashed the PIN to the strong algo, splice the
+    // upgraded record into appUsers so the next save persists it.
+    if (user.pinAlgo === PIN_PBKDF2_ALGO && user.pinHash) {
+      setAppUsers(prev => {
+        const i = prev.findIndex(u => u.id === user.id);
+        if (i < 0) return prev;
+        if (prev[i].pinHash === user.pinHash && prev[i].pinAlgo === user.pinAlgo) return prev;
+        const next = [...prev];
+        next[i] = user;
+        return next;
+      });
+    }
     // Restore the user's UI preferences (currently only compactView).
     // Missing preferences mean "use last value" – nothing to apply.
     const prefs = user?.preferences;
@@ -381,8 +425,12 @@ function App() {
             try {
               const {
                 state,
-                timestamps
+                timestamps,
+                loadedSchemaVersion
               } = await loadSplitStateFs(handle);
+              if (Number.isFinite(loadedSchemaVersion) && loadedSchemaVersion > SCHEMA_VERSION) {
+                setFutureSchemaSeen(loadedSchemaVersion);
+              }
               if (state && (state.employees.length || state.assignments.length || state.projects.length)) {
                 parsedData = state;
                 fsFileTimestampsRef.current = timestamps;
@@ -406,8 +454,12 @@ function App() {
           const {
             state,
             timestamps,
-            etags
+            etags,
+            loadedSchemaVersion
           } = await loadSplitStateSp(SP_CONTEXT);
+          if (Number.isFinite(loadedSchemaVersion) && loadedSchemaVersion > SCHEMA_VERSION) {
+            setFutureSchemaSeen(loadedSchemaVersion);
+          }
           // Treat "all empty" as fresh install → fall through to
           // localStorage / generateInitialData so the app has
           // sensible defaults to seed the new files.
@@ -647,13 +699,15 @@ function App() {
       return;
     }
     if (employees.length > prev.length) {
-      const added = employees.find(e => !prev.some(p => p.id === e.id));
+      const prevIds = new Set(prev.map(p => p.id));
+      const added = employees.find(e => !prevIds.has(e.id));
       if (added) logAudit('employee_create', `Mitarbeiter angelegt: ${added.name}`, {
         type: 'del_employee',
         id: added.id
       });
     } else if (employees.length < prev.length) {
-      const removed = prev.find(e => !employees.some(p => p.id === e.id));
+      const currIds = new Set(employees.map(e => e.id));
+      const removed = prev.find(e => !currIds.has(e.id));
       if (removed) {
         logAudit('employee_delete', `Mitarbeiter gelöscht: ${removed.name}`, {
           type: 'restore_employee',
@@ -669,12 +723,18 @@ function App() {
         });
       }
     } else {
-      const changed = employees.find(e => {
-        const p = prev.find(p => p.id === e.id);
-        return p && JSON.stringify(e) !== JSON.stringify(p);
-      });
+      const prevById = new Map(prev.map(p => [p.id, p]));
+      let changed = null,
+        prevEmp = null;
+      for (const e of employees) {
+        const p = prevById.get(e.id);
+        if (p && JSON.stringify(e) !== JSON.stringify(p)) {
+          changed = e;
+          prevEmp = p;
+          break;
+        }
+      }
       if (changed) {
-        const prevEmp = prev.find(p => p.id === changed.id);
         logAudit('employee_update', `Mitarbeiter bearbeitet: ${changed.name}`, {
           type: 'restore_employee',
           prev: prevEmp
@@ -700,13 +760,15 @@ function App() {
       return;
     }
     if (projects.length > prev.length) {
-      const added = projects.find(p => !prev.some(q => q.id === p.id));
+      const prevIds = new Set(prev.map(q => q.id));
+      const added = projects.find(p => !prevIds.has(p.id));
       if (added) logAudit('project_create', `Projekt angelegt: ${added.name}`, {
         type: 'del_project',
         id: added.id
       });
     } else if (projects.length < prev.length) {
-      const removed = prev.find(p => !projects.some(q => q.id === p.id));
+      const currIds = new Set(projects.map(q => q.id));
+      const removed = prev.find(p => !currIds.has(p.id));
       if (removed) {
         logAudit('project_delete', `Projekt gelöscht: ${removed.name}`, {
           type: 'restore_project',
@@ -722,12 +784,18 @@ function App() {
         });
       }
     } else {
-      const changed = projects.find(p => {
-        const q = prev.find(q => q.id === p.id);
-        return q && JSON.stringify(p) !== JSON.stringify(q);
-      });
+      const prevById = new Map(prev.map(q => [q.id, q]));
+      let changed = null,
+        prevProj = null;
+      for (const p of projects) {
+        const q = prevById.get(p.id);
+        if (q && JSON.stringify(p) !== JSON.stringify(q)) {
+          changed = p;
+          prevProj = q;
+          break;
+        }
+      }
       if (changed) {
-        const prevProj = prev.find(q => q.id === changed.id);
         logAudit('project_update', `Projekt bearbeitet: ${changed.name}`, {
           type: 'restore_project',
           prev: prevProj
@@ -778,6 +846,12 @@ function App() {
         localStorage.setItem('teamMasterProData', JSON.stringify(stateData));
       } catch (e) {
         console.warn('[LS] save failed', e);
+        // Quota exceeded or storage disabled – warn the user instead
+        // of silently dropping data on the next reload.
+        showToast('Lokaler Speicher voll – bitte Browserdaten freigeben oder Snapshot exportieren.', {
+          type: 'error',
+          duration: 8000
+        });
       }
       if (FS_MODE && dirHandleRef.current) {
         saveSplitState(stateData, lastSavedFsRef.current, (filename, payload) => fsSaveFile(dirHandleRef.current, filename, payload)).then(async () => {
@@ -980,13 +1054,47 @@ function App() {
       schemaVersion: SCHEMA_VERSION
     };
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    // Random suffix prevents same-second filename collisions when two
+    // clients hit the auto-backup tick simultaneously – SP overwrite=true
+    // would otherwise silently clobber the first write.
+    const rand = Math.random().toString(16).slice(2, 6);
+    const backupName = `backup-${ts}-${rand}.json`;
     const body = JSON.stringify(payload);
+    // Prune auto-backups older than the keep-count. Manual snapshots are
+    // left untouched so user-triggered safety copies don't disappear.
+    const pruneSp = async () => {
+      if (reason !== 'auto') return;
+      try {
+        const files = await spListBackups(SP_CONTEXT);
+        const autos = files.filter(f => f.name?.startsWith('backup-')).sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+        const excess = autos.length - BACKUP_KEEP_COUNT;
+        for (let i = 0; i < excess; i++) {
+          await spDeleteBackup(SP_CONTEXT, autos[i].name).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('[BACKUP] SP prune failed', e);
+      }
+    };
+    const pruneFs = async () => {
+      if (reason !== 'auto') return;
+      try {
+        const files = await fsListBackups(dirHandleRef.current);
+        const autos = files.filter(f => f.name?.startsWith('backup-')).sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));
+        const excess = autos.length - BACKUP_KEEP_COUNT;
+        for (let i = 0; i < excess; i++) {
+          await fsDeleteBackup(dirHandleRef.current, autos[i].name).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('[BACKUP] FS prune failed', e);
+      }
+    };
     // Prefer SharePoint when connected; fall back to local FS if a folder
     // handle is available. If neither is reachable, surface why.
     if (SP_CONTEXT) {
       try {
-        await spSaveBackup(SP_CONTEXT, `backup-${ts}.json`, body);
+        await spSaveBackup(SP_CONTEXT, backupName, body);
         setLastBackupAt(new Date().toISOString());
+        await pruneSp();
         return {
           ok: true,
           target: 'sp'
@@ -1002,8 +1110,9 @@ function App() {
     }
     if (dirHandleRef.current) {
       try {
-        await fsSaveBackup(dirHandleRef.current, `backup-${ts}.json`, body);
+        await fsSaveBackup(dirHandleRef.current, backupName, body);
         setLastBackupAt(new Date().toISOString());
+        await pruneFs();
         return {
           ok: true,
           target: 'fs'
@@ -1645,7 +1754,7 @@ function App() {
       const weeks = data.map(a => a.week).filter(Boolean).sort();
       const weekRange = weeks.length > 1 && weeks[0] !== weeks[weeks.length - 1] ? `${formatKW(weeks[0])} – ${formatKW(weeks[weeks.length - 1])}` : formatKW(weeks[0]);
       const emp = employeesRef.current.find(e => e.id === first?.empId);
-      logAudit('assignment_copy', `${data.length}× ${describeAssignment(first)} für ${emp?.name || '?'} (${weekRange})`, {
+      logAudit('assignment_copy', `${data.length}× ${describeAssignmentLocal(first)} für ${emp?.name || '?'} (${weekRange})`, {
         type: 'del_assignments',
         ids: data.map(a => a.id)
       });
@@ -1655,7 +1764,7 @@ function App() {
       const emp = employeesRef.current.find(e => e.id === data.empId);
       const weekChanged = oldAss && oldAss.week !== data.week;
       const weekPart = weekChanged ? `${formatKW(oldAss.week)} → ${formatKW(data.week)}` : formatKW(data.week);
-      logAudit('assignment_update', `${describeAssignment(data)} – ${emp?.name || '?'} (${weekPart})`, {
+      logAudit('assignment_update', `${describeAssignmentLocal(data)} – ${emp?.name || '?'} (${weekPart})`, {
         type: 'restore_assignment',
         prev: oldAss
       });
@@ -1666,7 +1775,7 @@ function App() {
         id: newId
       }]);
       const emp = employeesRef.current.find(e => e.id === data.empId);
-      logAudit('assignment_create', `${describeAssignment(data)} – ${emp?.name || '?'} (${formatKW(data.week)})`, {
+      logAudit('assignment_create', `${describeAssignmentLocal(data)} – ${emp?.name || '?'} (${formatKW(data.week)})`, {
         type: 'del_assignment',
         ids: [newId]
       });
@@ -1816,7 +1925,7 @@ function App() {
     setAssignments(prev => prev.filter(a => a.id !== id));
     if (deleted) {
       const emp = employeesRef.current.find(e => e.id === deleted.empId);
-      logAudit('assignment_delete', `${describeAssignment(deleted)} – ${emp?.name || '?'} (${formatKW(deleted.week)})`, {
+      logAudit('assignment_delete', `${describeAssignmentLocal(deleted)} – ${emp?.name || '?'} (${formatKW(deleted.week)})`, {
         type: 'restore_assignment',
         prev: deleted
       });
@@ -1834,7 +1943,7 @@ function App() {
     const emp = employeesRef.current.find(e => e.id === ass.empId);
     const weeks = toDelete.map(a => a.week).sort();
     const weekRange = weeks.length > 1 && weeks[0] !== weeks[weeks.length - 1] ? `${formatKW(weeks[0])} – ${formatKW(weeks[weeks.length - 1])}` : formatKW(weeks[0]);
-    logAudit('assignment_delete_series', `Terminserie ${describeAssignment(ass)} – ${emp?.name || '?'} (${toDelete.length}× ${weekRange})`, {
+    logAudit('assignment_delete_series', `Terminserie ${describeAssignmentLocal(ass)} – ${emp?.name || '?'} (${toDelete.length}× ${weekRange})`, {
       type: 'restore_assignments',
       prevItems: toDelete
     });
@@ -1883,10 +1992,10 @@ function App() {
         const empPart = fromEmp?.id !== toEmp?.id ? `${fromEmp?.name || '?'} → ${toEmp?.name || '?'}` : toEmp?.name || '?';
         const weekPart = origAss.week !== targetWeek ? `${formatKW(origAss.week)} → ${formatKW(targetWeek)}` : formatKW(targetWeek);
         // For project drops, also describe the new project if it changed
-        const draggedTask = !isResourceView && origAss.type === 'project' && targetEmpIdOrProjId !== origAss.reference ? `${describeAssignment(origAss)} → ${describeAssignment({
+        const draggedTask = !isResourceView && origAss.type === 'project' && targetEmpIdOrProjId !== origAss.reference ? `${describeAssignmentLocal(origAss)} → ${describeAssignmentLocal({
           ...origAss,
           reference: targetEmpIdOrProjId
-        })}` : describeAssignment(origAss);
+        })}` : describeAssignmentLocal(origAss);
         logAudit('assignment_drop', `${draggedTask} – ${empPart} (${weekPart})`, {
           type: 'restore_assignment',
           prev: origAss
@@ -1960,7 +2069,11 @@ function App() {
         const rawParsed = JSON.parse(event.target.result);
         const result = validateImportedState(rawParsed);
         if (!result.ok) {
-          alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+          if (result.reason === 'futureVersion') {
+            alert(`Diese Datei wurde mit einer neueren App-Version gespeichert (Schema v${result.version}, diese App nutzt v${SCHEMA_VERSION}). Bitte die App aktualisieren, bevor du sie importierst.`);
+          } else {
+            alert('Fehler beim Importieren der Daten: Die Datei konnte nicht gelesen werden.');
+          }
           return;
         }
         const parsed = result.data;
@@ -2143,7 +2256,7 @@ function App() {
     });
     const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
     const body = encodeURIComponent(`Guten Tag,\n\nanbei sende ich die Rechnung fuer folgendes Projekt:\n\n` + `Projekt: ${proj.name}\n` + `Projektnummer: ${proj.projectNumber || '-'}\n` + `Datum: ${new Date().toLocaleDateString('de-DE')}\n\n` + `Positionen:\n${rows.join('\n')}\n\n` + `Gesamtsumme (Netto): ${total.toFixed(2)} EUR\n\n` + `Mit freundlichen Gruessen`);
-    window.location.href = `mailto:${invoiceRecipient}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${encodeURIComponent(invoiceRecipient)}?subject=${subject}&body=${body}`;
   };
 
   // --- SUB-COMPONENTS ---
@@ -2721,6 +2834,7 @@ function App() {
     setEmailTemplate,
     showToast,
     dismissToast,
+    requestConfirm,
     loginUser,
     logoutUser,
     getEmpWeeklyHours,
@@ -2810,7 +2924,8 @@ function App() {
     onClose: () => setIsAssignModalOpen(false),
     onSave: handleSaveAssignment,
     onDelete: handleDeleteAssignment,
-    onDeleteSeries: handleDeleteAssignmentSeries
+    onDeleteSeries: handleDeleteAssignmentSeries,
+    requestConfirm: requestConfirm
   }), isCopyModalOpen && copyContext && currentUser && /*#__PURE__*/React.createElement(CopyModal, {
     copyContext: copyContext,
     assignmentsRef: assignmentsRef,
@@ -2899,10 +3014,56 @@ function App() {
     projects: projects,
     onConfirm: confirmCascadeDelete,
     onCancel: () => setCascadeConfirm(null)
+  }), confirmDialog && /*#__PURE__*/React.createElement(ConfirmModal, {
+    title: confirmDialog.title,
+    message: confirmDialog.message,
+    confirmLabel: confirmDialog.confirmLabel,
+    danger: confirmDialog.danger,
+    onConfirm: confirmDialog.onConfirm,
+    onCancel: () => setConfirmDialog(null)
   }), /*#__PURE__*/React.createElement(ToastContainer, {
     toasts: toasts,
     onDismiss: dismissToast
   }));
 }
+
+// Top-level error boundary. Without this, a single render-time exception in
+// any view blanks the whole app to React's default empty screen with no way
+// back. We catch here, log to the console for diagnosis, and offer a reload
+// CTA — SharePoint data is unaffected because saves go through onClick / save
+// effects, not render.
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: null
+    };
+  }
+  static getDerivedStateFromError(error) {
+    return {
+      error
+    };
+  }
+  componentDidCatch(error, info) {
+    console.error('[FATAL] React tree crashed:', error, info?.componentStack);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-h-screen flex items-center justify-center bg-slate-50 p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "max-w-md w-full bg-white border border-red-300 rounded-xl shadow-lg p-6 space-y-4"
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-semibold text-red-700"
+    }, "Anwendung ist abgest\xFCrzt"), /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-slate-700"
+    }, "Ein interner Fehler hat das Render gestoppt. Daten in SharePoint sind nicht betroffen. Lade die Seite neu, um es erneut zu versuchen."), /*#__PURE__*/React.createElement("pre", {
+      className: "text-xs bg-slate-100 text-slate-600 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap break-words"
+    }, String(this.state.error?.message || this.state.error)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => window.location.reload(),
+      className: "w-full bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700"
+    }, "Seite neu laden")));
+  }
+}
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(/*#__PURE__*/React.createElement(App, null));
+root.render(/*#__PURE__*/React.createElement(ErrorBoundary, null, /*#__PURE__*/React.createElement(App, null)));

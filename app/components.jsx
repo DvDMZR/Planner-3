@@ -39,6 +39,21 @@ const IconBookOpen = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2
 const IconSunset = ({ className, size=20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="2" x2="12" y2="9"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/><line x1="23" y1="22" x2="1" y2="22"/><polyline points="8 6 12 2 16 6"/></svg>;
 
 // --- SHARED UI COMPONENTS (module scope) ---
+// Bind window-keydown so pressing Escape closes the current modal. Pass the
+// same onClose the modal already uses for its X button. Several modals open
+// at once nest naturally: every level installs its own listener, all of them
+// fire on a single keystroke, the topmost one's onClose runs last (or its
+// parent re-renders without it before this listener's setState commits –
+// which is fine, idempotent).
+const useEscapeToClose = (onClose) => {
+    React.useEffect(() => {
+        if (typeof onClose !== 'function') return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+};
+
 // Defined outside App() so they keep a stable component identity across
 // App re-renders; otherwise any internal useState inside a modal would
 // reset whenever the parent re-renders (e.g. from remote sync polling).
@@ -101,6 +116,7 @@ const EmptyState = ({ icon, title, description, action }) => (
 const Tooltip = ({ text, children, side = 'top', delay = 250 }) => {
     const [show, setShow] = React.useState(false);
     const timer = React.useRef(null);
+    React.useEffect(() => () => clearTimeout(timer.current), []);
     if (!text) return children;
     const onEnter = () => { timer.current = setTimeout(() => setShow(true), delay); };
     const onLeave = () => { clearTimeout(timer.current); setShow(false); };
