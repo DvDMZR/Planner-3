@@ -195,7 +195,7 @@ const DataView = ({
     className: "p-4 space-y-3 bg-gea-50"
   }, isAdmin && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Name"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldName')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: editName,
     onChange: e => {
@@ -207,7 +207,7 @@ const DataView = ({
     className: "grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Neuer PIN"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldNewPin')), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: editPin,
     autoFocus: true,
@@ -216,10 +216,10 @@ const DataView = ({
       setEditError('');
     },
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
-    placeholder: "Min. 4 Zeichen"
+    placeholder: t('data.pinMinLength')
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "PIN best\xE4tigen"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldConfirmPin')), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: editPinConfirm,
     onChange: e => {
@@ -228,7 +228,7 @@ const DataView = ({
     },
     onKeyDown: e => e.key === 'Enter' && handleSaveEdit(user),
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
-    placeholder: "Wiederholen"
+    placeholder: t('data.pinRepeat')
   }))), editError && /*#__PURE__*/React.createElement("p", {
     className: "text-rose-600 text-xs"
   }, editError), /*#__PURE__*/React.createElement("div", {
@@ -236,10 +236,10 @@ const DataView = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setEditingId(null),
     className: "px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: () => handleSaveEdit(user),
     className: "px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors"
-  }, "Speichern"))) : /*#__PURE__*/React.createElement("div", {
+  }, t('btn.save')))) : /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 px-4 py-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: `w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${user.role === 'admin' ? 'bg-gea-100 text-gea-700' : 'bg-slate-100 text-slate-600'}`
@@ -251,23 +251,23 @@ const DataView = ({
     className: "text-sm font-medium text-slate-900 truncate"
   }, user.name), user.role === 'admin' && /*#__PURE__*/React.createElement("span", {
     className: "text-xs px-1.5 py-0.5 rounded-full bg-gea-100 text-gea-700 font-medium shrink-0"
-  }, "Admin"), currentUser.id === user.id && /*#__PURE__*/React.createElement("span", {
+  }, t('data.roleAdmin')), currentUser.id === user.id && /*#__PURE__*/React.createElement("span", {
     className: "text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0"
-  }, "Ich"))), canEdit(user) && /*#__PURE__*/React.createElement("div", {
+  }, t('data.roleMe')))), canEdit(user) && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => startEdit(user),
     className: "px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-  }, isAdmin ? 'Bearbeiten' : 'PIN ändern'), isAdmin && /*#__PURE__*/React.createElement("button", {
+  }, isAdmin ? t('btn.edit') : t('btn.changePin')), isAdmin && /*#__PURE__*/React.createElement("button", {
     onClick: () => handleDelete(user.id),
     className: "px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
-  }, "L\xF6schen"))))))), isAdmin && section('Neuen Nutzer anlegen', /*#__PURE__*/React.createElement("div", {
+  }, t('btn.delete')))))))), isAdmin && section(t('data.sectionNewUser'), /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Name"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldName')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: newName,
     onChange: e => {
@@ -278,7 +278,7 @@ const DataView = ({
     placeholder: "z.B. Max Mustermann"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "PIN"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldNewPin')), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: newPin,
     onChange: e => {
@@ -286,10 +286,10 @@ const DataView = ({
       setNewError('');
     },
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
-    placeholder: "Min. 4 Zeichen"
+    placeholder: t('data.pinMinLength')
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "PIN best\xE4tigen"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.fieldConfirmPin')), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: newPinConfirm,
     onChange: e => {
@@ -298,15 +298,15 @@ const DataView = ({
     },
     onKeyDown: e => e.key === 'Enter' && handleAdd(),
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400",
-    placeholder: "Wiederholen"
+    placeholder: t('data.pinRepeat')
   }))), newError && /*#__PURE__*/React.createElement("p", {
     className: "text-rose-600 text-xs"
   }, newError), /*#__PURE__*/React.createElement("button", {
     onClick: handleAdd,
     className: "px-4 py-2 bg-gea-600 text-white rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors"
-  }, "Nutzer anlegen"), /*#__PURE__*/React.createElement("p", {
+  }, t('btn.add')), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Neue Nutzer erhalten die Rolle \u201EAktiver Nutzer\"."))), isAdmin && autoBackup && section('Auto-Backup', /*#__PURE__*/React.createElement("div", {
+  }, t('data.newUserRole')))), isAdmin && autoBackup && section(t('data.sectionBackup'), /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 text-sm text-slate-700"
@@ -317,9 +317,9 @@ const DataView = ({
       ...prev,
       enabled: e.target.checked
     }))
-  }), "Periodisches Backup nach SharePoint aktivieren"), /*#__PURE__*/React.createElement("div", {
+  }), t('data.enableBackup')), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 text-sm text-slate-700"
-  }, /*#__PURE__*/React.createElement("span", null, "Intervall:"), /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("span", null, t('data.fieldInterval')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "5",
     step: "5",
@@ -333,27 +333,29 @@ const DataView = ({
       }));
     },
     className: "w-20 p-1 border border-slate-300 rounded text-sm"
-  }), /*#__PURE__*/React.createElement("span", null, "Minuten")), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, t('data.fieldMinutes'))), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-slate-500"
-  }, "Letztes Backup: ", lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
+  }, t('data.fieldLastBackup'), " ", lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'), /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       const res = await runBackup('manual');
       if (res.ok) {
-        showSuccess(`Backup wurde erstellt (${res.target === 'fs' ? 'lokal' : 'SharePoint'}).`);
+        showSuccess(t('data.backupCreated', {
+          target: res.target === 'fs' ? t('data.backupLocal') : 'SharePoint'
+        }));
       } else {
-        showSuccess(`Backup fehlgeschlagen: ${res.error || 'unbekannter Fehler'}`, 'warning');
+        showSuccess(t('data.backupFailed', {
+          error: res.error || t('data.backupErrUnknown')
+        }), 'warning');
       }
     },
     className: "px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors"
-  }, "Jetzt sichern"), /*#__PURE__*/React.createElement("p", {
+  }, t('data.backupNow')), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Backups landen in ", /*#__PURE__*/React.createElement("code", {
-    className: "text-slate-600"
-  }, "planner-data/backups/"), ' ', "als zeitgestempelte JSON-Dateien."))), isAdmin && emailTemplate && section('Email-Vorlage (Planungs-Benachrichtigung)', /*#__PURE__*/React.createElement("div", {
+  }, t('data.backupLocation')))), isAdmin && emailTemplate && section(t('data.sectionEmail'), /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Betreff"), /*#__PURE__*/React.createElement("input", {
+  }, t('data.emailSubject')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: emailTemplate.subject || '',
     onChange: e => setEmailTemplate(prev => ({
@@ -363,7 +365,7 @@ const DataView = ({
     className: "w-full p-2 border border-slate-300 rounded text-sm font-mono"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs font-semibold text-slate-600 mb-1"
-  }, "Text"), /*#__PURE__*/React.createElement("textarea", {
+  }, t('data.emailBody')), /*#__PURE__*/React.createElement("textarea", {
     value: emailTemplate.body || '',
     onChange: e => setEmailTemplate(prev => ({
       ...prev,
@@ -373,13 +375,13 @@ const DataView = ({
     className: "w-full p-2 border border-slate-300 rounded text-xs font-mono leading-relaxed"
   })), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-slate-500 leading-relaxed"
-  }, "Verf\xFCgbare Platzhalter:", ' ', /*#__PURE__*/React.createElement("code", null, '{firstName}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{refLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{typeLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{weekRange}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{comment}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{attachmentNote}'), ".", /*#__PURE__*/React.createElement("br", null), "Optionale Bl\xF6cke (werden nur eingef\xFCgt, wenn der Wert vorhanden ist):", ' ', /*#__PURE__*/React.createElement("code", null, '{{#comment}}…{{/comment}}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{{#attachmentNote}}…{{/attachmentNote}}'), "."), /*#__PURE__*/React.createElement("button", {
+  }, t('data.emailPlaceholders'), ' ', /*#__PURE__*/React.createElement("code", null, '{firstName}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{refLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{typeLabel}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{weekRange}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{comment}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{attachmentNote}'), ".", /*#__PURE__*/React.createElement("br", null), t('data.emailOptBlocks'), ' ', /*#__PURE__*/React.createElement("code", null, '{{#comment}}…{{/comment}}'), ",", ' ', /*#__PURE__*/React.createElement("code", null, '{{#attachmentNote}}…{{/attachmentNote}}'), "."), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEmailTemplate(DEFAULT_EMAIL_TEMPLATE);
-      showSuccess('Vorlage zurückgesetzt.');
+      showSuccess(t('data.templateReset'));
     },
     className: "px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-  }, "Auf Standard zur\xFCcksetzen"))), section('Rechnungsempfänger', /*#__PURE__*/React.createElement("div", {
+  }, t('data.resetToDefault')))), section(t('data.sectionInvoice'), /*#__PURE__*/React.createElement("div", {
     className: "p-4"
   }, /*#__PURE__*/React.createElement("input", {
     type: "email",
@@ -389,7 +391,7 @@ const DataView = ({
     className: "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "Standard-Empf\xE4nger f\xFCr den \u201EPer E-Mail\"-Button im Rechnungsdialog."))), section('Export & Import', /*#__PURE__*/React.createElement("div", {
+  }, t('data.invoiceHint')))), section(t('data.sectionExport'), /*#__PURE__*/React.createElement("div", {
     className: "p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-4"
@@ -398,7 +400,7 @@ const DataView = ({
     className: "bg-gea-600 hover:bg-gea-700 text-white py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconDownload, {
     size: 18
-  }), " Backup exportieren (JSON)"), /*#__PURE__*/React.createElement("div", {
+  }), " ", t('data.exportBtn')), /*#__PURE__*/React.createElement("div", {
     className: "relative"
   }, /*#__PURE__*/React.createElement("input", {
     type: "file",
@@ -409,11 +411,11 @@ const DataView = ({
     className: "w-full bg-white border-2 border-dashed border-slate-300 hover:border-gea-400 text-slate-600 py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconUpload, {
     size: 18
-  }), " Daten importieren (JSON)"))), /*#__PURE__*/React.createElement(DepsSection, {
+  }), " ", t('data.importBtn')))), /*#__PURE__*/React.createElement(DepsSection, {
     t: t
   }))), isAdmin && /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
-      if (confirm('Alle Daten unwiderruflich löschen?')) {
+      if (confirm(t('data.deleteAll'))) {
         localStorage.removeItem('teamMasterProData');
         if (SP_CONTEXT) {
           try {
@@ -441,5 +443,5 @@ const DataView = ({
       }
     },
     className: "w-full text-rose-500 hover:bg-rose-50 py-3 rounded-lg text-sm font-medium transition-colors"
-  }, "System zur\xFCcksetzen")));
+  }, t('data.resetSystem'))));
 };
