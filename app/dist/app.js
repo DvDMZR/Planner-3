@@ -49,6 +49,10 @@ function App() {
   // change).
   const [compactView, setCompactView] = useState(true);
 
+  // UI language ('de' | 'en'). Per-user preference, stored alongside compactView.
+  const [language, setLanguage] = useState('de');
+  const t = useMemo(() => makeT(language), [language]);
+
   // Auslastung click → Ressourcen jump: target week to scroll to once
   // ResourceView mounts. Cleared after the scroll runs.
   const [scrollTarget, setScrollTarget] = useState(null);
@@ -320,11 +324,14 @@ function App() {
         return next;
       });
     }
-    // Restore the user's UI preferences (currently only compactView).
+    // Restore the user's UI preferences (compactView + language).
     // Missing preferences mean "use last value" – nothing to apply.
     const prefs = user?.preferences;
     if (prefs && typeof prefs.compactView === 'boolean') {
       setCompactView(prefs.compactView);
+    }
+    if (prefs && (prefs.language === 'de' || prefs.language === 'en')) {
+      setLanguage(prefs.language);
     }
     // Best-effort recovery backup. Skipped when the initial load hasn't
     // populated state yet – we'd otherwise persist a near-empty snapshot.
@@ -1001,6 +1008,9 @@ function App() {
     if (prefs && typeof prefs.compactView === 'boolean') {
       setCompactView(prefs.compactView);
     }
+    if (prefs && (prefs.language === 'de' || prefs.language === 'en')) {
+      setLanguage(prefs.language);
+    }
   }, [appUsers, currentUser]);
 
   // Persist UI preferences back to the logged-in user. Only writes when
@@ -1012,16 +1022,17 @@ function App() {
     setAppUsers(prev => {
       const cur = prev.find(p => p.id === u.id);
       if (!cur) return prev;
-      if (cur.preferences?.compactView === compactView) return prev;
+      if (cur.preferences?.compactView === compactView && cur.preferences?.language === language) return prev;
       return prev.map(p => p.id === u.id ? {
         ...p,
         preferences: {
           ...(p.preferences || {}),
-          compactView
+          compactView,
+          language
         }
       } : p);
     });
-  }, [compactView, currentUser]);
+  }, [compactView, language, currentUser]);
 
   // ── AUTO-BACKUP (periodic snapshot of all data to planner-data/backups/) ──
   // Runs only when SharePoint is connected. One check per minute; writes a
@@ -2441,13 +2452,13 @@ function App() {
       overflowY: 'auto'
     }
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: "Hilfe & Legende",
+    title: t('help.title'),
     onClose: () => setIsHelpModalOpen(false)
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-6 text-sm"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2"
-  }, "Zell-Farben im Ressourcenplaner"), /*#__PURE__*/React.createElement("div", {
+  }, t('help.cellColors')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
@@ -2455,72 +2466,58 @@ function App() {
     className: "w-10 h-6 rounded flex-shrink-0 bg-emerald-200 border border-emerald-300"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Frei / Verf\xFCgbar \u2014 keine Eins\xE4tze geplant")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.free'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-amber-200 border border-amber-300"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Auslastung \u2265 80% \u2014 Achtung, fast voll")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.almostFull'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-rose-200 border border-rose-300"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "\xDCberlastet \u2014 Einsatz > 100%")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.overloaded'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 diagonal-stripes border border-slate-300"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Abwesenheit (Urlaub, Krank, Gleitzeit \u2026)")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.absence'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-blue-200 border border-blue-300 bg-hatched"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Einsatz zu 0% \u2014 ", /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Unter Vorbehalt"), " (geplant, aber nicht best\xE4tigt)")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.tentative'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-gea-200 border border-gea-400"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Aktuelle Woche \u2014 farbig hervorgehoben")), /*#__PURE__*/React.createElement("div", {
+  }, t('help.currentWeek'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-6 rounded flex-shrink-0 bg-slate-300 border border-slate-400"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700"
-  }, "Vergangene Woche \u2014 gedimmt angezeigt")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+  }, t('help.pastWeek'))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2"
-  }, "Bedienung"), /*#__PURE__*/React.createElement("div", {
+  }, t('help.controls')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2 text-slate-700"
-  }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Klick auf Zelle"), " \u2192 Einsatz anlegen oder bearbeiten (Prozent oder Stunden, Projekt oder Abwesenheit)"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Drag & Drop"), " (Projekt-Zeitstrahl) \u2192 Mitarbeiter aus der linken Liste in eine Projektwoche ziehen"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "L\xF6schmodus"), " \u2192 roten Button oben rechts aktivieren, dann Eins\xE4tze anklicken um sie zu l\xF6schen"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Kompaktansicht"), " \u2192 Button oben rechts reduziert die Zellh\xF6he; Kopiersymbol bleibt per Hover erreichbar"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Heute-Button"), " (Zeitstrahl) \u2192 springt zur aktuellen Kalenderwoche"), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-semibold"
-  }, "Klick in der Heatmap"), " \u2192 Klick auf einen Mitarbeiter oder Monat \xF6ffnet die Ressourcenplanung mit dem Mitarbeiter vorausgew\xE4hlt"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+  }, /*#__PURE__*/React.createElement("p", null, t('help.clickCell')), /*#__PURE__*/React.createElement("p", null, t('help.dragDrop')), /*#__PURE__*/React.createElement("p", null, t('help.deleteMode')), /*#__PURE__*/React.createElement("p", null, t('help.compactView')), /*#__PURE__*/React.createElement("p", null, t('help.todayBtn')), /*#__PURE__*/React.createElement("p", null, t('help.heatmapClick')))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2"
-  }, "Projekt-Status"), /*#__PURE__*/React.createElement("div", {
+  }, t('help.projStatus')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, PROJECT_STATUSES.map(s => /*#__PURE__*/React.createElement("div", {
     key: s.value,
     className: "flex items-start gap-3"
   }, /*#__PURE__*/React.createElement("span", {
     className: `text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 mt-0.5 ${s.color}`
-  }, s.label), /*#__PURE__*/React.createElement("span", {
+  }, t('status.' + s.value)), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-600 text-xs"
-  }, s.value === 'planned' ? 'Start-Woche liegt noch in der Zukunft' : s.value === 'active' ? 'Projekt hat begonnen und läuft aktuell' : s.value === 'missing_costs' ? 'IBN-Woche ist vorbei, aber noch keine Kostenpunkte erfasst' : s.value === 'completed' ? 'Projekt wurde als abgeschlossen markiert' : 'Kosten wurden bereits übermittelt'))))))));
+  }, s.value === 'planned' ? t('help.statusPlanned') : s.value === 'active' ? t('help.statusActive') : s.value === 'missing_costs' ? t('help.statusMissingCosts') : s.value === 'completed' ? t('help.statusCompleted') : t('help.statusCostsSubmitted')))))))));
   const InvoiceModal = () => {
     if (!isInvoiceModalOpen || !selectedProjectDetails) return null;
     const proj = projectById.get(selectedProjectDetails);
@@ -2535,14 +2532,14 @@ function App() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
     }, /*#__PURE__*/React.createElement(ModalHeader, {
-      title: "Rechnung konfigurieren",
-      subtitle: `Projekt: ${proj.name}`,
+      title: t('invoice.title'),
+      subtitle: `${t('overview.colProject')}: ${proj.name}`,
       onClose: () => setIsInvoiceModalOpen(false)
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto p-6 space-y-6"
     }, proj.billable !== false && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
       className: "text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium"
-    }, "Dienstleistungen (Arbeitszeit)"), /*#__PURE__*/React.createElement("div", {
+    }, t('invoice.laborSection')), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2"
     }, laborLines.filter(l => l.hours > 0).map(({
       empId,
@@ -2566,15 +2563,15 @@ function App() {
       className: "w-5 h-5 text-gea-600 rounded"
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 text-sm text-slate-800 font-medium"
-    }, emp?.name || 'Unbekannt'), /*#__PURE__*/React.createElement("div", {
+    }, emp?.name || t('invoice.unknown')), /*#__PURE__*/React.createElement("div", {
       className: "text-sm text-slate-500"
     }, hours, " Std. \xD7 ", rate, " \u20AC/h"), /*#__PURE__*/React.createElement("div", {
       className: "text-sm text-slate-900 w-24 text-right font-medium"
     }, cost.toFixed(2), " \u20AC"))), laborLines.length === 0 && /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-slate-400"
-    }, "Keine Arbeitszeiten verplant."))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    }, t('invoice.noLabor')))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
       className: "text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium"
-    }, "Kostenpunkte"), /*#__PURE__*/React.createElement("div", {
+    }, t('invoice.costSection')), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2"
     }, costLines.map(({
       ci,
@@ -2600,9 +2597,9 @@ function App() {
         className: "flex-1 text-sm"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-800 font-medium"
-      }, ci.description || 'Kostenpunkt'), /*#__PURE__*/React.createElement("span", {
+      }, ci.description || t('invoice.costDefault')), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400 ml-2"
-      }, "(", emp?.name || 'Unbekannt', ")")), ci.week && /*#__PURE__*/React.createElement("div", {
+      }, "(", emp?.name || t('invoice.unknown'), ")")), ci.week && /*#__PURE__*/React.createElement("div", {
         className: "text-xs text-slate-400"
       }, ci.week), /*#__PURE__*/React.createElement("div", {
         className: "text-sm text-slate-900 w-24 text-right font-medium"
@@ -2625,26 +2622,26 @@ function App() {
       })));
     }), costLines.length === 0 && /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-slate-400"
-    }, "Keine Kostenpunkte erfasst.")))), /*#__PURE__*/React.createElement("div", {
+    }, t('invoice.noCosts'))))), /*#__PURE__*/React.createElement("div", {
       className: "p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-slate-500"
-    }, "Gesamtsumme (Netto)"), /*#__PURE__*/React.createElement("p", {
+    }, t('invoice.totalNet')), /*#__PURE__*/React.createElement("p", {
       className: "text-xl text-gea-600 font-medium"
     }, currentTotal.toFixed(2), " \u20AC")), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setIsInvoiceModalOpen(false),
       className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-    }, "Abbrechen"), invoiceRecipient && /*#__PURE__*/React.createElement("button", {
+    }, t('btn.cancel')), invoiceRecipient && /*#__PURE__*/React.createElement("button", {
       onClick: handleInvoiceSendEmail,
       className: "px-4 py-2 text-sm text-white bg-gea-500 rounded-md hover:bg-gea-600 flex items-center gap-2 font-medium"
-    }, "\u2709 Per E-Mail"), /*#__PURE__*/React.createElement("button", {
+    }, "\u2709 ", t('invoice.sendEmail')), /*#__PURE__*/React.createElement("button", {
       onClick: handleInvoiceExport,
       className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 flex items-center gap-2 font-medium"
     }, /*#__PURE__*/React.createElement(IconFileText, {
       size: 16
-    }), " CSV Export")))));
+    }), " ", t('invoice.csvExport'))))));
   };
 
   // --- FILE SYSTEM SYNC HANDLERS ---
@@ -2766,6 +2763,8 @@ function App() {
     timelineScrollRef,
     compactView,
     scrollTarget,
+    language,
+    t,
     currentUser,
     appUsers,
     auditLog,
@@ -2826,6 +2825,7 @@ function App() {
     setFsStatus,
     setCompactView,
     setScrollTarget,
+    setLanguage,
     setAppUsers,
     setAuditLog,
     setIsLoginModalOpen,
@@ -2925,7 +2925,8 @@ function App() {
     onSave: handleSaveAssignment,
     onDelete: handleDeleteAssignment,
     onDeleteSeries: handleDeleteAssignmentSeries,
-    requestConfirm: requestConfirm
+    requestConfirm: requestConfirm,
+    t: t
   }), isCopyModalOpen && copyContext && currentUser && /*#__PURE__*/React.createElement(CopyModal, {
     copyContext: copyContext,
     assignmentsRef: assignmentsRef,
@@ -2941,7 +2942,8 @@ function App() {
     onClose: () => {
       setIsCopyModalOpen(false);
       setCopyContext(null);
-    }
+    },
+    t: t
   }), isInvoiceModalOpen && /*#__PURE__*/React.createElement(InvoiceModal, null), isProjFormOpen && ProjFormModal(), isChangelogOpen && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2950,7 +2952,7 @@ function App() {
       maxHeight: '85vh'
     }
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: "Changelog \u2013 Einsatzplanung",
+    title: "Changelog",
     onClose: () => setIsChangelogOpen(false)
   }), /*#__PURE__*/React.createElement("div", {
     className: "overflow-auto p-6",
@@ -2987,25 +2989,26 @@ function App() {
     y2: "15"
   }))), fsStatus === 'needs-setup' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
     className: "text-lg font-semibold text-slate-900 mb-2"
-  }, "Synchronisation einrichten"), /*#__PURE__*/React.createElement("p", {
+  }, t('fs.setupTitle')), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500 mb-6"
-  }, "W\xE4hle einmalig den Ordner, in dem ", /*#__PURE__*/React.createElement("strong", null, "index.html"), " liegt. OneDrive verteilt \xC4nderungen danach automatisch an alle Nutzer."), /*#__PURE__*/React.createElement("button", {
+  }, t('fs.setupMsg')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSetupFolder,
     className: "w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2"
-  }, "Ordner w\xE4hlen")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
+  }, t('fs.selectFolder'))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h2", {
     className: "text-lg font-semibold text-slate-900 mb-2"
-  }, "Synchronisation aktivieren"), /*#__PURE__*/React.createElement("p", {
+  }, t('fs.activateTitle')), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500 mb-6"
-  }, "Klicke auf ", /*#__PURE__*/React.createElement("strong", null, "Aktivieren"), " \u2013 der Browser fragt kurz nach Dateizugriff. Danach l\xE4uft die Synchronisation automatisch."), /*#__PURE__*/React.createElement("button", {
+  }, t('fs.activateMsg')), /*#__PURE__*/React.createElement("button", {
     onClick: handleActivateSync,
     className: "w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2"
-  }, "Aktivieren")), /*#__PURE__*/React.createElement("button", {
+  }, t('fs.activate'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setFsStatus('off'),
     className: "w-full text-slate-400 hover:text-slate-600 text-sm py-2 transition-colors"
-  }, "Ohne Sync starten"))), isHelpModalOpen && HelpModal(), isLoginModalOpen && /*#__PURE__*/React.createElement(LoginModal, {
+  }, t('fs.noSync')))), isHelpModalOpen && HelpModal(), isLoginModalOpen && /*#__PURE__*/React.createElement(LoginModal, {
     appUsers: appUsers,
     onLogin: loginUser,
-    onClose: () => setIsLoginModalOpen(false)
+    onClose: () => setIsLoginModalOpen(false),
+    t: t
   }), cascadeConfirm && /*#__PURE__*/React.createElement(CascadeDeleteModal, {
     entityKind: cascadeConfirm.entityKind,
     entityName: cascadeConfirm.entityName,
@@ -3013,11 +3016,13 @@ function App() {
     employees: employees,
     projects: projects,
     onConfirm: confirmCascadeDelete,
-    onCancel: () => setCascadeConfirm(null)
+    onCancel: () => setCascadeConfirm(null),
+    t: t
   }), confirmDialog && /*#__PURE__*/React.createElement(ConfirmModal, {
     title: confirmDialog.title,
     message: confirmDialog.message,
     confirmLabel: confirmDialog.confirmLabel,
+    cancelLabel: t('btn.cancel'),
     danger: confirmDialog.danger,
     onConfirm: confirmDialog.onConfirm,
     onCancel: () => setConfirmDialog(null)
@@ -3055,14 +3060,14 @@ class ErrorBoundary extends React.Component {
       className: "max-w-md w-full bg-white border border-red-300 rounded-xl shadow-lg p-6 space-y-4"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-lg font-semibold text-red-700"
-    }, "Anwendung ist abgest\xFCrzt"), /*#__PURE__*/React.createElement("p", {
+    }, "Application crashed / Anwendung ist abgest\xFCrzt"), /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-slate-700"
-    }, "Ein interner Fehler hat das Render gestoppt. Daten in SharePoint sind nicht betroffen. Lade die Seite neu, um es erneut zu versuchen."), /*#__PURE__*/React.createElement("pre", {
+    }, "An internal error stopped the render. Data in SharePoint is not affected. Reload the page to try again."), /*#__PURE__*/React.createElement("pre", {
       className: "text-xs bg-slate-100 text-slate-600 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap break-words"
     }, String(this.state.error?.message || this.state.error)), /*#__PURE__*/React.createElement("button", {
       onClick: () => window.location.reload(),
       className: "w-full bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700"
-    }, "Seite neu laden")));
+    }, "Reload page / Seite neu laden")));
   }
 }
 const root = ReactDOM.createRoot(document.getElementById('root'));

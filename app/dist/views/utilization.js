@@ -67,7 +67,8 @@ const UtilizationView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -227,33 +228,33 @@ const UtilizationView = ({
     className: "p-6 border-b border-slate-200 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-slate-900 font-medium"
-  }, "Auslastung (Heatmap)"), /*#__PURE__*/React.createElement("p", {
+  }, t('util.title')), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500"
-  }, "Monatsweise \xDCbersicht der durchschnittlichen Kapazit\xE4tsauslastung.")), /*#__PURE__*/React.createElement("div", {
+  }, t('util.subtitle'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-200"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm text-slate-700 font-medium"
-  }, "Vorschau:"), /*#__PURE__*/React.createElement("select", {
+  }, t('util.preview')), /*#__PURE__*/React.createElement("select", {
     value: weeksAhead,
     onChange: e => setWeeksAhead(Number(e.target.value)),
     className: "p-2 border border-slate-300 rounded text-sm bg-white"
   }, /*#__PURE__*/React.createElement("option", {
     value: 4
-  }, "4 Wochen"), /*#__PURE__*/React.createElement("option", {
+  }, t('util.weeks4')), /*#__PURE__*/React.createElement("option", {
     value: 8
-  }, "8 Wochen"), /*#__PURE__*/React.createElement("option", {
+  }, t('util.weeks8')), /*#__PURE__*/React.createElement("option", {
     value: 12
-  }, "12 Wochen"), /*#__PURE__*/React.createElement("option", {
+  }, t('util.weeks12')), /*#__PURE__*/React.createElement("option", {
     value: 24
-  }, "24 Wochen"), /*#__PURE__*/React.createElement("option", {
+  }, t('util.weeks24')), /*#__PURE__*/React.createElement("option", {
     value: 52
-  }, "52 Wochen")))), /*#__PURE__*/React.createElement("div", {
+  }, t('util.weeks52'))))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-auto px-6 pb-6"
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full border-collapse text-sm"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white"
-  }, "Mitarbeiter"), /*#__PURE__*/React.createElement("th", {
+  }, t('util.colEmployee')), /*#__PURE__*/React.createElement("th", {
     className: "p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 font-medium sticky top-0 z-20"
   }, "\xD8 Zeitraum"), months.map(m => {
     const firstWeek = weeksByMonth[m]?.[0];
@@ -270,7 +271,9 @@ const UtilizationView = ({
     return /*#__PURE__*/React.createElement("th", {
       key: m,
       onClick: firstWeek ? jumpToMonth : undefined,
-      title: firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined,
+      title: firstWeek ? t('util.navigateTo', {
+        month: m
+      }) : undefined,
       className: `p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white ${firstWeek ? 'cursor-pointer hover:text-gea-700 hover:bg-slate-50' : ''}`
     }, m);
   }))), /*#__PURE__*/React.createElement("tbody", null, activeCategories.map(category => {
@@ -318,11 +321,15 @@ const UtilizationView = ({
         className: "border-b border-slate-300 hover:bg-slate-50 transition-colors"
       }, /*#__PURE__*/React.createElement("td", {
         onClick: () => jumpToEmp(null),
-        title: `In Ressourcenplanung nach „${emp.name}" filtern`,
+        title: t('util.filterBy', {
+          name: emp.name
+        }),
         className: "p-2 text-slate-900 font-medium pl-6 cursor-pointer hover:text-gea-700"
       }, emp.name), /*#__PURE__*/React.createElement("td", {
         onClick: () => jumpToEmp(null),
-        title: `In Ressourcenplanung nach „${emp.name}" filtern`,
+        title: t('util.filterBy', {
+          name: emp.name
+        }),
         className: "p-2 border-r border-slate-300 cursor-pointer"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full h-8 rounded flex items-center justify-center gap-1 text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all"
@@ -359,7 +366,13 @@ const UtilizationView = ({
           jumpToEmp(firstWeek);
         };
         const overload = overloadIndicator(maxWeek);
-        const cellTitle = overload ? `${overload.title}${firstWeek ? ' · Zur Ressourcenplanung – ' + emp.name + ', ' + m : ''}` : firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined;
+        const cellTitle = overload ? `${overload.title}${firstWeek ? ' · ' + t('util.navigateFilter', {
+          name: emp.name,
+          month: m
+        }) : ''}` : firstWeek ? t('util.navigateFilter', {
+          name: emp.name,
+          month: m
+        }) : undefined;
         return /*#__PURE__*/React.createElement("td", {
           key: m,
           className: "p-1 border-r border-slate-300 last:border-0"

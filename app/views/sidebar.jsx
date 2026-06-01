@@ -17,7 +17,7 @@ const _SidebarBase = ({ s, h }) => {
         supportEmpsByCategory, supportEmpCategories, hasSupportEmployees,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef,
-        currentUser, appUsers } = s;
+        currentUser, appUsers, language, t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -37,7 +37,8 @@ const _SidebarBase = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek, reconnectSharePoint,
-        loginUser, logoutUser, setIsLoginModalOpen, requestConfirm } = h;
+        loginUser, logoutUser, setIsLoginModalOpen, requestConfirm,
+        setLanguage } = h;
 
     const isActive = !!currentUser;
     const isAdmin = currentUser?.role === 'admin';
@@ -84,57 +85,57 @@ const _SidebarBase = ({ s, h }) => {
                     <h1 className="text-white text-base tracking-tight font-bold uppercase">GEA</h1>
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
-                            <span className="text-xs font-medium">Einsatzplanung v0.86</span>
+                            <span className="text-xs font-medium">{t('nav.appTitle')}</span>
                             <span className="changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
                         </button>
                     </div>
                 </div>
             </div>
             <nav className="flex-1 py-4 space-y-0.5 px-3 overflow-y-auto">
-                <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">Planung</div>
-                {tabBtn('resource', 'Ressourcen', <IconUsers size={18}/>)}
-                {tabBtn('project', 'Projekte', <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
+                <div className="text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold">{t('nav.section.planning')}</div>
+                {tabBtn('resource', t('nav.resources'), <IconUsers size={18}/>)}
+                {tabBtn('project', t('nav.projects'), <IconGanttChart size={18}/>, () => { setActiveTab('project'); setSelectedProject(projects[0]); setSelectedProjectDetails(null); })}
 
                 <div className="px-3 pt-3 pb-1 flex items-center gap-2">
                     <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
-                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">Sonderplanung</span>
+                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">{t('nav.section.specialPlanning')}</span>
                     <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
                 </div>
-                {tabBtn('support',  'Support',       <IconLifebuoy size={18}/>)}
-                {tabBtn('offtime',  'Abwesenheiten', <IconCalendar size={18}/>)}
-                {tabBtn('training', 'Trainings',     <IconBookOpen size={18}/>)}
+                {tabBtn('support',  t('nav.support'),   <IconLifebuoy size={18}/>)}
+                {tabBtn('offtime',  t('nav.absences'),  <IconCalendar size={18}/>)}
+                {tabBtn('training', t('nav.trainings'), <IconBookOpen size={18}/>)}
 
                 <div className="px-3 pt-3 pb-1 flex items-center gap-2">
                     <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
-                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">Auswertung</span>
+                    <span className="text-[10px] text-gea-600 uppercase tracking-wider font-semibold">{t('nav.section.analysis')}</span>
                     <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.10)'}}/>
                 </div>
-                {isActive ? tabBtn('utilization', 'Auslastung', <IconBarChart size={18}/>) : lockedTabBtn('Auslastung', <IconBarChart size={18}/>)}
-                {isActive ? tabBtn('overview',    'Übersicht',  <IconTable size={18}/>)    : lockedTabBtn('Übersicht',  <IconTable size={18}/>)}
+                {isActive ? tabBtn('utilization', t('nav.utilization'), <IconBarChart size={18}/>) : lockedTabBtn(t('nav.utilization'), <IconBarChart size={18}/>)}
+                {isActive ? tabBtn('overview',    t('nav.overview'),    <IconTable size={18}/>)    : lockedTabBtn(t('nav.overview'),    <IconTable size={18}/>)}
 
                 <button
                     type="button"
                     onClick={() => setVerwaltungOpen(o => !o)}
                     className="w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
                 >
-                    <span>Verwaltung</span>
+                    <span>{t('nav.section.admin')}</span>
                     {verwaltungOpen ? <IconChevronDown size={14}/> : <IconChevronRight size={14}/>}
                 </button>
                 {verwaltungOpen && (isActive ? (
                     <>
-                        {tabBtn('setup_emp',  'Mitarbeiter',    <IconUser size={18}/>)}
-                        {tabBtn('setup_proj', 'Projekte',       <IconBriefcase size={18}/>)}
-                        {tabBtn('setup_cats', 'Kategorien',     <IconTag size={18}/>)}
-                        {tabBtn('data',       'System & Export',<IconSettings size={18}/>)}
-                        {tabBtn('audit',      'Verlauf',        <IconHistory size={18}/>)}
+                        {tabBtn('setup_emp',  t('nav.employees'),   <IconUser size={18}/>)}
+                        {tabBtn('setup_proj', t('nav.projects'),    <IconBriefcase size={18}/>)}
+                        {tabBtn('setup_cats', t('nav.categories'),  <IconTag size={18}/>)}
+                        {tabBtn('data',       t('nav.systemExport'),<IconSettings size={18}/>)}
+                        {tabBtn('audit',      t('nav.history'),     <IconHistory size={18}/>)}
                     </>
                 ) : (
                     <>
-                        {lockedTabBtn('Mitarbeiter',     <IconUser size={18}/>)}
-                        {lockedTabBtn('Projekte',        <IconBriefcase size={18}/>)}
-                        {lockedTabBtn('Kategorien',      <IconTag size={18}/>)}
-                        {lockedTabBtn('System & Export', <IconSettings size={18}/>)}
-                        {lockedTabBtn('Verlauf',         <IconHistory size={18}/>)}
+                        {lockedTabBtn(t('nav.employees'),   <IconUser size={18}/>)}
+                        {lockedTabBtn(t('nav.projects'),    <IconBriefcase size={18}/>)}
+                        {lockedTabBtn(t('nav.categories'),  <IconTag size={18}/>)}
+                        {lockedTabBtn(t('nav.systemExport'),<IconSettings size={18}/>)}
+                        {lockedTabBtn(t('nav.history'),     <IconHistory size={18}/>)}
                     </>
                 ))}
             </nav>
@@ -148,14 +149,25 @@ const _SidebarBase = ({ s, h }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                             <span className="text-gea-200 text-xs font-medium truncate block">{currentUser.name}</span>
-                            <span className="text-gea-500 text-xs">{isAdmin ? 'Administrator' : 'Aktiver Nutzer'}</span>
+                            <span className="text-gea-500 text-xs">{isAdmin ? t('auth.administrator') : t('auth.activeUser')}</span>
                         </div>
-                        <Tooltip text="Abmelden" side="top">
+                        <div className="flex items-center gap-0.5 shrink-0">
+                            {['de', 'en'].map(lng => (
+                                <button
+                                    key={lng}
+                                    onClick={() => setLanguage(lng)}
+                                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${language === lng ? 'bg-gea-600 text-white' : 'text-gea-500 hover:text-gea-300'}`}
+                                >
+                                    {lng.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                        <Tooltip text={t('auth.logout')} side="top">
                             <button
                                 onClick={() => requestConfirm({
-                                    title: 'Abmelden?',
-                                    message: 'Du wirst zur Login-Seite zurückgeleitet. Nicht-gespeicherte Änderungen können verloren gehen.',
-                                    confirmLabel: 'Abmelden',
+                                    title: t('auth.logoutTitle'),
+                                    message: t('auth.logoutMsg'),
+                                    confirmLabel: t('auth.logout'),
                                     onConfirm: logoutUser
                                 })}
                                 className="text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
@@ -169,7 +181,7 @@ const _SidebarBase = ({ s, h }) => {
                         onClick={() => setIsLoginModalOpen(true)}
                         className="w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
                     >
-                        <IconLogIn size={15}/> Anmelden
+                        <IconLogIn size={15}/> {t('auth.login')}
                     </button>
                 )}
             </div>
@@ -191,19 +203,19 @@ const _SidebarBase = ({ s, h }) => {
                             type="button"
                             onClick={reconnectSharePoint}
                             className="text-rose-300 hover:text-rose-200 text-xs truncate underline decoration-dotted"
-                            title="Sitzung bei SharePoint ist abgelaufen – hier klicken um sich neu anzumelden"
+                            title={t('sync.sessionExpiredTitle')}
                         >
-                            Sitzung abgelaufen – neu verbinden
+                            {t('sync.sessionExpired')}
                         </button>
                     ) : (
                         <span className="text-gea-400 text-xs truncate">
-                            {syncStatus === 'idle'            ? 'Synchronisiert' :
-                             syncStatus === 'syncing'         ? 'Speichert ...' :
-                             syncStatus === 'updated'         ? 'Aktualisiert ✓' :
-                             syncStatus === 'conflict-reload' ? 'Änderung eines Kollegen übernommen' :
-                             syncStatus === 'reconnecting'    ? 'Sitzung erneuern ...' :
-                             syncStatus === 'offline'         ? 'Offline – lokal' :
-                                                               'Verbindet ...'}
+                            {syncStatus === 'idle'            ? t('sync.idle') :
+                             syncStatus === 'syncing'         ? t('sync.syncing') :
+                             syncStatus === 'updated'         ? t('sync.updated') :
+                             syncStatus === 'conflict-reload' ? t('sync.conflictReload') :
+                             syncStatus === 'reconnecting'    ? t('sync.reconnecting') :
+                             syncStatus === 'offline'         ? t('sync.offline') :
+                                                               t('sync.connecting')}
                         </span>
                     )}
                 </div>
@@ -219,5 +231,6 @@ const SidebarView = React.memo(_SidebarBase, (prev, next) =>
     prev.s.syncStatus          === next.s.syncStatus         &&
     prev.s.fsStatus            === next.s.fsStatus           &&
     prev.s.projects            === next.s.projects           && // needed for onClick: setSelectedProject(projects[0])
-    prev.s.currentUser         === next.s.currentUser           // login/logout
+    prev.s.currentUser         === next.s.currentUser        && // login/logout
+    prev.s.language            === next.s.language              // language toggle
 );

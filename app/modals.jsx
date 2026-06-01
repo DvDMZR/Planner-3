@@ -26,6 +26,7 @@ const AssignmentModal = ({
     onDelete,
     onDeleteSeries,
     requestConfirm,
+    t = (k) => k,
 }) => {
     useEscapeToClose(onClose);
     // Guard against weeklyHours = 0 / negative – would otherwise produce
@@ -214,7 +215,7 @@ const AssignmentModal = ({
         // tab/user between modal-open and save. Adding it back as a new row
         // would resurrect a deleted assignment with the old id.
         if (formData.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === formData.id)) {
-            showToast?.('Eintrag wurde von einem Kollegen gelöscht – Bearbeitung verworfen.', { type: 'warning', duration: 5000 });
+            showToast?.(t('modal.entryDeleted'), { type: 'warning', duration: 5000 });
             onClose();
             return;
         }
@@ -237,7 +238,7 @@ const AssignmentModal = ({
         const newTotal = currentTotal - (existingH / weeklyH * 100) + (newH / weeklyH * 100);
         if (newTotal > 100) {
             const empName = employeeById.get(formData.empId)?.name || '';
-            if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
+            if (!window.confirm(t('modal.overutilWarning', { empName, pct: Math.round(newTotal) }))) return;
         }
         const numWeeks = Math.max(1, parseInt(planWeeks) || 1);
         if (numWeeks > 1 && !data.id) {
@@ -275,7 +276,7 @@ const AssignmentModal = ({
         { value: 'support',  label: 'Support' },
         { value: 'basic',    label: 'Basic' },
         { value: 'other',    label: 'Other' },
-        { value: 'project',  label: 'Projekt' },
+        { value: 'project',  label: t('modal.typeProject') },
         { value: 'offtime',  label: 'Offtime' },
         { value: 'new',      label: '+ Neu' },
     ];
@@ -285,7 +286,7 @@ const AssignmentModal = ({
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                <ModalHeader title={formData.id ? 'Planung bearbeiten' : 'Planung hinzufügen'} onClose={onClose} />
+                <ModalHeader title={formData.id ? t('modal.assignEdit') : t('modal.assignAdd')} onClose={onClose} />
                 <div className="p-6 space-y-4">
                     <div className="text-sm text-slate-500">
                         <span className="text-slate-900 font-medium">{emp?.name}</span>
@@ -295,7 +296,7 @@ const AssignmentModal = ({
 
                     {!allowedType && (
                     <div>
-                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Typ</label>
+                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">{t('modal.typeLabel')}</label>
                         <div className="grid grid-cols-4 gap-1">
                             {TYPE_BUTTONS.map(opt => (
                                 <button key={opt.value} onClick={() => handleTypeChange(opt.value)}
@@ -309,18 +310,18 @@ const AssignmentModal = ({
 
                     {!allowedType && formData.type === 'new' && (
                         <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">Neuer Task-Name (Other)</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">{t('modal.newTaskName')}</label>
                             <input type="text" value={newTaskName} onChange={e => setNewTaskName(e.target.value)}
                                 autoFocus
-                                placeholder="z.B. Meeting, Workshop, …"
+                                placeholder={t('modal.newTaskPlaceholder')}
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
-                            <p className="text-xs text-slate-400 mt-1">Wird als Other-Task gespeichert und zur Liste hinzugefügt.</p>
+                            <p className="text-xs text-slate-400 mt-1">{t('modal.newTaskHint')}</p>
                         </div>
                     )}
 
                     {formData.type !== 'new' && (
                         <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Auswahl</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">{t('modal.selectionLabel')}</label>
                             {formData.type === 'project' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
                                     {projects.filter(p => ['active','planned'].includes(computeAutoStatus(p))).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -328,29 +329,29 @@ const AssignmentModal = ({
                             )}
                             {formData.type === 'basic' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {hardcodedBasicTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {hardcodedBasicTasks.map(bt => <option key={bt} value={bt}>{bt}</option>)}
                                 </select>
                             )}
                             {formData.type === 'other' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
                                     {otherTasks.length > 0
-                                        ? otherTasks.map(t => <option key={t} value={t}>{t}</option>)
-                                        : <option value="">— Noch keine Other-Tasks (+ Neu verwenden) —</option>}
+                                        ? otherTasks.map(ot => <option key={ot} value={ot}>{ot}</option>)
+                                        : <option value="">{t('modal.noOtherTasks')}</option>}
                                 </select>
                             )}
                             {formData.type === 'support' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {activeSupportTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {activeSupportTasks.map(st => <option key={st} value={st}>{st}</option>)}
                                 </select>
                             )}
                             {formData.type === 'training' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {activeTrainingTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {activeTrainingTasks.map(tt => <option key={tt} value={tt}>{tt}</option>)}
                                 </select>
                             )}
                             {formData.type === 'offtime' && (
                                 <select value={formData.reference} onChange={e => setFormData({...formData, reference: e.target.value})} className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                    {activeOfftimeTasks.map(t => <option key={t} value={t}>{t}</option>)}
+                                    {activeOfftimeTasks.map(oft => <option key={oft} value={oft}>{oft}</option>)}
                                 </select>
                             )}
                         </div>
@@ -358,7 +359,7 @@ const AssignmentModal = ({
 
                     <div>
                         <label className="block text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">
-                            Auslastung: <span className="text-gea-600 font-medium">{pct}%</span>
+                            {t('modal.utilization')}: <span className="text-gea-600 font-medium">{pct}%</span>
                             <span className="text-slate-400 ml-2">({hoursDisp}h)</span>
                         </label>
                         {/* step=5 lets the user hit 25 / 50 / 75 % exactly; we no longer
@@ -390,11 +391,11 @@ const AssignmentModal = ({
                     </div>
 
                     <div>
-                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">Kommentar (optional)</label>
+                        <label className="block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide">{t('modal.comment')}</label>
                         <textarea
                             value={formData.comment || ''}
                             onChange={e => setFormData({...formData, comment: e.target.value})}
-                            placeholder="Notiz zu dieser Planung…"
+                            placeholder={t('modal.commentPlaceholder')}
                             rows={2}
                             className="w-full p-2 border border-slate-300 rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-gea-400"
                         />
@@ -403,14 +404,14 @@ const AssignmentModal = ({
                     {!formData.id && (
                         <div className="border-t border-slate-100 pt-3 space-y-3">
                             <div className="flex items-center gap-3">
-                                <label className="text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap">Planen für</label>
+                                <label className="text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap">{t('modal.planFor')}</label>
                                 <input type="number" min="1" max="52"
                                     value={planWeeks}
                                     onChange={e => setPlanWeeks(Math.max(1, parseInt(e.target.value) || 1))}
                                     className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
-                                <span className="text-sm text-slate-600">Woche{planWeeks > 1 ? 'n' : ''}</span>
+                                <span className="text-sm text-slate-600">{t('modal.weeks', { s: planWeeks > 1 ? t('modal.weekPluralSuffix') : '' })}</span>
                                 {planWeeks > 1 && (
-                                    <span className="text-xs text-slate-400 ml-auto">bis {addWeeks(formData.week, planWeeks - 1)}</span>
+                                    <span className="text-xs text-slate-400 ml-auto">{t('modal.until')} {addWeeks(formData.week, planWeeks - 1)}</span>
                                 )}
                             </div>
                             {planWeeks === 1 && (
@@ -421,21 +422,21 @@ const AssignmentModal = ({
                                             onChange={e => setRecurRule(r => ({ ...r, enabled: e.target.checked }))}
                                             className="rounded accent-gea-600"/>
                                         <span className="text-xs font-medium uppercase tracking-wide text-slate-500 flex items-center gap-1">
-                                            <IconRepeat size={12}/> Wiederkehrend (Regel)
+                                            <IconRepeat size={12}/> {t('modal.recurring')}
                                         </span>
                                     </label>
                                     {recurRule.enabled && (
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-3">
                                                 <div>
-                                                    <label className="block text-xs text-slate-400 mb-1">Alle X Wochen</label>
+                                                    <label className="block text-xs text-slate-400 mb-1">{t('modal.everyXWeeks')}</label>
                                                     <input type="number" min="1" max="52"
                                                         value={recurRule.everyXWeeks}
                                                         onChange={e => setRecurRule(r => ({ ...r, everyXWeeks: Math.max(1, parseInt(e.target.value)||1) }))}
                                                         className="w-20 p-2 border border-slate-300 rounded-md text-sm text-center"/>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <label className="block text-xs text-slate-400 mb-1">Bis Woche</label>
+                                                    <label className="block text-xs text-slate-400 mb-1">{t('modal.untilWeek')}</label>
                                                     <input type="week"
                                                         value={recurRule.endWeek}
                                                         min={addWeeks(formData.week, 1)}
@@ -454,13 +455,13 @@ const AssignmentModal = ({
                                     onChange={e => setNotifyByEmail(e.target.checked)}
                                     className="rounded accent-gea-600"/>
                                 <span className="text-xs flex items-center gap-1.5">
-                                    <span className="font-medium uppercase tracking-wide text-slate-500">Per Email + Outlook-Termin benachrichtigen</span>
+                                    <span className="font-medium uppercase tracking-wide text-slate-500">{t('modal.notifyEmail')}</span>
                                     <span className="relative group/tip cursor-help" onClick={e => e.preventDefault()}>
                                         <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-xs font-bold leading-none">?</span>
                                         <span className="pointer-events-none absolute bottom-5 left-0 z-50 w-64 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/tip:opacity-100 transition-opacity shadow-lg" style={{whiteSpace:'normal'}}>
                                             {empEmail
-                                                ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.`
-                                                : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.'}
+                                                ? t('modal.notifyEmailTip', { email: empEmail })
+                                                : t('modal.noEmail')}
                                         </span>
                                     </span>
                                 </span>
@@ -471,29 +472,29 @@ const AssignmentModal = ({
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
                     {formData.id ? (
                         <div className="flex gap-1">
-                            <button onClick={() => onDelete(formData.id)} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">Löschen</button>
+                            <button onClick={() => onDelete(formData.id)} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">{t('btn.delete')}</button>
                             {formData.ruleId && onDeleteSeries && (
                                 <button
                                     onClick={() => {
                                         const seriesCount = (assignmentsRef?.current || []).filter(a => a.ruleId === formData.ruleId && a.week >= formData.week).length;
                                         requestConfirm({
-                                            title: 'Serie löschen?',
-                                            message: `Diese und alle späteren Instanzen der Serie (${seriesCount} Zuweisung${seriesCount === 1 ? '' : 'en'}) werden entfernt.`,
-                                            confirmLabel: 'Serie löschen',
+                                            title: t('modal.deleteSeries'),
+                                            message: t('modal.deleteSeriesCount', { n: seriesCount, s: seriesCount === 1 ? '' : t('modal.assignmentPluralSuffix') }),
+                                            confirmLabel: t('modal.deleteSeriesBtn'),
                                             danger: true,
                                             onConfirm: () => onDeleteSeries(formData.id)
                                         });
                                     }}
                                     className="text-rose-500 text-xs hover:bg-rose-50 px-2 py-1 rounded font-medium border border-rose-200 flex items-center gap-1"
-                                    title="Diese und alle späteren Instanzen der Serie löschen">
-                                    <IconRepeat size={11}/> Serie ab hier löschen
+                                    title={t('modal.deleteSeriesFromTitle')}>
+                                    <IconRepeat size={11}/> {t('modal.deleteSeriesFrom')}
                                 </button>
                             )}
                         </div>
                     ) : <div/>}
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
-                        <button onClick={handleSave} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium">Speichern</button>
+                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">{t('btn.cancel')}</button>
+                        <button onClick={handleSave} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium">{t('btn.save')}</button>
                     </div>
                 </div>
             </div>
@@ -515,6 +516,7 @@ const CopyModal = ({
     assignments,
     setAssignments,
     onClose,
+    t = (k) => k,
 }) => {
     useEscapeToClose(onClose);
     const { assignment } = copyContext;
@@ -569,22 +571,22 @@ const CopyModal = ({
         // Race guard: source assignment may have been deleted while the modal
         // was open; copying it would resurrect deleted data on every target.
         if (assignment.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === assignment.id)) {
-            showToast?.('Quell-Eintrag wurde gelöscht – Kopieren abgebrochen.', { type: 'warning', duration: 5000 });
+            showToast?.(t('copy.sourceDeleted'), { type: 'warning', duration: 5000 });
             onClose();
             return;
         }
         const targetWeeks = weeks.filter(w => selWeeks[w.id]).map(w => w.id);
         const targetEmps = activeEmps.filter(e => selEmps[e.id]).map(e => e.id);
         if (targetEmps.length === 0 && targetWeeks.length === 0) {
-            setError('Bitte mindestens einen Mitarbeiter und eine Woche auswählen.');
+            setError(t('copy.errorBoth'));
             return;
         }
         if (targetEmps.length === 0) {
-            setError('Bitte mindestens einen Mitarbeiter auswählen.');
+            setError(t('copy.errorEmp'));
             return;
         }
         if (targetWeeks.length === 0) {
-            setError('Bitte mindestens eine Woche auswählen.');
+            setError(t('copy.errorWeek'));
             return;
         }
         setError('');
@@ -620,12 +622,12 @@ const CopyModal = ({
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-                <ModalHeader title="Task kopieren" subtitle={`"${label}" · ${pct}%`} onClose={onClose}/>
+                <ModalHeader title={t('copy.title')} subtitle={`"${label}" · ${pct}%`} onClose={onClose}/>
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
                     {/* Employee selection – grouped by team */}
                     <div>
-                        <h4 className="text-sm font-medium text-slate-700 mb-3">Mitarbeiter auswählen</h4>
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">{t('copy.selectEmployees')}</h4>
                         {useTeams ? (
                             <div className="space-y-2 border border-slate-200 rounded-lg overflow-hidden">
                                 {empCategories.map(cat => {
@@ -643,7 +645,7 @@ const CopyModal = ({
                                                     {selInTeam > 0 && <span className="ml-1 text-xs bg-gea-100 text-gea-700 px-1.5 py-0.5 rounded-full font-medium">{selInTeam}/{catEmps.length}</span>}
                                                 </button>
                                                 <button onClick={() => toggleAllInTeam(cat)} className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${allInTeam ? 'text-gea-600 hover:text-gea-800' : 'text-slate-500 hover:text-gea-600'}`}>
-                                                    {allInTeam ? 'Alle ab' : 'Alle'}
+                                                    {allInTeam ? t('copy.allDeselect') : t('copy.allSelect')}
                                                 </button>
                                             </div>
                                             {!isCollapsed && (
@@ -675,9 +677,9 @@ const CopyModal = ({
                     {/* Week selection */}
                     <div>
                         <div className="flex justify-between items-center mb-3">
-                            <h4 className="text-sm font-medium text-slate-700">Wochen auswählen</h4>
+                            <h4 className="text-sm font-medium text-slate-700">{t('copy.selectWeeks')}</h4>
                             <button onClick={toggleAllWeeks} className="text-xs text-gea-600 hover:text-gea-700 font-medium">
-                                Alle {weeks.every(w => selWeeks[w.id]) ? 'abwählen' : 'auswählen'}
+                                {weeks.every(w => selWeeks[w.id]) ? t('copy.weeksDeselectAll') : t('copy.weeksSelectAll')}
                             </button>
                         </div>
                         <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
@@ -685,7 +687,7 @@ const CopyModal = ({
                                 const isSource = w.id === assignment.week;
                                 return (
                                     <button key={w.id} onClick={() => toggleWeek(w.id)}
-                                        title={isSource ? 'Ursprungswoche (für andere MA kopierbar)' : ''}
+                                        title={isSource ? t('copy.sourceWeekTip') : ''}
                                         className={`px-2.5 py-1 rounded text-xs border font-medium transition-colors ${selWeeks[w.id] ? 'bg-gea-600 text-white border-gea-600' : isSource ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-gea-400' : 'bg-white text-slate-600 border-slate-200 hover:border-gea-300'}`}>
                                         {w.label}{isSource ? ' ★' : ''}
                                     </button>
@@ -702,13 +704,13 @@ const CopyModal = ({
                         </span>
                     ) : (
                         <span className="text-xs text-slate-400">
-                            {selEmpCount} MA × {selWeekCount} KW = {selEmpCount * selWeekCount} Einträge
+                            {t('copy.stats', { ma: selEmpCount, kw: selWeekCount, total: selEmpCount * selWeekCount })}
                         </span>
                     )}
                     <div className="flex gap-2 shrink-0">
-                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
+                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">{t('btn.cancel')}</button>
                         <button onClick={handleCopy} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium flex items-center gap-2">
-                            <IconCopy size={15}/> Kopieren
+                            <IconCopy size={15}/> {t('btn.copy')}
                         </button>
                     </div>
                 </div>
@@ -727,6 +729,7 @@ const CostItemModal = ({
     setCostItems,
     showToast,
     onClose,
+    t = (k) => k,
 }) => {
     useEscapeToClose(onClose);
     // Coerce a free-text number to a finite, non-negative float. parseFloat
@@ -786,7 +789,7 @@ const CostItemModal = ({
         if (!form.empId || lines.length === 0) return;
         // Race guard: the cost item we're editing may have been removed.
         if (existingItem?.id && Array.isArray(costItems) && !costItems.some(c => c.id === existingItem.id)) {
-            showToast?.('Kostenpunkt wurde gelöscht – Bearbeitung verworfen.', { type: 'warning', duration: 5000 });
+            showToast?.(t('costitem.deleted'), { type: 'warning', duration: 5000 });
             onClose();
             return;
         }
@@ -836,34 +839,34 @@ const CostItemModal = ({
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
                 <ModalHeader
-                    title={existingItem ? 'Kostenpunkt bearbeiten' : 'Kostenpunkt erfassen'}
+                    title={existingItem ? t('costitem.editTitle') : t('costitem.addTitle')}
                     onClose={onClose}
                 />
                 <div className="p-6 space-y-5 overflow-y-auto">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">Mitarbeiter</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">{t('costitem.employee')}</label>
                             <select value={form.empId} onChange={e => setForm({...form, empId: e.target.value})}
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm">
-                                <option value="">Bitte wählen…</option>
+                                <option value="">{t('costitem.selectEmployee')}</option>
                                 {projEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                                 {employees.filter(e => !empIds.has(e.id)).map(e =>
-                                    <option key={e.id} value={e.id}>{e.name} (nicht verplant)</option>
+                                    <option key={e.id} value={e.id}>{e.name} ({t('costitem.notScheduled')})</option>
                                 )}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-500 mb-1 font-medium">Anlass (optional)</label>
+                            <label className="block text-xs text-slate-500 mb-1 font-medium">{t('costitem.occasion')}</label>
                             <input type="text" value={form.description}
                                 onChange={e => setForm({...form, description: e.target.value})}
-                                placeholder="z.B. Vor-Ort-Einsatz"
+                                placeholder={t('costitem.occasionPlaceholder')}
                                 className="w-full p-2 border border-slate-300 rounded-md text-sm"/>
                         </div>
                     </div>
 
                     <div>
                         <label className="block text-xs text-slate-500 mb-1 font-medium">
-                            Zeitraum (optional)
+                            {t('costitem.period')}
                             {kwLabel && <span className="ml-2 text-gea-600 font-medium">{kwLabel}</span>}
                         </label>
                         <div className="grid grid-cols-2 gap-3">
@@ -879,12 +882,12 @@ const CostItemModal = ({
 
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
                         <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-medium text-slate-600 mr-1">Posten</span>
-                            {COST_LINE_TYPE_ORDER.map(t => {
-                                const cfg = COST_LINE_TYPES[t];
+                            <span className="text-xs font-medium text-slate-600 mr-1">{t('costitem.lineItems')}</span>
+                            {COST_LINE_TYPE_ORDER.map(lt => {
+                                const cfg = COST_LINE_TYPES[lt];
                                 return (
-                                    <button key={t} onClick={() => addLine(t)}
-                                        title={cfg.example ? `z.B. ${cfg.example}` : 'Stunden × Satz'}
+                                    <button key={lt} onClick={() => addLine(lt)}
+                                        title={cfg.example ? `z.B. ${cfg.example}` : t('costitem.hoursX')}
                                         className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 transition-opacity hover:opacity-80 ${cfg.chip}`}>
                                         <IconPlus size={11}/> {cfg.label}
                                     </button>
@@ -894,7 +897,7 @@ const CostItemModal = ({
 
                         {lines.length === 0 ? (
                             <div className="px-4 py-6 text-center text-xs text-slate-400">
-                                Noch keine Posten. Oben einen Typ wählen, um eine Zeile hinzuzufügen.
+                                {t('costitem.noItems')}
                             </div>
                         ) : (
                             <div className="p-3 space-y-2">
@@ -909,7 +912,7 @@ const CostItemModal = ({
                                                 <div className="flex gap-1 items-center w-44 shrink-0">
                                                     <input type="number" min="0" step="0.5" value={l.hours}
                                                         onChange={e => updateLine(l.id, 'hours', e.target.value)}
-                                                        placeholder="Std."
+                                                        placeholder={t('costitem.hourPlaceholder')}
                                                         className="w-20 p-2 border border-slate-300 rounded text-sm"/>
                                                     <span className="text-slate-400 text-xs">×</span>
                                                     <input type="number" min="0" step="1" value={l.hourlyRate}
@@ -925,7 +928,7 @@ const CostItemModal = ({
                                             )}
                                             <input type="text" value={l.comment}
                                                 onChange={e => updateLine(l.id, 'comment', e.target.value)}
-                                                placeholder={cfg.example ? `Kommentar (z.B. ${cfg.example})` : 'Kommentar (optional)'}
+                                                placeholder={cfg.example ? t('costitem.commentPrefix', { example: cfg.example }) : t('costitem.commentGeneric')}
                                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                                             <span className="w-20 text-right text-sm text-slate-700 tabular-nums shrink-0">{lineAmount(l).toFixed(2)} €</span>
                                             <button onClick={() => removeLine(l.id)}
@@ -938,7 +941,7 @@ const CostItemModal = ({
 
                         {lines.length > 0 && (
                             <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                                <span className="text-xs text-slate-500">Summe</span>
+                                <span className="text-xs text-slate-500">{t('costitem.total')}</span>
                                 <span className="text-base font-semibold text-slate-900 tabular-nums">{total.toFixed(2)} €</span>
                             </div>
                         )}
@@ -946,13 +949,13 @@ const CostItemModal = ({
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
                     {existingItem ? (
-                        <button onClick={handleDelete} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">Löschen</button>
+                        <button onClick={handleDelete} className="text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium">{t('btn.delete')}</button>
                     ) : <div/>}
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
+                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">{t('btn.cancel')}</button>
                         <button onClick={handleSave} disabled={!form.empId || lines.length === 0}
                             className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed">
-                            Speichern
+                            {t('btn.save')}
                         </button>
                     </div>
                 </div>
@@ -974,7 +977,7 @@ const DEPS_LIST = [
 ];
 
 
-const DepsSection = () => {
+const DepsSection = ({ t = (k) => k }) => {
     const [latest, setLatest] = React.useState({});
     const [checking, setChecking] = React.useState(false);
     const [checked, setChecked] = React.useState(false);
@@ -1001,21 +1004,21 @@ const DepsSection = () => {
         <div className="mt-8 text-left border border-slate-200 rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
                 <div>
-                    <span className="text-sm font-semibold text-slate-700">Verwendete Bibliotheken</span>
-                    <p className="text-xs text-slate-400 mt-0.5">Externe Skripte, die beim Laden der Seite eingebunden werden (CDN).</p>
+                    <span className="text-sm font-semibold text-slate-700">{t('deps.title')}</span>
+                    <p className="text-xs text-slate-400 mt-0.5">{t('deps.subtitle')}</p>
                 </div>
                 <button onClick={checkUpdates} disabled={checking}
                     className="text-xs px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-600 hover:border-gea-400 hover:text-gea-700 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-                    {checking ? <><svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Prüfe…</> : 'Auf Updates prüfen'}
+                    {checking ? <><svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>{t('deps.checking')}</> : t('deps.checkUpdates')}
                 </button>
             </div>
             <table className="w-full text-xs">
                 <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-100">
-                        <th className="px-4 py-2 font-medium">Bibliothek</th>
-                        <th className="px-4 py-2 font-medium">Geladen</th>
-                        {checked && <th className="px-4 py-2 font-medium">Aktuell</th>}
-                        <th className="px-4 py-2 font-medium">Quelle</th>
+                        <th className="px-4 py-2 font-medium">{t('deps.colLibrary')}</th>
+                        <th className="px-4 py-2 font-medium">{t('deps.colLoaded')}</th>
+                        {checked && <th className="px-4 py-2 font-medium">{t('deps.colLatest')}</th>}
+                        <th className="px-4 py-2 font-medium">{t('deps.colSource')}</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1063,7 +1066,7 @@ const DepsSection = () => {
                 </tbody>
             </table>
             <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
-                <p className="text-xs text-slate-400">Alle Verbindungen erfolgen über <strong className="text-slate-500">HTTPS</strong>. Quellen: <strong className="text-slate-500">unpkg.com</strong>, <strong className="text-slate-500">cdn.tailwindcss.com</strong>. Die App läuft vollständig im Browser – kein Backend, keine Telemetrie.</p>
+                <p className="text-xs text-slate-400">{t('deps.footer')}</p>
             </div>
         </div>
     );
@@ -1071,7 +1074,7 @@ const DepsSection = () => {
 
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
 // LOGIN_LOCK_THRESHOLD and LOGIN_LOCK_DURATION_MS live in config.js
-const LoginModal = ({ appUsers, onLogin, onClose }) => {
+const LoginModal = ({ appUsers, onLogin, onClose, t = (k) => k }) => {
     const { useState, useEffect, useRef } = React;
     useEscapeToClose(onClose);
     const [selectedUserId, setSelectedUserId] = useState('');
@@ -1103,7 +1106,7 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
     const handleLogin = async () => {
         if (isLocked) return;
         const user = appUsers.find(u => u.id === selectedUserId);
-        if (!user) { setError('Bitte einen Nutzer auswählen.'); return; }
+        if (!user) { setError(t('login.noUser')); return; }
         // New hashed flow (preferred). Legacy plaintext `pin` is also accepted
         // as a fallback so users with un-migrated records can still log in –
         // the next save will migrate them to a hash.
@@ -1123,9 +1126,9 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
                 setLockUntil(until);
                 setNow(Date.now());
                 try { sessionStorage.setItem('plannerLoginLockUntil', String(until)); } catch(e) {}
-                setError(`Zu viele Fehlversuche – ${Math.ceil(LOGIN_LOCK_DURATION_MS / 1000)} Sekunden gesperrt.`);
+                setError(t('login.tooManyFails', { s: Math.ceil(LOGIN_LOCK_DURATION_MS / 1000) }));
             } else {
-                setError(`Falscher PIN. Noch ${LOGIN_LOCK_THRESHOLD - next} Versuche.`);
+                setError(t('login.wrongPin', { n: LOGIN_LOCK_THRESHOLD - next }));
             }
             setPin('');
             return;
@@ -1153,10 +1156,10 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
-                <ModalHeader title="Anmelden" onClose={onClose}/>
+                <ModalHeader title={t('login.title')} onClose={onClose}/>
                 <div className="p-6 space-y-4">
                     <div>
-                        <label className="block text-xs text-slate-700 mb-2 font-semibold">Nutzer auswählen</label>
+                        <label className="block text-xs text-slate-700 mb-2 font-semibold">{t('login.selectUser')}</label>
                         <div className="flex flex-wrap gap-2">
                             {appUsers.map(u => {
                                 const active = selectedUserId === u.id;
@@ -1175,7 +1178,7 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
                     </div>
                     {selectedUserId && (
                         <div>
-                            <label className="block text-xs text-slate-700 mb-1 font-semibold">PIN</label>
+                            <label className="block text-xs text-slate-700 mb-1 font-semibold">{t('login.pinLabel')}</label>
                             <input
                                 ref={pinRef}
                                 type="password"
@@ -1184,21 +1187,21 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
                                 onChange={e => { setPin(e.target.value); setError(''); }}
                                 onKeyDown={e => e.key === 'Enter' && !isLocked && handleLogin()}
                                 className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 disabled:bg-slate-100"
-                                placeholder="PIN eingeben"
+                                placeholder={t('login.pinPlaceholder')}
                             />
                         </div>
                     )}
                     {error && <p className="text-rose-600 text-sm">{error}</p>}
                     {isLocked && (
-                        <p className="text-amber-700 text-sm">Gesperrt – noch {secondsLeft}s.</p>
+                        <p className="text-amber-700 text-sm">{t('login.locked', { s: secondsLeft })}</p>
                     )}
                     <div className="flex gap-2 pt-1">
-                        <button onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">Abbrechen</button>
+                        <button onClick={onClose} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">{t('btn.cancel')}</button>
                         <button
                             onClick={handleLogin}
                             disabled={!selectedUserId || isLocked}
                             className="flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >{isLocked ? `Gesperrt (${secondsLeft}s)` : 'Anmelden'}</button>
+                        >{isLocked ? t('login.lockedBtn', { s: secondsLeft }) : t('login.loginBtn')}</button>
                     </div>
                 </div>
             </div>
@@ -1215,7 +1218,7 @@ const LoginModal = ({ appUsers, onLogin, onClose }) => {
 // have their own dependency-cascade modal: logout, delete app-user, delete a
 // recurring assignment series. Body is a plain string; pass `\n` for line
 // breaks. `danger` swaps the confirm button to a rose accent.
-const ConfirmModal = ({ title, message, confirmLabel = 'Bestätigen', danger = false, onConfirm, onCancel }) => {
+const ConfirmModal = ({ title, message, confirmLabel, cancelLabel = 'Abbrechen', danger = false, onConfirm, onCancel }) => {
     useEscapeToClose(onCancel);
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -1224,8 +1227,8 @@ const ConfirmModal = ({ title, message, confirmLabel = 'Bestätigen', danger = f
                 <div className="p-6 space-y-4">
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{message}</p>
                     <div className="flex gap-2 pt-1">
-                        <button onClick={onCancel} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">Abbrechen</button>
-                        <button onClick={onConfirm} className={`flex-1 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-gea-600 hover:bg-gea-700'} text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors`}>{confirmLabel}</button>
+                        <button onClick={onCancel} className="flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors">{cancelLabel}</button>
+                        <button onClick={onConfirm} className={`flex-1 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-gea-600 hover:bg-gea-700'} text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors`}>{confirmLabel || 'Bestätigen'}</button>
                     </div>
                 </div>
             </div>
@@ -1233,7 +1236,7 @@ const ConfirmModal = ({ title, message, confirmLabel = 'Bestätigen', danger = f
     );
 };
 
-const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, projects, onConfirm, onCancel }) => {
+const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, projects, onConfirm, onCancel, t = (k) => k }) => {
     useEscapeToClose(onCancel);
     const empById = useMemo(() => {
         const m = new Map();
@@ -1250,20 +1253,20 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
     const describeAss = (a) => describeAssignment(a, id => projById.get(id));
 
     const total = (dependents.assignments?.length || 0) + (dependents.costItems?.length || 0);
-    const kindLabel = entityKind === 'project' ? 'Projekt' : 'Mitarbeiter';
+    const kindLabel = entityKind === 'project' ? t('cascade.entityProject') : t('cascade.entityEmployee');
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
-                <ModalHeader title={`${kindLabel} löschen?`} subtitle={entityName} onClose={onCancel}/>
+                <ModalHeader title={t('cascade.deleteTitle', { kind: kindLabel })} subtitle={entityName} onClose={onCancel}/>
                 <div className="p-6 space-y-4 overflow-y-auto">
                     <p className="text-sm text-slate-700">
-                        {kindLabel} <strong>„{entityName}"</strong> wird gelöscht. Folgende abhängige Einträge werden mitgelöscht:
+                        {t('cascade.willDelete', { kind: kindLabel, name: entityName })}
                     </p>
                     {dependents.assignments?.length > 0 && (
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-                                {dependents.assignments.length} Zuweisung{dependents.assignments.length !== 1 ? 'en' : ''}
+                                {t('cascade.assignments', { n: dependents.assignments.length, s: dependents.assignments.length !== 1 ? t('modal.assignmentPluralSuffix') : '' })}
                             </div>
                             <ul className="space-y-1 max-h-48 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50">
                                 {dependents.assignments.slice(0, 50).map(a => {
@@ -1276,7 +1279,7 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
                                     );
                                 })}
                                 {dependents.assignments.length > 50 && (
-                                    <li className="text-xs text-slate-400">… und {dependents.assignments.length - 50} weitere</li>
+                                    <li className="text-xs text-slate-400">{t('cascade.andMore', { n: dependents.assignments.length - 50 })}</li>
                                 )}
                             </ul>
                         </div>
@@ -1284,7 +1287,7 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
                     {dependents.costItems?.length > 0 && (
                         <div>
                             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-                                {dependents.costItems.length} Kostenpunkt{dependents.costItems.length !== 1 ? 'e' : ''}
+                                {t('cascade.costItems', { n: dependents.costItems.length, s: dependents.costItems.length !== 1 ? t('cascade.costItemPluralSuffix') : '' })}
                             </div>
                             <ul className="space-y-1 max-h-40 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50">
                                 {dependents.costItems.slice(0, 50).map(c => {
@@ -1293,7 +1296,7 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
                                     return (
                                         <li key={c.id} className="text-xs text-slate-700 flex justify-between gap-2">
                                             <span className="truncate">
-                                                {c.description || 'Kostenpunkt'}
+                                                {c.description || t('cascade.costDefault')}
                                                 {entityKind === 'employee' && proj ? ` · ${proj.name}` : ''}
                                                 {entityKind === 'project' && emp ? ` · ${emp.name}` : ''}
                                             </span>
@@ -1302,19 +1305,19 @@ const CascadeDeleteModal = ({ entityKind, entityName, dependents, employees, pro
                                     );
                                 })}
                                 {dependents.costItems.length > 50 && (
-                                    <li className="text-xs text-slate-400">… und {dependents.costItems.length - 50} weitere</li>
+                                    <li className="text-xs text-slate-400">{t('cascade.andMore', { n: dependents.costItems.length - 50 })}</li>
                                 )}
                             </ul>
                         </div>
                     )}
                     <p className="text-xs text-slate-500">
-                        Über den Verlauf (Audit-Log) kannst Du diese Aktion innerhalb der nächsten 500 Einträge rückgängig machen.
+                        {t('cascade.undoHint')}
                     </p>
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
-                    <button onClick={onCancel} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
+                    <button onClick={onCancel} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">{t('btn.cancel')}</button>
                     <button onClick={onConfirm} className="px-4 py-2 text-sm text-white bg-rose-600 rounded-md hover:bg-rose-700 font-medium">
-                        Löschen inkl. {total} abhängiger Eintr{total === 1 ? 'ag' : 'äge'}
+                        {t('cascade.deleteIncl', { n: total, entry: t(total === 1 ? 'cascade.entryWordSingular' : 'cascade.entryWordPlural') })}
                     </button>
                 </div>
             </div>

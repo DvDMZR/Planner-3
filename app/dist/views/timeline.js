@@ -68,7 +68,8 @@ const TimelineView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -227,10 +228,10 @@ const TimelineView = ({
       icon: /*#__PURE__*/React.createElement(IconBriefcase, {
         size: 32
       }),
-      title: "Noch keine Projekte angelegt",
-      description: isLoggedIn ? "Legen Sie Ihr erstes Projekt an, um Termine zu planen." : "Bitte melden Sie sich an, um Projekte anzulegen.",
+      title: t('timeline.noProjects'),
+      description: isLoggedIn ? t('timeline.noProjectsDesc') : "Bitte melden Sie sich an, um Projekte anzulegen.",
       action: isLoggedIn ? {
-        label: 'Projekt anlegen',
+        label: t('timeline.addProject'),
         onClick: () => setActiveTab('setup_proj')
       } : null
     }));
@@ -243,9 +244,9 @@ const TimelineView = ({
     className: "p-4 border-b border-slate-200 bg-white"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-slate-900 text-lg font-medium"
-  }, "Mitarbeiter (Drag)"), /*#__PURE__*/React.createElement("p", {
+  }, t('timeline.employees')), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
-  }, "Zieh Mitarbeiter in den Kalender")), /*#__PURE__*/React.createElement("div", {
+  }, t('timeline.dragInstruction'))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-auto"
   }, activeEmpCategories.map(category => {
     const isCollapsed = collapsedCategories[category];
@@ -284,12 +285,12 @@ const TimelineView = ({
     className: "p-4 border-b border-slate-200 bg-white flex justify-between items-center gap-3"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-slate-900 text-lg font-medium shrink-0"
-  }, "Projekt-Planung"), /*#__PURE__*/React.createElement("div", {
+  }, t('timeline.title')), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 flex-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement(Tooltip, {
-    text: "4 Wochen zur\xFCck"
+    text: t('btn.weeks4back')
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(-4),
     className: "p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"
@@ -298,7 +299,7 @@ const TimelineView = ({
   }))), /*#__PURE__*/React.createElement("span", {
     className: "px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums"
   }, scrollInfo.label || '—'), /*#__PURE__*/React.createElement(Tooltip, {
-    text: "4 Wochen vor"
+    text: t('btn.weeks4fwd')
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(4),
     className: "p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"
@@ -323,7 +324,7 @@ const TimelineView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute")), /*#__PURE__*/React.createElement("div", {
+  }, t('btn.today'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 ml-auto shrink-0"
   }, isDeleteMode && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0"
@@ -332,7 +333,7 @@ const TimelineView = ({
   }, /*#__PURE__*/React.createElement(IconTrash, {
     size: 14,
     className: "shrink-0"
-  }), "L\xF6schmodus aktiv"), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
+  }), t('btn.deleteModeActive')), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: undoDelete,
     className: "flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors"
   }, "\u21A9 ", undoStack.length), /*#__PURE__*/React.createElement("button", {
@@ -345,7 +346,7 @@ const TimelineView = ({
     ref: menuRef
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setMenuOpen(o => !o),
-    "aria-label": "Weitere Optionen",
+    "aria-label": t('btn.moreOptions'),
     className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
   }, /*#__PURE__*/React.createElement(IconMoreHorizontal, {
     size: 16
@@ -360,7 +361,7 @@ const TimelineView = ({
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 14,
     className: `shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`
-  }), /*#__PURE__*/React.createElement("span", null, "L\xF6schmodus"), isDeleteMode && /*#__PURE__*/React.createElement("span", {
+  }), /*#__PURE__*/React.createElement("span", null, t('btn.deleteMode')), isDeleteMode && /*#__PURE__*/React.createElement("span", {
     className: "ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"
   })))))), /*#__PURE__*/React.createElement("div", {
     className: "h-0.5 bg-slate-100 shrink-0"
@@ -398,7 +399,7 @@ const TimelineView = ({
     className: "bg-white z-20"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-3 border-b border-slate-200 sticky-col-divider w-[72rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium "
-  }, "Projekt"), timelineWeeks.map(w => /*#__PURE__*/React.createElement("th", {
+  }, t('timeline.colProject')), timelineWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w.id,
     ref: w.id === currentWeekStr ? currentWeekColRef : null,
     className: `p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`
@@ -410,7 +411,7 @@ const TimelineView = ({
   }, w.holidays.join(' · ')))))), /*#__PURE__*/React.createElement("tbody", null, projects.length === 0 ? /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: timelineWeeks.length + 1,
     className: "p-8 text-center text-slate-400"
-  }, "Noch keine Projekte angelegt.")) : activeProjCategories.map(category => {
+  }, t('timeline.noProjects'))) : activeProjCategories.map(category => {
     const isCollapsed = collapsedProjCategories[category];
     const catProjects = projectsByCategory.get(category) || [];
     if (catProjects.length === 0) return null;
@@ -482,7 +483,7 @@ const TimelineView = ({
           return /*#__PURE__*/React.createElement("div", {
             key: a.id,
             draggable: !isDeleteMode,
-            title: isTentative ? a.comment ? a.comment + ' · Unter Vorbehalt (0 h)' : 'Unter Vorbehalt (0 h)' : a.comment || undefined,
+            title: isTentative ? a.comment ? a.comment + ' · ' + t('resource.tentativeHours') : t('resource.tentativeHours') : a.comment || undefined,
             onDragStart: e => {
               e.stopPropagation();
               e.dataTransfer.setData('assignmentId', a.id);
@@ -503,7 +504,7 @@ const TimelineView = ({
             className: `text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`
           }, /*#__PURE__*/React.createElement("span", {
             className: "truncate font-medium"
-          }, emp?.name || 'Unbekannt'), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
+          }, emp?.name || t('resource.unknown')), a.comment && /*#__PURE__*/React.createElement(IconMessageSquare, {
             size: 10,
             className: "flex-shrink-0 ml-1 opacity-70"
           }), /*#__PURE__*/React.createElement("div", {
@@ -519,7 +520,7 @@ const TimelineView = ({
               setIsCopyModalOpen(true);
             },
             className: "opacity-0 group-hover/chip:opacity-100 text-slate-500 hover:text-gea-700 transition-opacity p-0.5 rounded",
-            title: "Kopieren"
+            title: t('btn.copy')
           }, /*#__PURE__*/React.createElement(IconCopy, {
             size: 10
           }))));

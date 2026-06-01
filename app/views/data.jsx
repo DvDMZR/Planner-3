@@ -5,7 +5,7 @@
 const DataView = ({ s, h }) => {
     const { useState } = React;
     const { currentUser, appUsers, autoBackup, lastBackupAt, emailTemplate,
-            invoiceRecipient } = s;
+            invoiceRecipient, t } = s;
     const { setAppUsers, loginUser, setAutoBackup, runBackup, setEmailTemplate,
             setInvoiceRecipient, exportData, importData, showToast, requestConfirm } = h;
 
@@ -26,7 +26,7 @@ const DataView = ({ s, h }) => {
     if (!currentUser) {
         return (
             <main className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-                Kein Zugriff – bitte anmelden.
+                {t('data.noAccess')}
             </main>
         );
     }
@@ -45,31 +45,31 @@ const DataView = ({ s, h }) => {
     };
 
     const handleAdd = async () => {
-        if (!newName.trim()) { setNewError('Name darf nicht leer sein.'); return; }
-        if (newPin.length < 4) { setNewError('PIN muss mindestens 4 Zeichen haben.'); return; }
-        if (newPin !== newPinConfirm) { setNewError('PINs stimmen nicht überein.'); return; }
+        if (!newName.trim()) { setNewError(t('data.nameRequired')); return; }
+        if (newPin.length < 4) { setNewError(t('data.pinTooShort')); return; }
+        if (newPin !== newPinConfirm) { setNewError(t('data.pinMismatch')); return; }
         if (appUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase())) {
-            setNewError('Ein Nutzer mit diesem Namen existiert bereits.'); return;
+            setNewError(t('data.userExists')); return;
         }
         const pinSalt = generatePinSalt();
         const pinHash = await hashPin(newPin, pinSalt);
         const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, pinAlgo: PIN_PBKDF2_ALGO, role: 'active' };
         setAppUsers(prev => [...prev, user]);
         setNewName(''); setNewPin(''); setNewPinConfirm(''); setNewError('');
-        showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
+        showSuccess(t('data.userCreated', { name: user.name }));
     };
 
     const handleDelete = (id) => {
         const user = appUsers.find(u => u.id === id);
         if (!user) return;
         requestConfirm({
-            title: 'Nutzer löschen?',
-            message: `Nutzer „${user.name}" wird endgültig entfernt. Mitarbeiter-Datensätze und Zuweisungen sind davon nicht betroffen.`,
-            confirmLabel: 'Löschen',
+            title: t('data.deleteUserTitle'),
+            message: t('data.deleteUserMsg', { name: user.name }),
+            confirmLabel: t('btn.delete'),
             danger: true,
             onConfirm: () => {
                 setAppUsers(prev => prev.filter(u => u.id !== id));
-                showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+                showSuccess(t('data.userDeleted', { name: user.name }));
             }
         });
     };
@@ -80,10 +80,10 @@ const DataView = ({ s, h }) => {
     };
 
     const handleSaveEdit = async (user) => {
-        if (isAdmin && !editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
-        if (editPin && editPin.length < 4) { setEditError('PIN muss mindestens 4 Zeichen haben.'); return; }
-        if (editPin && editPin !== editPinConfirm) { setEditError('PINs stimmen nicht überein.'); return; }
-        if (!editPin) { setEditError('Bitte einen neuen PIN eingeben.'); return; }
+        if (isAdmin && !editName.trim()) { setEditError(t('data.nameRequired')); return; }
+        if (editPin && editPin.length < 4) { setEditError(t('data.pinTooShort')); return; }
+        if (editPin && editPin !== editPinConfirm) { setEditError(t('data.pinMismatch')); return; }
+        if (!editPin) { setEditError(t('data.enterNewPin')); return; }
         const pinSalt = generatePinSalt();
         const pinHash = await hashPin(editPin, pinSalt);
         const { pin: _legacyPin, ...rest } = user;
@@ -95,7 +95,7 @@ const DataView = ({ s, h }) => {
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
         if (currentUser.id === user.id) loginUser(updated);
         setEditingId(null);
-        showSuccess(`PIN für „${updated.name}" wurde gespeichert.`);
+        showSuccess(t('data.pinSaved', { name: updated.name }));
     };
 
     const canEdit = (user) => isAdmin ? user.role !== 'admin' : user.id === currentUser.id;
@@ -116,8 +116,8 @@ const DataView = ({ s, h }) => {
                 <div className="flex items-center gap-4">
                     <IconSettings size={36} className="text-slate-300 shrink-0"/>
                     <div>
-                        <h2 className="text-xl text-slate-900 font-medium">System &amp; Export</h2>
-                        <p className="text-sm text-slate-500">Benutzer, Sicherung, Vorlagen, Import/Export und System-Wartung.</p>
+                        <h2 className="text-xl text-slate-900 font-medium">{t('data.title')}</h2>
+                        <p className="text-sm text-slate-500">{t('data.subtitle')}</p>
                     </div>
                 </div>
 
@@ -128,9 +128,9 @@ const DataView = ({ s, h }) => {
                 )}
 
                 {/* ── Benutzer ─────────────────────────────────────────── */}
-                {section('Benutzer', (
+                {section(t('data.sectionUsers'), (
                     appUsers.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-slate-400 text-sm">Keine Nutzer vorhanden.</div>
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">{t('data.noUsers')}</div>
                     ) : (
                         <div className="divide-y divide-slate-100">
                             {appUsers.map(user => (
@@ -139,7 +139,7 @@ const DataView = ({ s, h }) => {
                                         <div className="p-4 space-y-3 bg-gea-50">
                                             {isAdmin && (
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldName')}</label>
                                                     <input type="text" value={editName}
                                                         onChange={e => { setEditName(e.target.value); setEditError(''); }}
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"/>
@@ -343,7 +343,7 @@ const DataView = ({ s, h }) => {
                                 </button>
                             </div>
                         </div>
-                        <DepsSection/>
+                        <DepsSection t={t}/>
                     </div>
                 ))}
 

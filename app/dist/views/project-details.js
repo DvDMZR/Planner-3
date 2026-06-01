@@ -67,7 +67,9 @@ const ProjectDetailsView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    language,
+    t
   } = s;
   const {
     setActiveTab,
@@ -217,7 +219,7 @@ const ProjectDetailsView = ({
     className: "w-4 h-4 text-gea-600 rounded"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-medium text-slate-700"
-  }, "Projekt abgeschlossen")), /*#__PURE__*/React.createElement("label", {
+  }, t('projDetail.completed'))), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer select-none"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -229,7 +231,7 @@ const ProjectDetailsView = ({
     className: "w-4 h-4 text-gea-600 rounded"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-medium text-slate-700"
-  }, "Kosten \xFCbermittelt")), /*#__PURE__*/React.createElement("button", {
+  }, t('projDetail.costsSubmitted'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setProjForm({
         name: proj.name,
@@ -247,12 +249,12 @@ const ProjectDetailsView = ({
     className: "bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconEdit, {
     size: 15
-  }), " Bearbeiten"), /*#__PURE__*/React.createElement("button", {
+  }), " ", t('btn.edit')), /*#__PURE__*/React.createElement("button", {
     onClick: openInvoiceModal,
     className: "bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconFileText, {
     size: 15
-  }), " Rechnung"), /*#__PURE__*/React.createElement("button", {
+  }), " ", t('projDetail.invoice')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEditingCostItem(null);
       setIsCostItemModalOpen(true);
@@ -260,7 +262,7 @@ const ProjectDetailsView = ({
     className: "bg-gea-600 hover:bg-gea-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconPlus, {
     size: 15
-  }), " Kostenpunkt"))), /*#__PURE__*/React.createElement("div", {
+  }), " ", t('projDetail.costItem')))), /*#__PURE__*/React.createElement("div", {
     className: "p-6 max-w-7xl mx-auto w-full space-y-6"
   }, assignedEmpIds.length > 0 && presenceWeeks.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
@@ -268,20 +270,20 @@ const ProjectDetailsView = ({
     className: "p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-slate-900 text-base font-medium"
-  }, "Mitarbeiter-Anwesenheit"), /*#__PURE__*/React.createElement("span", {
+  }, t('projDetail.presence')), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
-  }, presenceWeeks.length, " Wochen")), /*#__PURE__*/React.createElement("div", {
+  }, presenceWeeks.length, " ", t('projDetail.weeks'))), /*#__PURE__*/React.createElement("div", {
     className: "overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
     className: "text-xs border-collapse w-full"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-left text-slate-500 font-medium border-r border-slate-200 bg-slate-50 w-40 sticky left-0"
-  }, "Mitarbeiter"), presenceWeeks.map(w => /*#__PURE__*/React.createElement("th", {
+  }, t('projDetail.colEmployee')), presenceWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w,
     className: "p-2 text-center text-slate-500 font-medium border-r border-slate-200 bg-slate-50 min-w-[52px]"
   }, "KW", w.split('-W')[1])), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]"
-  }, "Stunden"))), /*#__PURE__*/React.createElement("tbody", {
+  }, t('projDetail.colHours')))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100"
   }, assignedEmpIds.map(empId => {
     const emp = employeeById.get(empId);
@@ -292,7 +294,7 @@ const ProjectDetailsView = ({
       className: "hover:bg-slate-50"
     }, /*#__PURE__*/React.createElement("td", {
       className: "p-3 text-slate-800 font-medium border-r border-slate-200 sticky left-0 bg-white"
-    }, emp?.name || 'Unbekannt'), presenceWeeks.map(w => {
+    }, emp?.name || t('projDetail.unknown')), presenceWeeks.map(w => {
       const a = empAss.find(x => x.week === w);
       return /*#__PURE__*/React.createElement("td", {
         key: w,
@@ -319,7 +321,7 @@ const ProjectDetailsView = ({
     className: "p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-slate-900 text-base font-medium"
-  }, "Kostenpunkte"), /*#__PURE__*/React.createElement("button", {
+  }, t('projDetail.costItems')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEditingCostItem(null);
       setIsCostItemModalOpen(true);
@@ -327,23 +329,23 @@ const ProjectDetailsView = ({
     className: "text-gea-600 text-sm font-medium hover:text-gea-700 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconPlus, {
     size: 15
-  }), " Hinzuf\xFCgen")), projCostItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }), " ", t('btn.add'))), projCostItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "p-10 text-center text-slate-400 text-sm"
-  }, "Noch keine Kostenpunkte erfasst.") : /*#__PURE__*/React.createElement("table", {
+  }, t('projDetail.noCostItems')) : /*#__PURE__*/React.createElement("table", {
     className: "w-full text-left text-sm"
   }, /*#__PURE__*/React.createElement("thead", {
     className: "bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium"
-  }, "Mitarbeiter"), /*#__PURE__*/React.createElement("th", {
+  }, t('projDetail.colEmployee')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium"
-  }, "Anlass"), /*#__PURE__*/React.createElement("th", {
+  }, t('projDetail.colOccasion')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-center"
   }, "KW"), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium"
-  }, "Posten"), /*#__PURE__*/React.createElement("th", {
+  }, t('projDetail.colItems')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-right"
-  }, "Betrag"), /*#__PURE__*/React.createElement("th", {
+  }, t('projDetail.colAmount')), /*#__PURE__*/React.createElement("th", {
     className: "p-3"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100"
@@ -397,14 +399,14 @@ const ProjectDetailsView = ({
         setIsCostItemModalOpen(true);
       },
       className: "text-gea-600 text-xs font-medium hover:text-gea-700"
-    }, "Bearbeiten")));
+    }, t('btn.edit'))));
   })))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-slate-900 text-base font-medium"
-  }, "Zusammenfassung")), /*#__PURE__*/React.createElement("div", {
+  }, t('projDetail.summary'))), /*#__PURE__*/React.createElement("div", {
     className: "p-6 grid grid-cols-2 gap-4 md:grid-cols-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg border border-slate-200 bg-slate-50/50 p-4"
@@ -417,7 +419,7 @@ const ProjectDetailsView = ({
     className: "text-slate-500"
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500 font-medium uppercase tracking-wide"
-  }, "Stunden")), /*#__PURE__*/React.createElement("p", {
+  }, t('projDetail.hours'))), /*#__PURE__*/React.createElement("p", {
     className: "text-2xl text-slate-900 font-semibold tabular-nums"
   }, totalHours, "h")), /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg border border-slate-200 bg-slate-50/50 p-4"
@@ -430,11 +432,11 @@ const ProjectDetailsView = ({
     className: "text-blue-600"
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500 font-medium uppercase tracking-wide"
-  }, "Lohnkosten")), /*#__PURE__*/React.createElement("p", {
+  }, t('projDetail.laborCosts'))), /*#__PURE__*/React.createElement("p", {
     className: "text-2xl text-slate-900 font-semibold tabular-nums"
   }, totalLaborCost.toFixed(2), " \u20AC"), proj.billable === false && /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "nicht berechnet")), /*#__PURE__*/React.createElement("div", {
+  }, t('projDetail.notCalc'))), /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg border border-slate-200 bg-slate-50/50 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2"
@@ -445,7 +447,7 @@ const ProjectDetailsView = ({
     className: "text-amber-600"
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500 font-medium uppercase tracking-wide"
-  }, "Kostenpunkte")), /*#__PURE__*/React.createElement("p", {
+  }, t('projDetail.extraCosts'))), /*#__PURE__*/React.createElement("p", {
     className: "text-2xl text-slate-900 font-semibold tabular-nums"
   }, totalOtherCost.toFixed(2), " \u20AC")), /*#__PURE__*/React.createElement("div", {
     className: "rounded-xl border-2 border-gea-300 bg-gradient-to-br from-gea-50 to-gea-100 p-4 shadow-sm"
@@ -458,7 +460,7 @@ const ProjectDetailsView = ({
     className: "text-white"
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-gea-700 font-medium uppercase tracking-wide"
-  }, "Gesamt")), /*#__PURE__*/React.createElement("p", {
+  }, t('projDetail.total'))), /*#__PURE__*/React.createElement("p", {
     className: "text-2xl text-gea-800 font-bold tabular-nums"
   }, grandTotal.toFixed(2), " \u20AC"))), /*#__PURE__*/React.createElement("div", {
     className: "px-6 pb-5 pt-1 flex items-center gap-4 border-t border-slate-100"
@@ -474,11 +476,11 @@ const ProjectDetailsView = ({
     className: "w-4 h-4 text-gea-600 rounded"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-sm text-slate-700"
-  }, "Arbeitszeit berechnen")), proj.billable !== false && /*#__PURE__*/React.createElement("div", {
+  }, t('projDetail.calcHours'))), proj.billable !== false && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm text-slate-500"
-  }, "Std.-Satz:"), /*#__PURE__*/React.createElement("input", {
+  }, t('projDetail.hourRate')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "0",
     step: "1",
@@ -501,6 +503,7 @@ const ProjectDetailsView = ({
     onClose: () => {
       setIsCostItemModalOpen(false);
       setEditingCostItem(null);
-    }
+    },
+    t: t
   }));
 };

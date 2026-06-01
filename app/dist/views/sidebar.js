@@ -72,7 +72,9 @@ const _SidebarBase = ({
     resourceScrollRef,
     timelineScrollRef,
     currentUser,
-    appUsers
+    appUsers,
+    language,
+    t
   } = s;
   const {
     setActiveTab,
@@ -142,7 +144,8 @@ const _SidebarBase = ({
     loginUser,
     logoutUser,
     setIsLoginModalOpen,
-    requestConfirm
+    requestConfirm,
+    setLanguage
   } = h;
   const isActive = !!currentUser;
   const isAdmin = currentUser?.role === 'admin';
@@ -200,7 +203,7 @@ const _SidebarBase = ({
     className: "flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-medium"
-  }, "Einsatzplanung v0.86"), /*#__PURE__*/React.createElement("span", {
+  }, t('nav.appTitle')), /*#__PURE__*/React.createElement("span", {
     className: "changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconHistory, {
     size: 12
@@ -208,9 +211,9 @@ const _SidebarBase = ({
     className: "flex-1 py-4 space-y-0.5 px-3 overflow-y-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold"
-  }, "Planung"), tabBtn('resource', 'Ressourcen', /*#__PURE__*/React.createElement(IconUsers, {
+  }, t('nav.section.planning')), tabBtn('resource', t('nav.resources'), /*#__PURE__*/React.createElement(IconUsers, {
     size: 18
-  })), tabBtn('project', 'Projekte', /*#__PURE__*/React.createElement(IconGanttChart, {
+  })), tabBtn('project', t('nav.projects'), /*#__PURE__*/React.createElement(IconGanttChart, {
     size: 18
   }), () => {
     setActiveTab('project');
@@ -225,16 +228,16 @@ const _SidebarBase = ({
     }
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gea-600 uppercase tracking-wider font-semibold"
-  }, "Sonderplanung"), /*#__PURE__*/React.createElement("div", {
+  }, t('nav.section.specialPlanning')), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 h-px",
     style: {
       background: 'rgba(255,255,255,0.10)'
     }
-  })), tabBtn('support', 'Support', /*#__PURE__*/React.createElement(IconLifebuoy, {
+  })), tabBtn('support', t('nav.support'), /*#__PURE__*/React.createElement(IconLifebuoy, {
     size: 18
-  })), tabBtn('offtime', 'Abwesenheiten', /*#__PURE__*/React.createElement(IconCalendar, {
+  })), tabBtn('offtime', t('nav.absences'), /*#__PURE__*/React.createElement(IconCalendar, {
     size: 18
-  })), tabBtn('training', 'Trainings', /*#__PURE__*/React.createElement(IconBookOpen, {
+  })), tabBtn('training', t('nav.trainings'), /*#__PURE__*/React.createElement(IconBookOpen, {
     size: 18
   })), /*#__PURE__*/React.createElement("div", {
     className: "px-3 pt-3 pb-1 flex items-center gap-2"
@@ -245,46 +248,46 @@ const _SidebarBase = ({
     }
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-gea-600 uppercase tracking-wider font-semibold"
-  }, "Auswertung"), /*#__PURE__*/React.createElement("div", {
+  }, t('nav.section.analysis')), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 h-px",
     style: {
       background: 'rgba(255,255,255,0.10)'
     }
-  })), isActive ? tabBtn('utilization', 'Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+  })), isActive ? tabBtn('utilization', t('nav.utilization'), /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
-  })) : lockedTabBtn('Auslastung', /*#__PURE__*/React.createElement(IconBarChart, {
+  })) : lockedTabBtn(t('nav.utilization'), /*#__PURE__*/React.createElement(IconBarChart, {
     size: 18
-  })), isActive ? tabBtn('overview', 'Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+  })), isActive ? tabBtn('overview', t('nav.overview'), /*#__PURE__*/React.createElement(IconTable, {
     size: 18
-  })) : lockedTabBtn('Übersicht', /*#__PURE__*/React.createElement(IconTable, {
+  })) : lockedTabBtn(t('nav.overview'), /*#__PURE__*/React.createElement(IconTable, {
     size: 18
   })), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => setVerwaltungOpen(o => !o),
     className: "w-full flex items-center justify-between text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-8 font-semibold hover:text-gea-300 transition-colors"
-  }, /*#__PURE__*/React.createElement("span", null, "Verwaltung"), verwaltungOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
+  }, /*#__PURE__*/React.createElement("span", null, t('nav.section.admin')), verwaltungOpen ? /*#__PURE__*/React.createElement(IconChevronDown, {
     size: 14
   }) : /*#__PURE__*/React.createElement(IconChevronRight, {
     size: 14
-  })), verwaltungOpen && (isActive ? /*#__PURE__*/React.createElement(React.Fragment, null, tabBtn('setup_emp', 'Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
+  })), verwaltungOpen && (isActive ? /*#__PURE__*/React.createElement(React.Fragment, null, tabBtn('setup_emp', t('nav.employees'), /*#__PURE__*/React.createElement(IconUser, {
     size: 18
-  })), tabBtn('setup_proj', 'Projekte', /*#__PURE__*/React.createElement(IconBriefcase, {
+  })), tabBtn('setup_proj', t('nav.projects'), /*#__PURE__*/React.createElement(IconBriefcase, {
     size: 18
-  })), tabBtn('setup_cats', 'Kategorien', /*#__PURE__*/React.createElement(IconTag, {
+  })), tabBtn('setup_cats', t('nav.categories'), /*#__PURE__*/React.createElement(IconTag, {
     size: 18
-  })), tabBtn('data', 'System & Export', /*#__PURE__*/React.createElement(IconSettings, {
+  })), tabBtn('data', t('nav.systemExport'), /*#__PURE__*/React.createElement(IconSettings, {
     size: 18
-  })), tabBtn('audit', 'Verlauf', /*#__PURE__*/React.createElement(IconHistory, {
+  })), tabBtn('audit', t('nav.history'), /*#__PURE__*/React.createElement(IconHistory, {
     size: 18
-  }))) : /*#__PURE__*/React.createElement(React.Fragment, null, lockedTabBtn('Mitarbeiter', /*#__PURE__*/React.createElement(IconUser, {
+  }))) : /*#__PURE__*/React.createElement(React.Fragment, null, lockedTabBtn(t('nav.employees'), /*#__PURE__*/React.createElement(IconUser, {
     size: 18
-  })), lockedTabBtn('Projekte', /*#__PURE__*/React.createElement(IconBriefcase, {
+  })), lockedTabBtn(t('nav.projects'), /*#__PURE__*/React.createElement(IconBriefcase, {
     size: 18
-  })), lockedTabBtn('Kategorien', /*#__PURE__*/React.createElement(IconTag, {
+  })), lockedTabBtn(t('nav.categories'), /*#__PURE__*/React.createElement(IconTag, {
     size: 18
-  })), lockedTabBtn('System & Export', /*#__PURE__*/React.createElement(IconSettings, {
+  })), lockedTabBtn(t('nav.systemExport'), /*#__PURE__*/React.createElement(IconSettings, {
     size: 18
-  })), lockedTabBtn('Verlauf', /*#__PURE__*/React.createElement(IconHistory, {
+  })), lockedTabBtn(t('nav.history'), /*#__PURE__*/React.createElement(IconHistory, {
     size: 18
   }))))), /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 border-t border-gea-700 shrink-0"
@@ -298,14 +301,20 @@ const _SidebarBase = ({
     className: "text-gea-200 text-xs font-medium truncate block"
   }, currentUser.name), /*#__PURE__*/React.createElement("span", {
     className: "text-gea-500 text-xs"
-  }, isAdmin ? 'Administrator' : 'Aktiver Nutzer')), /*#__PURE__*/React.createElement(Tooltip, {
-    text: "Abmelden",
+  }, isAdmin ? t('auth.administrator') : t('auth.activeUser'))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-0.5 shrink-0"
+  }, ['de', 'en'].map(lng => /*#__PURE__*/React.createElement("button", {
+    key: lng,
+    onClick: () => setLanguage(lng),
+    className: `px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${language === lng ? 'bg-gea-600 text-white' : 'text-gea-500 hover:text-gea-300'}`
+  }, lng.toUpperCase()))), /*#__PURE__*/React.createElement(Tooltip, {
+    text: t('auth.logout'),
     side: "top"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => requestConfirm({
-      title: 'Abmelden?',
-      message: 'Du wirst zur Login-Seite zurückgeleitet. Nicht-gespeicherte Änderungen können verloren gehen.',
-      confirmLabel: 'Abmelden',
+      title: t('auth.logoutTitle'),
+      message: t('auth.logoutMsg'),
+      confirmLabel: t('auth.logout'),
       onConfirm: logoutUser
     }),
     className: "text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
@@ -316,7 +325,7 @@ const _SidebarBase = ({
     className: "w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
   }, /*#__PURE__*/React.createElement(IconLogIn, {
     size: 15
-  }), " Anmelden")), (SP_CONTEXT || fsStatus === 'connected') && /*#__PURE__*/React.createElement("div", {
+  }), " ", t('auth.login'))), (SP_CONTEXT || fsStatus === 'connected') && /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: `w-2 h-2 rounded-full shrink-0 ${syncStatus === 'idle' ? 'bg-emerald-400' : syncStatus === 'syncing' ? 'bg-amber-400 animate-pulse' : syncStatus === 'updated' ? 'bg-blue-400' : syncStatus === 'conflict-reload' ? 'bg-orange-400' : syncStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' : syncStatus === 'needs-auth' ? 'bg-rose-500' : syncStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-400 animate-pulse'}`
@@ -324,15 +333,17 @@ const _SidebarBase = ({
     type: "button",
     onClick: reconnectSharePoint,
     className: "text-rose-300 hover:text-rose-200 text-xs truncate underline decoration-dotted",
-    title: "Sitzung bei SharePoint ist abgelaufen \u2013 hier klicken um sich neu anzumelden"
-  }, "Sitzung abgelaufen \u2013 neu verbinden") : /*#__PURE__*/React.createElement("span", {
+    title: t('sync.sessionExpiredTitle')
+  }, t('sync.sessionExpired')) : /*#__PURE__*/React.createElement("span", {
     className: "text-gea-400 text-xs truncate"
-  }, syncStatus === 'idle' ? 'Synchronisiert' : syncStatus === 'syncing' ? 'Speichert ...' : syncStatus === 'updated' ? 'Aktualisiert ✓' : syncStatus === 'conflict-reload' ? 'Änderung eines Kollegen übernommen' : syncStatus === 'reconnecting' ? 'Sitzung erneuern ...' : syncStatus === 'offline' ? 'Offline – lokal' : 'Verbindet ...')));
+  }, syncStatus === 'idle' ? t('sync.idle') : syncStatus === 'syncing' ? t('sync.syncing') : syncStatus === 'updated' ? t('sync.updated') : syncStatus === 'conflict-reload' ? t('sync.conflictReload') : syncStatus === 'reconnecting' ? t('sync.reconnecting') : syncStatus === 'offline' ? t('sync.offline') : t('sync.connecting'))));
 };
 
 // Only re-render when sidebar-visible state actually changes (not on every
 // background poll that touches employees/projects/assignments).
 const SidebarView = React.memo(_SidebarBase, (prev, next) => prev.s.activeTab === next.s.activeTab && prev.s.syncStatus === next.s.syncStatus && prev.s.fsStatus === next.s.fsStatus && prev.s.projects === next.s.projects &&
 // needed for onClick: setSelectedProject(projects[0])
-prev.s.currentUser === next.s.currentUser // login/logout
+prev.s.currentUser === next.s.currentUser &&
+// login/logout
+prev.s.language === next.s.language // language toggle
 );

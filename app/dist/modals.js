@@ -30,7 +30,8 @@ const AssignmentModal = ({
   onSave,
   onDelete,
   onDeleteSeries,
-  requestConfirm
+  requestConfirm,
+  t = k => k
 }) => {
   useEscapeToClose(onClose);
   // Guard against weeklyHours = 0 / negative – would otherwise produce
@@ -187,7 +188,7 @@ const AssignmentModal = ({
     // tab/user between modal-open and save. Adding it back as a new row
     // would resurrect a deleted assignment with the old id.
     if (formData.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === formData.id)) {
-      showToast?.('Eintrag wurde von einem Kollegen gelöscht – Bearbeitung verworfen.', {
+      showToast?.(t('modal.entryDeleted'), {
         type: 'warning',
         duration: 5000
       });
@@ -225,7 +226,10 @@ const AssignmentModal = ({
     const newTotal = currentTotal - existingH / weeklyH * 100 + newH / weeklyH * 100;
     if (newTotal > 100) {
       const empName = employeeById.get(formData.empId)?.name || '';
-      if (!window.confirm(`${empName} wäre diese Woche bei ${Math.round(newTotal)} % — trotzdem speichern?`)) return;
+      if (!window.confirm(t('modal.overutilWarning', {
+        empName,
+        pct: Math.round(newTotal)
+      }))) return;
     }
     const numWeeks = Math.max(1, parseInt(planWeeks) || 1);
     if (numWeeks > 1 && !data.id) {
@@ -280,7 +284,7 @@ const AssignmentModal = ({
     label: 'Other'
   }, {
     value: 'project',
-    label: 'Projekt'
+    label: t('modal.typeProject')
   }, {
     value: 'offtime',
     label: 'Offtime'
@@ -294,7 +298,7 @@ const AssignmentModal = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: formData.id ? 'Planung bearbeiten' : 'Planung hinzufügen',
+    title: formData.id ? t('modal.assignEdit') : t('modal.assignAdd'),
     onClose: onClose
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-4"
@@ -308,7 +312,7 @@ const AssignmentModal = ({
     className: "font-medium text-slate-700"
   }, formData.week)), !allowedType && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Typ"), /*#__PURE__*/React.createElement("div", {
+  }, t('modal.typeLabel')), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-4 gap-1"
   }, TYPE_BUTTONS.map(opt => /*#__PURE__*/React.createElement("button", {
     key: opt.value,
@@ -316,18 +320,18 @@ const AssignmentModal = ({
     className: `py-2 px-1 text-xs rounded-md border font-medium transition-colors ${formData.type === opt.value ? 'bg-gea-600 text-white border-gea-600' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400'}`
   }, opt.label)))), !allowedType && formData.type === 'new' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Neuer Task-Name (Other)"), /*#__PURE__*/React.createElement("input", {
+  }, t('modal.newTaskName')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: newTaskName,
     onChange: e => setNewTaskName(e.target.value),
     autoFocus: true,
-    placeholder: "z.B. Meeting, Workshop, \u2026",
+    placeholder: t('modal.newTaskPlaceholder'),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
   }), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "Wird als Other-Task gespeichert und zur Liste hinzugef\xFCgt.")), formData.type !== 'new' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, t('modal.newTaskHint'))), formData.type !== 'new' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Auswahl"), formData.type === 'project' && /*#__PURE__*/React.createElement("select", {
+  }, t('modal.selectionLabel')), formData.type === 'project' && /*#__PURE__*/React.createElement("select", {
     value: formData.reference,
     onChange: e => setFormData({
       ...formData,
@@ -344,54 +348,54 @@ const AssignmentModal = ({
       reference: e.target.value
     }),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
-  }, hardcodedBasicTasks.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t))), formData.type === 'other' && /*#__PURE__*/React.createElement("select", {
+  }, hardcodedBasicTasks.map(bt => /*#__PURE__*/React.createElement("option", {
+    key: bt,
+    value: bt
+  }, bt))), formData.type === 'other' && /*#__PURE__*/React.createElement("select", {
     value: formData.reference,
     onChange: e => setFormData({
       ...formData,
       reference: e.target.value
     }),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
-  }, otherTasks.length > 0 ? otherTasks.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t)) : /*#__PURE__*/React.createElement("option", {
+  }, otherTasks.length > 0 ? otherTasks.map(ot => /*#__PURE__*/React.createElement("option", {
+    key: ot,
+    value: ot
+  }, ot)) : /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "\u2014 Noch keine Other-Tasks (+ Neu verwenden) \u2014")), formData.type === 'support' && /*#__PURE__*/React.createElement("select", {
+  }, t('modal.noOtherTasks'))), formData.type === 'support' && /*#__PURE__*/React.createElement("select", {
     value: formData.reference,
     onChange: e => setFormData({
       ...formData,
       reference: e.target.value
     }),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
-  }, activeSupportTasks.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t))), formData.type === 'training' && /*#__PURE__*/React.createElement("select", {
+  }, activeSupportTasks.map(st => /*#__PURE__*/React.createElement("option", {
+    key: st,
+    value: st
+  }, st))), formData.type === 'training' && /*#__PURE__*/React.createElement("select", {
     value: formData.reference,
     onChange: e => setFormData({
       ...formData,
       reference: e.target.value
     }),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
-  }, activeTrainingTasks.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t))), formData.type === 'offtime' && /*#__PURE__*/React.createElement("select", {
+  }, activeTrainingTasks.map(tt => /*#__PURE__*/React.createElement("option", {
+    key: tt,
+    value: tt
+  }, tt))), formData.type === 'offtime' && /*#__PURE__*/React.createElement("select", {
     value: formData.reference,
     onChange: e => setFormData({
       ...formData,
       reference: e.target.value
     }),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
-  }, activeOfftimeTasks.map(t => /*#__PURE__*/React.createElement("option", {
-    key: t,
-    value: t
-  }, t)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, activeOfftimeTasks.map(oft => /*#__PURE__*/React.createElement("option", {
+    key: oft,
+    value: oft
+  }, oft)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide"
-  }, "Auslastung: ", /*#__PURE__*/React.createElement("span", {
+  }, t('modal.utilization'), ": ", /*#__PURE__*/React.createElement("span", {
     className: "text-gea-600 font-medium"
   }, pct, "%"), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 ml-2"
@@ -428,13 +432,13 @@ const AssignmentModal = ({
     }
   }, v, "%")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Kommentar (optional)"), /*#__PURE__*/React.createElement("textarea", {
+  }, t('modal.comment')), /*#__PURE__*/React.createElement("textarea", {
     value: formData.comment || '',
     onChange: e => setFormData({
       ...formData,
       comment: e.target.value
     }),
-    placeholder: "Notiz zu dieser Planung\u2026",
+    placeholder: t('modal.commentPlaceholder'),
     rows: 2,
     className: "w-full p-2 border border-slate-300 rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-gea-400"
   })), !formData.id && /*#__PURE__*/React.createElement("div", {
@@ -443,7 +447,7 @@ const AssignmentModal = ({
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("label", {
     className: "text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap"
-  }, "Planen f\xFCr"), /*#__PURE__*/React.createElement("input", {
+  }, t('modal.planFor')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "1",
     max: "52",
@@ -452,9 +456,11 @@ const AssignmentModal = ({
     className: "w-20 p-2 border border-slate-300 rounded-md text-sm text-center"
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-sm text-slate-600"
-  }, "Woche", planWeeks > 1 ? 'n' : ''), planWeeks > 1 && /*#__PURE__*/React.createElement("span", {
+  }, t('modal.weeks', {
+    s: planWeeks > 1 ? t('modal.weekPluralSuffix') : ''
+  })), planWeeks > 1 && /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400 ml-auto"
-  }, "bis ", addWeeks(formData.week, planWeeks - 1))), planWeeks === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("label", {
+  }, t('modal.until'), " ", addWeeks(formData.week, planWeeks - 1))), planWeeks === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer select-none"
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
@@ -468,13 +474,13 @@ const AssignmentModal = ({
     className: "text-xs font-medium uppercase tracking-wide text-slate-500 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconRepeat, {
     size: 12
-  }), " Wiederkehrend (Regel)")), recurRule.enabled && /*#__PURE__*/React.createElement("div", {
+  }), " ", t('modal.recurring'))), recurRule.enabled && /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-400 mb-1"
-  }, "Alle X Wochen"), /*#__PURE__*/React.createElement("input", {
+  }, t('modal.everyXWeeks')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "1",
     max: "52",
@@ -488,7 +494,7 @@ const AssignmentModal = ({
     className: "flex-1"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-400 mb-1"
-  }, "Bis Woche"), /*#__PURE__*/React.createElement("input", {
+  }, t('modal.untilWeek')), /*#__PURE__*/React.createElement("input", {
     type: "week",
     value: recurRule.endWeek,
     min: addWeeks(formData.week, 1),
@@ -509,7 +515,7 @@ const AssignmentModal = ({
     className: "text-xs flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-medium uppercase tracking-wide text-slate-500"
-  }, "Per Email + Outlook-Termin benachrichtigen"), /*#__PURE__*/React.createElement("span", {
+  }, t('modal.notifyEmail')), /*#__PURE__*/React.createElement("span", {
     className: "relative group/tip cursor-help",
     onClick: e => e.preventDefault()
   }, /*#__PURE__*/React.createElement("span", {
@@ -519,37 +525,42 @@ const AssignmentModal = ({
     style: {
       whiteSpace: 'normal'
     }
-  }, empEmail ? `Lädt eine .ics-Termindatei herunter und öffnet einen Email-Entwurf an ${empEmail}. Die .ics anhängen oder per Doppelklick in Outlook als Termineinladung versenden.` : 'Keine Email-Adresse hinterlegt. In den Mitarbeiter-Einstellungen ergänzen.')))))), /*#__PURE__*/React.createElement("div", {
+  }, empEmail ? t('modal.notifyEmailTip', {
+    email: empEmail
+  }) : t('modal.noEmail'))))))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between"
   }, formData.id ? /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => onDelete(formData.id),
     className: "text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium"
-  }, "L\xF6schen"), formData.ruleId && onDeleteSeries && /*#__PURE__*/React.createElement("button", {
+  }, t('btn.delete')), formData.ruleId && onDeleteSeries && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       const seriesCount = (assignmentsRef?.current || []).filter(a => a.ruleId === formData.ruleId && a.week >= formData.week).length;
       requestConfirm({
-        title: 'Serie löschen?',
-        message: `Diese und alle späteren Instanzen der Serie (${seriesCount} Zuweisung${seriesCount === 1 ? '' : 'en'}) werden entfernt.`,
-        confirmLabel: 'Serie löschen',
+        title: t('modal.deleteSeries'),
+        message: t('modal.deleteSeriesCount', {
+          n: seriesCount,
+          s: seriesCount === 1 ? '' : t('modal.assignmentPluralSuffix')
+        }),
+        confirmLabel: t('modal.deleteSeriesBtn'),
         danger: true,
         onConfirm: () => onDeleteSeries(formData.id)
       });
     },
     className: "text-rose-500 text-xs hover:bg-rose-50 px-2 py-1 rounded font-medium border border-rose-200 flex items-center gap-1",
-    title: "Diese und alle sp\xE4teren Instanzen der Serie l\xF6schen"
+    title: t('modal.deleteSeriesFromTitle')
   }, /*#__PURE__*/React.createElement(IconRepeat, {
     size: 11
-  }), " Serie ab hier l\xF6schen")) : /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
+  }), " ", t('modal.deleteSeriesFrom'))) : /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSave,
     className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium"
-  }, "Speichern")))));
+  }, t('btn.save'))))));
 };
 const CopyModal = ({
   copyContext,
@@ -563,7 +574,8 @@ const CopyModal = ({
   projectById,
   assignments,
   setAssignments,
-  onClose
+  onClose,
+  t = k => k
 }) => {
   useEscapeToClose(onClose);
   const {
@@ -639,7 +651,7 @@ const CopyModal = ({
     // Race guard: source assignment may have been deleted while the modal
     // was open; copying it would resurrect deleted data on every target.
     if (assignment.id && assignmentsRef?.current && !assignmentsRef.current.some(a => a.id === assignment.id)) {
-      showToast?.('Quell-Eintrag wurde gelöscht – Kopieren abgebrochen.', {
+      showToast?.(t('copy.sourceDeleted'), {
         type: 'warning',
         duration: 5000
       });
@@ -649,15 +661,15 @@ const CopyModal = ({
     const targetWeeks = weeks.filter(w => selWeeks[w.id]).map(w => w.id);
     const targetEmps = activeEmps.filter(e => selEmps[e.id]).map(e => e.id);
     if (targetEmps.length === 0 && targetWeeks.length === 0) {
-      setError('Bitte mindestens einen Mitarbeiter und eine Woche auswählen.');
+      setError(t('copy.errorBoth'));
       return;
     }
     if (targetEmps.length === 0) {
-      setError('Bitte mindestens einen Mitarbeiter auswählen.');
+      setError(t('copy.errorEmp'));
       return;
     }
     if (targetWeeks.length === 0) {
-      setError('Bitte mindestens eine Woche auswählen.');
+      setError(t('copy.errorWeek'));
       return;
     }
     setError('');
@@ -702,14 +714,14 @@ const CopyModal = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: "Task kopieren",
+    title: t('copy.title'),
     subtitle: `"${label}" · ${pct}%`,
     onClose: onClose
   }), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto p-6 space-y-6"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
     className: "text-sm font-medium text-slate-700 mb-3"
-  }, "Mitarbeiter ausw\xE4hlen"), useTeams ? /*#__PURE__*/React.createElement("div", {
+  }, t('copy.selectEmployees')), useTeams ? /*#__PURE__*/React.createElement("div", {
     className: "space-y-2 border border-slate-200 rounded-lg overflow-hidden"
   }, empCategories.map(cat => {
     const catEmps = empsByCategory.get(cat) || [];
@@ -744,7 +756,7 @@ const CopyModal = ({
     }, selInTeam, "/", catEmps.length)), /*#__PURE__*/React.createElement("button", {
       onClick: () => toggleAllInTeam(cat),
       className: `text-xs font-medium px-2 py-0.5 rounded transition-colors ${allInTeam ? 'text-gea-600 hover:text-gea-800' : 'text-slate-500 hover:text-gea-600'}`
-    }, allInTeam ? 'Alle ab' : 'Alle')), !isCollapsed && /*#__PURE__*/React.createElement("div", {
+    }, allInTeam ? t('copy.allDeselect') : t('copy.allSelect'))), !isCollapsed && /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-2 px-3 py-2.5 bg-white"
     }, catEmps.map(e => /*#__PURE__*/React.createElement("button", {
       key: e.id,
@@ -761,17 +773,17 @@ const CopyModal = ({
     className: "flex justify-between items-center mb-3"
   }, /*#__PURE__*/React.createElement("h4", {
     className: "text-sm font-medium text-slate-700"
-  }, "Wochen ausw\xE4hlen"), /*#__PURE__*/React.createElement("button", {
+  }, t('copy.selectWeeks')), /*#__PURE__*/React.createElement("button", {
     onClick: toggleAllWeeks,
     className: "text-xs text-gea-600 hover:text-gea-700 font-medium"
-  }, "Alle ", weeks.every(w => selWeeks[w.id]) ? 'abwählen' : 'auswählen')), /*#__PURE__*/React.createElement("div", {
+  }, weeks.every(w => selWeeks[w.id]) ? t('copy.weeksDeselectAll') : t('copy.weeksSelectAll'))), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-1.5 max-h-48 overflow-y-auto"
   }, weeks.map(w => {
     const isSource = w.id === assignment.week;
     return /*#__PURE__*/React.createElement("button", {
       key: w.id,
       onClick: () => toggleWeek(w.id),
-      title: isSource ? 'Ursprungswoche (für andere MA kopierbar)' : '',
+      title: isSource ? t('copy.sourceWeekTip') : '',
       className: `px-2.5 py-1 rounded text-xs border font-medium transition-colors ${selWeeks[w.id] ? 'bg-gea-600 text-white border-gea-600' : isSource ? 'bg-amber-50 text-amber-700 border-amber-300 hover:border-gea-400' : 'bg-white text-slate-600 border-slate-200 hover:border-gea-300'}`
     }, w.label, isSource ? ' ★' : '');
   })))), /*#__PURE__*/React.createElement("div", {
@@ -803,17 +815,21 @@ const CopyModal = ({
     y2: "16"
   })), error) : /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400"
-  }, selEmpCount, " MA \xD7 ", selWeekCount, " KW = ", selEmpCount * selWeekCount, " Eintr\xE4ge"), /*#__PURE__*/React.createElement("div", {
+  }, t('copy.stats', {
+    ma: selEmpCount,
+    kw: selWeekCount,
+    total: selEmpCount * selWeekCount
+  })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleCopy,
     className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(IconCopy, {
     size: 15
-  }), " Kopieren")))));
+  }), " ", t('btn.copy'))))));
 };
 const CostItemModal = ({
   projectId,
@@ -823,7 +839,8 @@ const CostItemModal = ({
   costItems,
   setCostItems,
   showToast,
-  onClose
+  onClose,
+  t = k => k
 }) => {
   useEscapeToClose(onClose);
   // Coerce a free-text number to a finite, non-negative float. parseFloat
@@ -882,7 +899,7 @@ const CostItemModal = ({
     if (!form.empId || lines.length === 0) return;
     // Race guard: the cost item we're editing may have been removed.
     if (existingItem?.id && Array.isArray(costItems) && !costItems.some(c => c.id === existingItem.id)) {
-      showToast?.('Kostenpunkt wurde gelöscht – Bearbeitung verworfen.', {
+      showToast?.(t('costitem.deleted'), {
         type: 'warning',
         duration: 5000
       });
@@ -937,7 +954,7 @@ const CostItemModal = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: existingItem ? 'Kostenpunkt bearbeiten' : 'Kostenpunkt erfassen',
+    title: existingItem ? t('costitem.editTitle') : t('costitem.addTitle'),
     onClose: onClose
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-5 overflow-y-auto"
@@ -945,7 +962,7 @@ const CostItemModal = ({
     className: "grid grid-cols-2 gap-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Mitarbeiter"), /*#__PURE__*/React.createElement("select", {
+  }, t('costitem.employee')), /*#__PURE__*/React.createElement("select", {
     value: form.empId,
     onChange: e => setForm({
       ...form,
@@ -954,26 +971,26 @@ const CostItemModal = ({
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "Bitte w\xE4hlen\u2026"), projEmployees.map(e => /*#__PURE__*/React.createElement("option", {
+  }, t('costitem.selectEmployee')), projEmployees.map(e => /*#__PURE__*/React.createElement("option", {
     key: e.id,
     value: e.id
   }, e.name)), employees.filter(e => !empIds.has(e.id)).map(e => /*#__PURE__*/React.createElement("option", {
     key: e.id,
     value: e.id
-  }, e.name, " (nicht verplant)")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, e.name, " (", t('costitem.notScheduled'), ")")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Anlass (optional)"), /*#__PURE__*/React.createElement("input", {
+  }, t('costitem.occasion')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: form.description,
     onChange: e => setForm({
       ...form,
       description: e.target.value
     }),
-    placeholder: "z.B. Vor-Ort-Einsatz",
+    placeholder: t('costitem.occasionPlaceholder'),
     className: "w-full p-2 border border-slate-300 rounded-md text-sm"
   }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium"
-  }, "Zeitraum (optional)", kwLabel && /*#__PURE__*/React.createElement("span", {
+  }, t('costitem.period'), kwLabel && /*#__PURE__*/React.createElement("span", {
     className: "ml-2 text-gea-600 font-medium"
   }, kwLabel)), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-3"
@@ -1000,19 +1017,19 @@ const CostItemModal = ({
     className: "px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-medium text-slate-600 mr-1"
-  }, "Posten"), COST_LINE_TYPE_ORDER.map(t => {
-    const cfg = COST_LINE_TYPES[t];
+  }, t('costitem.lineItems')), COST_LINE_TYPE_ORDER.map(lt => {
+    const cfg = COST_LINE_TYPES[lt];
     return /*#__PURE__*/React.createElement("button", {
-      key: t,
-      onClick: () => addLine(t),
-      title: cfg.example ? `z.B. ${cfg.example}` : 'Stunden × Satz',
+      key: lt,
+      onClick: () => addLine(lt),
+      title: cfg.example ? `z.B. ${cfg.example}` : t('costitem.hoursX'),
       className: `text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 transition-opacity hover:opacity-80 ${cfg.chip}`
     }, /*#__PURE__*/React.createElement(IconPlus, {
       size: 11
     }), " ", cfg.label);
   })), lines.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-6 text-center text-xs text-slate-400"
-  }, "Noch keine Posten. Oben einen Typ w\xE4hlen, um eine Zeile hinzuzuf\xFCgen.") : /*#__PURE__*/React.createElement("div", {
+  }, t('costitem.noItems')) : /*#__PURE__*/React.createElement("div", {
     className: "p-3 space-y-2"
   }, lines.map(l => {
     const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
@@ -1029,7 +1046,7 @@ const CostItemModal = ({
       step: "0.5",
       value: l.hours,
       onChange: e => updateLine(l.id, 'hours', e.target.value),
-      placeholder: "Std.",
+      placeholder: t('costitem.hourPlaceholder'),
       className: "w-20 p-2 border border-slate-300 rounded text-sm"
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-xs"
@@ -1053,7 +1070,9 @@ const CostItemModal = ({
       type: "text",
       value: l.comment,
       onChange: e => updateLine(l.id, 'comment', e.target.value),
-      placeholder: cfg.example ? `Kommentar (z.B. ${cfg.example})` : 'Kommentar (optional)',
+      placeholder: cfg.example ? t('costitem.commentPrefix', {
+        example: cfg.example
+      }) : t('costitem.commentGeneric'),
       className: "flex-1 p-2 border border-slate-300 rounded text-sm"
     }), /*#__PURE__*/React.createElement("span", {
       className: "w-20 text-right text-sm text-slate-700 tabular-nums shrink-0"
@@ -1067,23 +1086,23 @@ const CostItemModal = ({
     className: "px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-500"
-  }, "Summe"), /*#__PURE__*/React.createElement("span", {
+  }, t('costitem.total')), /*#__PURE__*/React.createElement("span", {
     className: "text-base font-semibold text-slate-900 tabular-nums"
   }, total.toFixed(2), " \u20AC")))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-between"
   }, existingItem ? /*#__PURE__*/React.createElement("button", {
     onClick: handleDelete,
     className: "text-rose-600 text-sm hover:bg-rose-50 px-3 py-2 rounded font-medium"
-  }, "L\xF6schen") : /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
+  }, t('btn.delete')) : /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSave,
     disabled: !form.empId || lines.length === 0,
     className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
-  }, "Speichern")))));
+  }, t('btn.save'))))));
 };
 
 // --- DEPENDENCIES / SECURITY INFO ---
@@ -1112,7 +1131,9 @@ const DEPS_LIST = [{
   getLoaded: () => window.tailwind?.version || '(Play CDN)',
   desc: 'CSS-Utility-Framework für das gesamte Styling der App. Die Play-CDN-Version wird direkt im Browser generiert – keine separate CSS-Datei nötig.'
 }];
-const DepsSection = () => {
+const DepsSection = ({
+  t = k => k
+}) => {
   const [latest, setLatest] = React.useState({});
   const [checking, setChecking] = React.useState(false);
   const [checked, setChecked] = React.useState(false);
@@ -1141,9 +1162,9 @@ const DepsSection = () => {
     className: "flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-semibold text-slate-700"
-  }, "Verwendete Bibliotheken"), /*#__PURE__*/React.createElement("p", {
+  }, t('deps.title')), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-0.5"
-  }, "Externe Skripte, die beim Laden der Seite eingebunden werden (CDN).")), /*#__PURE__*/React.createElement("button", {
+  }, t('deps.subtitle'))), /*#__PURE__*/React.createElement("button", {
     onClick: checkUpdates,
     disabled: checking,
     className: "text-xs px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-600 hover:border-gea-400 hover:text-gea-700 transition-colors disabled:opacity-50 flex items-center gap-1.5"
@@ -1157,19 +1178,19 @@ const DepsSection = () => {
     strokeWidth: "2"
   }, /*#__PURE__*/React.createElement("path", {
     d: "M21 12a9 9 0 1 1-6.219-8.56"
-  })), "Pr\xFCfe\u2026") : 'Auf Updates prüfen')), /*#__PURE__*/React.createElement("table", {
+  })), t('deps.checking')) : t('deps.checkUpdates'))), /*#__PURE__*/React.createElement("table", {
     className: "w-full text-xs"
   }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
     className: "text-left text-slate-500 border-b border-slate-100"
   }, /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-2 font-medium"
-  }, "Bibliothek"), /*#__PURE__*/React.createElement("th", {
+  }, t('deps.colLibrary')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-2 font-medium"
-  }, "Geladen"), checked && /*#__PURE__*/React.createElement("th", {
+  }, t('deps.colLoaded')), checked && /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-2 font-medium"
-  }, "Aktuell"), /*#__PURE__*/React.createElement("th", {
+  }, t('deps.colLatest')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-2 font-medium"
-  }, "Quelle"))), /*#__PURE__*/React.createElement("tbody", {
+  }, t('deps.colSource')))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-50"
   }, DEPS_LIST.map(dep => {
     const loaded = dep.getLoaded();
@@ -1219,13 +1240,7 @@ const DepsSection = () => {
     className: "px-4 py-2.5 bg-slate-50 border-t border-slate-100"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400"
-  }, "Alle Verbindungen erfolgen \xFCber ", /*#__PURE__*/React.createElement("strong", {
-    className: "text-slate-500"
-  }, "HTTPS"), ". Quellen: ", /*#__PURE__*/React.createElement("strong", {
-    className: "text-slate-500"
-  }, "unpkg.com"), ", ", /*#__PURE__*/React.createElement("strong", {
-    className: "text-slate-500"
-  }, "cdn.tailwindcss.com"), ". Die App l\xE4uft vollst\xE4ndig im Browser \u2013 kein Backend, keine Telemetrie.")));
+  }, t('deps.footer'))));
 };
 
 // ─── LOGIN MODAL ─────────────────────────────────────────────────────────────
@@ -1233,7 +1248,8 @@ const DepsSection = () => {
 const LoginModal = ({
   appUsers,
   onLogin,
-  onClose
+  onClose,
+  t = k => k
 }) => {
   const {
     useState,
@@ -1276,7 +1292,7 @@ const LoginModal = ({
     if (isLocked) return;
     const user = appUsers.find(u => u.id === selectedUserId);
     if (!user) {
-      setError('Bitte einen Nutzer auswählen.');
+      setError(t('login.noUser'));
       return;
     }
     // New hashed flow (preferred). Legacy plaintext `pin` is also accepted
@@ -1305,9 +1321,13 @@ const LoginModal = ({
         try {
           sessionStorage.setItem('plannerLoginLockUntil', String(until));
         } catch (e) {}
-        setError(`Zu viele Fehlversuche – ${Math.ceil(LOGIN_LOCK_DURATION_MS / 1000)} Sekunden gesperrt.`);
+        setError(t('login.tooManyFails', {
+          s: Math.ceil(LOGIN_LOCK_DURATION_MS / 1000)
+        }));
       } else {
-        setError(`Falscher PIN. Noch ${LOGIN_LOCK_THRESHOLD - next} Versuche.`);
+        setError(t('login.wrongPin', {
+          n: LOGIN_LOCK_THRESHOLD - next
+        }));
       }
       setPin('');
       return;
@@ -1344,13 +1364,13 @@ const LoginModal = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden"
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: "Anmelden",
+    title: t('login.title'),
     onClose: onClose
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-700 mb-2 font-semibold"
-  }, "Nutzer ausw\xE4hlen"), /*#__PURE__*/React.createElement("div", {
+  }, t('login.selectUser')), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-2"
   }, appUsers.map(u => {
     const active = selectedUserId === u.id;
@@ -1366,7 +1386,7 @@ const LoginModal = ({
     }, u.name, u.role === 'admin' ? ' ★' : '');
   }))), selectedUserId && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-700 mb-1 font-semibold"
-  }, "PIN"), /*#__PURE__*/React.createElement("input", {
+  }, t('login.pinLabel')), /*#__PURE__*/React.createElement("input", {
     ref: pinRef,
     type: "password",
     value: pin,
@@ -1377,21 +1397,25 @@ const LoginModal = ({
     },
     onKeyDown: e => e.key === 'Enter' && !isLocked && handleLogin(),
     className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 disabled:bg-slate-100",
-    placeholder: "PIN eingeben"
+    placeholder: t('login.pinPlaceholder')
   })), error && /*#__PURE__*/React.createElement("p", {
     className: "text-rose-600 text-sm"
   }, error), isLocked && /*#__PURE__*/React.createElement("p", {
     className: "text-amber-700 text-sm"
-  }, "Gesperrt \u2013 noch ", secondsLeft, "s."), /*#__PURE__*/React.createElement("div", {
+  }, t('login.locked', {
+    s: secondsLeft
+  })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 pt-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleLogin,
     disabled: !selectedUserId || isLocked,
     className: "flex-1 bg-gea-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-  }, isLocked ? `Gesperrt (${secondsLeft}s)` : 'Anmelden')))));
+  }, isLocked ? t('login.lockedBtn', {
+    s: secondsLeft
+  }) : t('login.loginBtn'))))));
 };
 
 // ─── CASCADE DELETE CONFIRMATION ─────────────────────────────────────────────
@@ -1406,7 +1430,8 @@ const LoginModal = ({
 const ConfirmModal = ({
   title,
   message,
-  confirmLabel = 'Bestätigen',
+  confirmLabel,
+  cancelLabel = 'Abbrechen',
   danger = false,
   onConfirm,
   onCancel
@@ -1428,10 +1453,10 @@ const ConfirmModal = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onCancel,
     className: "flex-1 bg-slate-100 text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, cancelLabel), /*#__PURE__*/React.createElement("button", {
     onClick: onConfirm,
     className: `flex-1 ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-gea-600 hover:bg-gea-700'} text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors`
-  }, confirmLabel)))));
+  }, confirmLabel || 'Bestätigen')))));
 };
 const CascadeDeleteModal = ({
   entityKind,
@@ -1440,7 +1465,8 @@ const CascadeDeleteModal = ({
   employees,
   projects,
   onConfirm,
-  onCancel
+  onCancel,
+  t = k => k
 }) => {
   useEscapeToClose(onCancel);
   const empById = useMemo(() => {
@@ -1457,22 +1483,30 @@ const CascadeDeleteModal = ({
   // formatKW + describeAssignment live in utils.js; bind the lookup here.
   const describeAss = a => describeAssignment(a, id => projById.get(id));
   const total = (dependents.assignments?.length || 0) + (dependents.costItems?.length || 0);
-  const kindLabel = entityKind === 'project' ? 'Projekt' : 'Mitarbeiter';
+  const kindLabel = entityKind === 'project' ? t('cascade.entityProject') : t('cascade.entityEmployee');
   return /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: `${kindLabel} löschen?`,
+    title: t('cascade.deleteTitle', {
+      kind: kindLabel
+    }),
     subtitle: entityName,
     onClose: onCancel
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-4 overflow-y-auto"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-700"
-  }, kindLabel, " ", /*#__PURE__*/React.createElement("strong", null, "\u201E", entityName, "\""), " wird gel\xF6scht. Folgende abh\xE4ngige Eintr\xE4ge werden mitgel\xF6scht:"), dependents.assignments?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t('cascade.willDelete', {
+    kind: kindLabel,
+    name: entityName
+  })), dependents.assignments?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2"
-  }, dependents.assignments.length, " Zuweisung", dependents.assignments.length !== 1 ? 'en' : ''), /*#__PURE__*/React.createElement("ul", {
+  }, t('cascade.assignments', {
+    n: dependents.assignments.length,
+    s: dependents.assignments.length !== 1 ? t('modal.assignmentPluralSuffix') : ''
+  })), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1 max-h-48 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50"
   }, dependents.assignments.slice(0, 50).map(a => {
     const emp = empById.get(a.empId);
@@ -1486,9 +1520,14 @@ const CascadeDeleteModal = ({
     }, formatKW(a.week)));
   }), dependents.assignments.length > 50 && /*#__PURE__*/React.createElement("li", {
     className: "text-xs text-slate-400"
-  }, "\u2026 und ", dependents.assignments.length - 50, " weitere"))), dependents.costItems?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t('cascade.andMore', {
+    n: dependents.assignments.length - 50
+  })))), dependents.costItems?.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2"
-  }, dependents.costItems.length, " Kostenpunkt", dependents.costItems.length !== 1 ? 'e' : ''), /*#__PURE__*/React.createElement("ul", {
+  }, t('cascade.costItems', {
+    n: dependents.costItems.length,
+    s: dependents.costItems.length !== 1 ? t('cascade.costItemPluralSuffix') : ''
+  })), /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1 max-h-40 overflow-y-auto pr-1 border border-slate-100 rounded-md p-2 bg-slate-50"
   }, dependents.costItems.slice(0, 50).map(c => {
     const emp = empById.get(c.empId);
@@ -1498,22 +1537,27 @@ const CascadeDeleteModal = ({
       className: "text-xs text-slate-700 flex justify-between gap-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "truncate"
-    }, c.description || 'Kostenpunkt', entityKind === 'employee' && proj ? ` · ${proj.name}` : '', entityKind === 'project' && emp ? ` · ${emp.name}` : ''), /*#__PURE__*/React.createElement("span", {
+    }, c.description || t('cascade.costDefault'), entityKind === 'employee' && proj ? ` · ${proj.name}` : '', entityKind === 'project' && emp ? ` · ${emp.name}` : ''), /*#__PURE__*/React.createElement("span", {
       className: "text-slate-500 shrink-0 tabular-nums"
     }, (c.amount || 0).toFixed(2), " \u20AC"));
   }), dependents.costItems.length > 50 && /*#__PURE__*/React.createElement("li", {
     className: "text-xs text-slate-400"
-  }, "\u2026 und ", dependents.costItems.length - 50, " weitere"))), /*#__PURE__*/React.createElement("p", {
+  }, t('cascade.andMore', {
+    n: dependents.costItems.length - 50
+  })))), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500"
-  }, "\xDCber den Verlauf (Audit-Log) kannst Du diese Aktion innerhalb der n\xE4chsten 500 Eintr\xE4ge r\xFCckg\xE4ngig machen.")), /*#__PURE__*/React.createElement("div", {
+  }, t('cascade.undoHint'))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onCancel,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: onConfirm,
     className: "px-4 py-2 text-sm text-white bg-rose-600 rounded-md hover:bg-rose-700 font-medium"
-  }, "L\xF6schen inkl. ", total, " abh\xE4ngiger Eintr", total === 1 ? 'ag' : 'äge'))));
+  }, t('cascade.deleteIncl', {
+    n: total,
+    entry: t(total === 1 ? 'cascade.entryWordSingular' : 'cascade.entryWordPlural')
+  })))));
 };
 
 // --- MAIN APP ---

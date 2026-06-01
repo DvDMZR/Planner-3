@@ -15,7 +15,8 @@ const ProjectDetailsView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        language, t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -100,28 +101,28 @@ const ProjectDetailsView = ({ s, h }) => {
                                 checked={!!proj.projectCompleted}
                                 onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, projectCompleted: e.target.checked} : p))}
                                 className="w-4 h-4 text-gea-600 rounded"/>
-                            <span className="text-sm font-medium text-slate-700">Projekt abgeschlossen</span>
+                            <span className="text-sm font-medium text-slate-700">{t('projDetail.completed')}</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox"
                                 checked={!!proj.costsSubmitted}
                                 onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, costsSubmitted: e.target.checked} : p))}
                                 className="w-4 h-4 text-gea-600 rounded"/>
-                            <span className="text-sm font-medium text-slate-700">Kosten übermittelt</span>
+                            <span className="text-sm font-medium text-slate-700">{t('projDetail.costsSubmitted')}</span>
                         </label>
                         <button onClick={() => {
                             setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', country: proj.country || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
                             setEditingProjectId(proj.id);
                             setIsProjFormOpen(true);
                         }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
-                            <IconEdit size={15}/> Bearbeiten
+                            <IconEdit size={15}/> {t('btn.edit')}
                         </button>
                         <button onClick={openInvoiceModal} className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
-                            <IconFileText size={15}/> Rechnung
+                            <IconFileText size={15}/> {t('projDetail.invoice')}
                         </button>
                         <button onClick={() => { setEditingCostItem(null); setIsCostItemModalOpen(true); }}
                             className="bg-gea-600 hover:bg-gea-700 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
-                            <IconPlus size={15}/> Kostenpunkt
+                            <IconPlus size={15}/> {t('projDetail.costItem')}
                         </button>
                     </div>
                 </div>
@@ -132,20 +133,20 @@ const ProjectDetailsView = ({ s, h }) => {
                     {assignedEmpIds.length > 0 && presenceWeeks.length > 0 && (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                                <h3 className="text-slate-900 text-base font-medium">Mitarbeiter-Anwesenheit</h3>
-                                <span className="text-xs text-slate-400">{presenceWeeks.length} Wochen</span>
+                                <h3 className="text-slate-900 text-base font-medium">{t('projDetail.presence')}</h3>
+                                <span className="text-xs text-slate-400">{presenceWeeks.length} {t('projDetail.weeks')}</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="text-xs border-collapse w-full">
                                     <thead>
                                         <tr>
-                                            <th className="p-3 text-left text-slate-500 font-medium border-r border-slate-200 bg-slate-50 w-40 sticky left-0">Mitarbeiter</th>
+                                            <th className="p-3 text-left text-slate-500 font-medium border-r border-slate-200 bg-slate-50 w-40 sticky left-0">{t('projDetail.colEmployee')}</th>
                                             {presenceWeeks.map(w => (
                                                 <th key={w} className="p-2 text-center text-slate-500 font-medium border-r border-slate-200 bg-slate-50 min-w-[52px]">
                                                     KW{w.split('-W')[1]}
                                                 </th>
                                             ))}
-                                            <th className="p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]">Stunden</th>
+                                            <th className="p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]">{t('projDetail.colHours')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
@@ -155,7 +156,7 @@ const ProjectDetailsView = ({ s, h }) => {
                                             const empHours = empAss.reduce((acc, a) => acc + (a.hours ?? (a.percent / 100 * HOURS_PER_WEEK)), 0);
                                             return (
                                                 <tr key={empId} className="hover:bg-slate-50">
-                                                    <td className="p-3 text-slate-800 font-medium border-r border-slate-200 sticky left-0 bg-white">{emp?.name || 'Unbekannt'}</td>
+                                                    <td className="p-3 text-slate-800 font-medium border-r border-slate-200 sticky left-0 bg-white">{emp?.name || t('projDetail.unknown')}</td>
                                                     {presenceWeeks.map(w => {
                                                         const a = empAss.find(x => x.week === w);
                                                         return (
@@ -185,25 +186,25 @@ const ProjectDetailsView = ({ s, h }) => {
                     {/* Cost Items Table */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                            <h3 className="text-slate-900 text-base font-medium">Kostenpunkte</h3>
+                            <h3 className="text-slate-900 text-base font-medium">{t('projDetail.costItems')}</h3>
                             <button onClick={() => { setEditingCostItem(null); setIsCostItemModalOpen(true); }}
                                 className="text-gea-600 text-sm font-medium hover:text-gea-700 flex items-center gap-1">
-                                <IconPlus size={15}/> Hinzufügen
+                                <IconPlus size={15}/> {t('btn.add')}
                             </button>
                         </div>
                         {projCostItems.length === 0 ? (
                             <div className="p-10 text-center text-slate-400 text-sm">
-                                Noch keine Kostenpunkte erfasst.
+                                {t('projDetail.noCostItems')}
                             </div>
                         ) : (
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th className="p-3 text-slate-500 font-medium">Mitarbeiter</th>
-                                        <th className="p-3 text-slate-500 font-medium">Anlass</th>
+                                        <th className="p-3 text-slate-500 font-medium">{t('projDetail.colEmployee')}</th>
+                                        <th className="p-3 text-slate-500 font-medium">{t('projDetail.colOccasion')}</th>
                                         <th className="p-3 text-slate-500 font-medium text-center">KW</th>
-                                        <th className="p-3 text-slate-500 font-medium">Posten</th>
-                                        <th className="p-3 text-slate-500 font-medium text-right">Betrag</th>
+                                        <th className="p-3 text-slate-500 font-medium">{t('projDetail.colItems')}</th>
+                                        <th className="p-3 text-slate-500 font-medium text-right">{t('projDetail.colAmount')}</th>
                                         <th className="p-3"></th>
                                     </tr>
                                 </thead>
@@ -248,7 +249,7 @@ const ProjectDetailsView = ({ s, h }) => {
                                                 <td className="p-3 text-right text-slate-900 font-medium tabular-nums">{(ci.amount || 0).toFixed(2)} €</td>
                                                 <td className="p-3 text-right">
                                                     <button onClick={() => { setEditingCostItem(ci); setIsCostItemModalOpen(true); }}
-                                                        className="text-gea-600 text-xs font-medium hover:text-gea-700">Bearbeiten</button>
+                                                        className="text-gea-600 text-xs font-medium hover:text-gea-700">{t('btn.edit')}</button>
                                                 </td>
                                             </tr>
                                         );
@@ -261,35 +262,35 @@ const ProjectDetailsView = ({ s, h }) => {
                     {/* Summary */}
                     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="p-4 bg-slate-50 border-b border-slate-200">
-                            <h3 className="text-slate-900 text-base font-medium">Zusammenfassung</h3>
+                            <h3 className="text-slate-900 text-base font-medium">{t('projDetail.summary')}</h3>
                         </div>
                         <div className="p-6 grid grid-cols-2 gap-4 md:grid-cols-4">
                             <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-7 h-7 rounded-md bg-slate-200 flex items-center justify-center"><IconClock size={14} className="text-slate-500"/></div>
-                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Stunden</p>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('projDetail.hours')}</p>
                                 </div>
                                 <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalHours}h</p>
                             </div>
                             <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center"><IconUsers size={14} className="text-blue-600"/></div>
-                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Lohnkosten</p>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('projDetail.laborCosts')}</p>
                                 </div>
                                 <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalLaborCost.toFixed(2)} €</p>
-                                {proj.billable === false && <p className="text-xs text-slate-400 mt-1">nicht berechnet</p>}
+                                {proj.billable === false && <p className="text-xs text-slate-400 mt-1">{t('projDetail.notCalc')}</p>}
                             </div>
                             <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-7 h-7 rounded-md bg-amber-100 flex items-center justify-center"><IconFileText size={14} className="text-amber-600"/></div>
-                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Kostenpunkte</p>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">{t('projDetail.extraCosts')}</p>
                                 </div>
                                 <p className="text-2xl text-slate-900 font-semibold tabular-nums">{totalOtherCost.toFixed(2)} €</p>
                             </div>
                             <div className="rounded-xl border-2 border-gea-300 bg-gradient-to-br from-gea-50 to-gea-100 p-4 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="w-7 h-7 rounded-md bg-gea-500 flex items-center justify-center"><IconBarChart size={14} className="text-white"/></div>
-                                    <p className="text-[10px] text-gea-700 font-medium uppercase tracking-wide">Gesamt</p>
+                                    <p className="text-[10px] text-gea-700 font-medium uppercase tracking-wide">{t('projDetail.total')}</p>
                                 </div>
                                 <p className="text-2xl text-gea-800 font-bold tabular-nums">{grandTotal.toFixed(2)} €</p>
                             </div>
@@ -299,11 +300,11 @@ const ProjectDetailsView = ({ s, h }) => {
                                 <input type="checkbox" checked={proj.billable !== false}
                                     onChange={() => setProjects(projects.map(p => p.id === proj.id ? {...p, billable: !p.billable} : p))}
                                     className="w-4 h-4 text-gea-600 rounded"/>
-                                <span className="text-sm text-slate-700">Arbeitszeit berechnen</span>
+                                <span className="text-sm text-slate-700">{t('projDetail.calcHours')}</span>
                             </label>
                             {proj.billable !== false && (
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-slate-500">Std.-Satz:</span>
+                                    <span className="text-sm text-slate-500">{t('projDetail.hourRate')}</span>
                                     <input type="number" min="0" step="1"
                                         value={proj.hourlyRate ?? DEFAULT_HOURLY_RATE}
                                         onChange={e => setProjects(projects.map(p => p.id === proj.id ? {...p, hourlyRate: parseFloat(e.target.value) || 0} : p))}
@@ -325,6 +326,7 @@ const ProjectDetailsView = ({ s, h }) => {
                         setCostItems={setCostItems}
                         showToast={showToast}
                         onClose={() => { setIsCostItemModalOpen(false); setEditingCostItem(null); }}
+                        t={t}
                     />
                 )}
             </div>

@@ -15,7 +15,8 @@ const DataView = ({
     autoBackup,
     lastBackupAt,
     emailTemplate,
-    invoiceRecipient
+    invoiceRecipient,
+    t
   } = s;
   const {
     setAppUsers,
@@ -45,7 +46,7 @@ const DataView = ({
   if (!currentUser) {
     return /*#__PURE__*/React.createElement("main", {
       className: "flex-1 flex items-center justify-center text-slate-400 text-sm"
-    }, "Kein Zugriff \u2013 bitte anmelden.");
+    }, t('data.noAccess'));
   }
 
   // Show feedback as a real floating toast (anchored to the viewport, so
@@ -65,19 +66,19 @@ const DataView = ({
   };
   const handleAdd = async () => {
     if (!newName.trim()) {
-      setNewError('Name darf nicht leer sein.');
+      setNewError(t('data.nameRequired'));
       return;
     }
     if (newPin.length < 4) {
-      setNewError('PIN muss mindestens 4 Zeichen haben.');
+      setNewError(t('data.pinTooShort'));
       return;
     }
     if (newPin !== newPinConfirm) {
-      setNewError('PINs stimmen nicht überein.');
+      setNewError(t('data.pinMismatch'));
       return;
     }
     if (appUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase())) {
-      setNewError('Ein Nutzer mit diesem Namen existiert bereits.');
+      setNewError(t('data.userExists'));
       return;
     }
     const pinSalt = generatePinSalt();
@@ -95,19 +96,25 @@ const DataView = ({
     setNewPin('');
     setNewPinConfirm('');
     setNewError('');
-    showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
+    showSuccess(t('data.userCreated', {
+      name: user.name
+    }));
   };
   const handleDelete = id => {
     const user = appUsers.find(u => u.id === id);
     if (!user) return;
     requestConfirm({
-      title: 'Nutzer löschen?',
-      message: `Nutzer „${user.name}" wird endgültig entfernt. Mitarbeiter-Datensätze und Zuweisungen sind davon nicht betroffen.`,
-      confirmLabel: 'Löschen',
+      title: t('data.deleteUserTitle'),
+      message: t('data.deleteUserMsg', {
+        name: user.name
+      }),
+      confirmLabel: t('btn.delete'),
       danger: true,
       onConfirm: () => {
         setAppUsers(prev => prev.filter(u => u.id !== id));
-        showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+        showSuccess(t('data.userDeleted', {
+          name: user.name
+        }));
       }
     });
   };
@@ -120,19 +127,19 @@ const DataView = ({
   };
   const handleSaveEdit = async user => {
     if (isAdmin && !editName.trim()) {
-      setEditError('Name darf nicht leer sein.');
+      setEditError(t('data.nameRequired'));
       return;
     }
     if (editPin && editPin.length < 4) {
-      setEditError('PIN muss mindestens 4 Zeichen haben.');
+      setEditError(t('data.pinTooShort'));
       return;
     }
     if (editPin && editPin !== editPinConfirm) {
-      setEditError('PINs stimmen nicht überein.');
+      setEditError(t('data.pinMismatch'));
       return;
     }
     if (!editPin) {
-      setEditError('Bitte einen neuen PIN eingeben.');
+      setEditError(t('data.enterNewPin'));
       return;
     }
     const pinSalt = generatePinSalt();
@@ -151,7 +158,9 @@ const DataView = ({
     setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
     if (currentUser.id === user.id) loginUser(updated);
     setEditingId(null);
-    showSuccess(`PIN für „${updated.name}" wurde gespeichert.`);
+    showSuccess(t('data.pinSaved', {
+      name: updated.name
+    }));
   };
   const canEdit = user => isAdmin ? user.role !== 'admin' : user.id === currentUser.id;
   const section = (title, body) => /*#__PURE__*/React.createElement("div", {
@@ -172,13 +181,13 @@ const DataView = ({
     className: "text-slate-300 shrink-0"
   }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-slate-900 font-medium"
-  }, "System & Export"), /*#__PURE__*/React.createElement("p", {
+  }, t('data.title')), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500"
-  }, "Benutzer, Sicherung, Vorlagen, Import/Export und System-Wartung."))), successMsg && /*#__PURE__*/React.createElement("div", {
+  }, t('data.subtitle')))), successMsg && /*#__PURE__*/React.createElement("div", {
     className: "bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-4 py-3 text-sm"
-  }, successMsg), section('Benutzer', appUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, successMsg), section(t('data.sectionUsers'), appUsers.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-6 text-center text-slate-400 text-sm"
-  }, "Keine Nutzer vorhanden.") : /*#__PURE__*/React.createElement("div", {
+  }, t('data.noUsers')) : /*#__PURE__*/React.createElement("div", {
     className: "divide-y divide-slate-100"
   }, appUsers.map(user => /*#__PURE__*/React.createElement("div", {
     key: user.id
@@ -400,7 +409,9 @@ const DataView = ({
     className: "w-full bg-white border-2 border-dashed border-slate-300 hover:border-gea-400 text-slate-600 py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors"
   }, /*#__PURE__*/React.createElement(IconUpload, {
     size: 18
-  }), " Daten importieren (JSON)"))), /*#__PURE__*/React.createElement(DepsSection, null))), isAdmin && /*#__PURE__*/React.createElement("button", {
+  }), " Daten importieren (JSON)"))), /*#__PURE__*/React.createElement(DepsSection, {
+    t: t
+  }))), isAdmin && /*#__PURE__*/React.createElement("button", {
     onClick: async () => {
       if (confirm('Alle Daten unwiderruflich löschen?')) {
         localStorage.removeItem('teamMasterProData');

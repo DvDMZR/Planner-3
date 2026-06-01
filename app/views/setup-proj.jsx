@@ -15,7 +15,8 @@ const SetupProjView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -71,9 +72,9 @@ const SetupProjView = ({ s, h }) => {
                     <td className="p-4 text-slate-600 text-xs">{p.startWeek} – {p.ibnWeek}</td>
                     <td className="p-4 text-right">
                         <div className="flex justify-end gap-3">
-                            <button onClick={() => handleEditProject(p)} className="text-gea-600 text-xs font-medium hover:text-gea-700">Bearbeiten</button>
+                            <button onClick={() => handleEditProject(p)} className="text-gea-600 text-xs font-medium hover:text-gea-700">{t('btn.edit')}</button>
                             <button onClick={() => requestDeleteProject(p.id)}
-                                className="text-rose-600 text-xs font-medium hover:text-rose-700">Löschen</button>
+                                className="text-rose-600 text-xs font-medium hover:text-rose-700">{t('btn.delete')}</button>
                         </div>
                     </td>
                 </tr>
@@ -84,7 +85,7 @@ const SetupProjView = ({ s, h }) => {
             <div className="flex-1 overflow-auto p-8 bg-slate-50">
                 <div className="max-w-5xl mx-auto space-y-6">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl text-gea-800 font-semibold">Projekte</h2>
+                        <h2 className="text-xl text-gea-800 font-semibold">{t('proj.title')}</h2>
                         <button
                             onClick={() => {
                                 setEditingProjectId(null);
@@ -92,7 +93,7 @@ const SetupProjView = ({ s, h }) => {
                                 setIsProjFormOpen(true);
                             }}
                             className="flex items-center gap-2 bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors shadow-sm">
-                            <IconPlus size={16}/> Neues Projekt
+                            <IconPlus size={16}/> {t('proj.new')}
                         </button>
                     </div>
 
@@ -100,8 +101,8 @@ const SetupProjView = ({ s, h }) => {
                     {activeCats.length === 0 && activeProjects.length === 0 && (
                         <EmptyState
                             icon={<IconBriefcase size={32}/>}
-                            title="Noch keine aktiven Projekte"
-                            description="Legen Sie Ihr erstes Projekt an — der Plus-Button oben rechts startet das Formular."
+                            title={t('proj.noActive')}
+                            description={t('proj.noActiveDesc')}
                         />
                     )}
                     {activeCats.map(cat => {
@@ -119,11 +120,11 @@ const SetupProjView = ({ s, h }) => {
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
-                                                <th className="p-4 text-slate-700 font-semibold">Name</th>
-                                                <th className="p-4 text-slate-700 font-semibold">Land</th>
-                                                <th className="p-4 text-slate-700 font-semibold">Nr.</th>
-                                                <th className="p-4 text-slate-700 font-semibold">Status</th>
-                                                <th className="p-4 text-slate-700 font-semibold">Zeitraum</th>
+                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colName')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colCountry')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colNr')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colStatus')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colPeriod')}</th>
                                                 <th className="p-4"></th>
                                             </tr>
                                         </thead>
@@ -142,18 +143,18 @@ const SetupProjView = ({ s, h }) => {
                             <button onClick={() => setPastProjectsExpanded(e => !e)}
                                 className="w-full p-4 bg-slate-100 border-b border-slate-300 flex items-center gap-3 hover:bg-slate-200 transition-colors">
                                 <span className="text-slate-500">{pastProjectsExpanded ? <IconChevronDown size={18}/> : <IconChevronRight size={18}/>}</span>
-                                <span className="text-slate-700 font-semibold">Vergangene Projekte</span>
+                                <span className="text-slate-700 font-semibold">{t('proj.pastProjects')}</span>
                                 <span className="ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded-full text-xs text-slate-600 font-semibold">{pastProjects.length}</span>
                             </button>
                             {pastProjectsExpanded && (
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            <th className="p-4 text-slate-700 font-semibold">Name</th>
-                                            <th className="p-4 text-slate-700 font-semibold">Land</th>
-                                            <th className="p-4 text-slate-700 font-semibold">Nr.</th>
-                                            <th className="p-4 text-slate-700 font-semibold">Status</th>
-                                            <th className="p-4 text-slate-700 font-semibold">Zeitraum</th>
+                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colName')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colCountry')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colNr')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colStatus')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colPeriod')}</th>
                                             <th className="p-4"></th>
                                         </tr>
                                     </thead>
