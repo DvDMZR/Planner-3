@@ -15,7 +15,8 @@ const UtilizationView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -106,17 +107,17 @@ const UtilizationView = ({ s, h }) => {
             <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center">
                     <div>
-                        <h2 className="text-xl text-slate-900 font-medium">Auslastung (Heatmap)</h2>
-                        <p className="text-sm text-slate-500">Monatsweise Übersicht der durchschnittlichen Kapazitätsauslastung.</p>
+                        <h2 className="text-xl text-slate-900 font-medium">{t('util.title')}</h2>
+                        <p className="text-sm text-slate-500">{t('util.subtitle')}</p>
                     </div>
                     <div className="flex gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <span className="text-sm text-slate-700 font-medium">Vorschau:</span>
+                        <span className="text-sm text-slate-700 font-medium">{t('util.preview')}</span>
                         <select value={weeksAhead} onChange={e=>setWeeksAhead(Number(e.target.value))} className="p-2 border border-slate-300 rounded text-sm bg-white">
-                            <option value={4}>4 Wochen</option>
-                            <option value={8}>8 Wochen</option>
-                            <option value={12}>12 Wochen</option>
-                            <option value={24}>24 Wochen</option>
-                            <option value={52}>52 Wochen</option>
+                            <option value={4}>{t('util.weeks4')}</option>
+                            <option value={8}>{t('util.weeks8')}</option>
+                            <option value={12}>{t('util.weeks12')}</option>
+                            <option value={24}>{t('util.weeks24')}</option>
+                            <option value={52}>{t('util.weeks52')}</option>
                         </select>
                     </div>
                 </div>
@@ -124,7 +125,7 @@ const UtilizationView = ({ s, h }) => {
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr>
-                                <th className="p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white">Mitarbeiter</th>
+                                <th className="p-2 border-b-2 border-slate-300 text-left w-48 text-slate-500 font-medium sticky top-0 z-20 bg-white">{t('util.colEmployee')}</th>
                                 <th className="p-2 border-b-2 border-slate-300 text-center w-32 text-gea-600 bg-gea-50 font-medium sticky top-0 z-20">Ø Zeitraum</th>
                                 {months.map(m => {
                                     const firstWeek = weeksByMonth[m]?.[0];
@@ -138,7 +139,7 @@ const UtilizationView = ({ s, h }) => {
                                     return (
                                         <th key={m}
                                             onClick={firstWeek ? jumpToMonth : undefined}
-                                            title={firstWeek ? `Zur Ressourcenplanung – ${m}` : undefined}
+                                            title={firstWeek ? t('util.navigateTo', { month: m }) : undefined}
                                             className={`p-2 border-b-2 border-slate-300 text-center text-slate-500 font-medium sticky top-0 z-20 bg-white ${firstWeek ? 'cursor-pointer hover:text-gea-700 hover:bg-slate-50' : ''}`}>
                                             {m}
                                         </th>
@@ -186,13 +187,13 @@ const UtilizationView = ({ s, h }) => {
                                             return (
                                                 <tr key={emp.id} className="border-b border-slate-300 hover:bg-slate-50 transition-colors">
                                                     <td onClick={() => jumpToEmp(null)}
-                                                        title={`In Ressourcenplanung nach „${emp.name}" filtern`}
+                                                        title={t('util.filterBy', { name: emp.name })}
                                                         className="p-2 text-slate-900 font-medium pl-6 cursor-pointer hover:text-gea-700">
                                                         {emp.name}
                                                     </td>
 
                                                     <td onClick={() => jumpToEmp(null)}
-                                                        title={`In Ressourcenplanung nach „${emp.name}" filtern`}
+                                                        title={t('util.filterBy', { name: emp.name })}
                                                         className="p-2 border-r border-slate-300 cursor-pointer">
                                                         <div className="w-full h-8 rounded flex items-center justify-center gap-1 text-xs bg-gea-50 text-gea-700 border border-gea-100 font-medium hover:ring-2 hover:ring-gea-400 hover:ring-offset-1 transition-all">
                                                             <span>{avgAll}%</span>
@@ -225,8 +226,8 @@ const UtilizationView = ({ s, h }) => {
                                                         };
                                                         const overload = overloadIndicator(maxWeek);
                                                         const cellTitle = overload
-                                                            ? `${overload.title}${firstWeek ? ' · Zur Ressourcenplanung – ' + emp.name + ', ' + m : ''}`
-                                                            : (firstWeek ? `Zur Ressourcenplanung – ${emp.name}, ${m}` : undefined);
+                                                            ? `${overload.title}${firstWeek ? ' · ' + t('util.navigateFilter', { name: emp.name, month: m }) : ''}`
+                                                            : (firstWeek ? t('util.navigateFilter', { name: emp.name, month: m }) : undefined);
 
                                                         return (
                                                             <td key={m} className="p-1 border-r border-slate-300 last:border-0">

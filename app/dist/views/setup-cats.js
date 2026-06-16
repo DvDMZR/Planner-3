@@ -20,7 +20,8 @@ const SetupCatsView = ({
     newEmpCat,
     newProjCat,
     newBasicTask,
-    newOfftimeTask
+    newOfftimeTask,
+    t
   } = s;
   const {
     setEmpCategories,
@@ -84,7 +85,7 @@ const SetupCatsView = ({
     className: "flex gap-1 items-center"
   }, COLOR_SWATCHES.map((cid, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
-    title: cid || 'Keine Farbe',
+    title: cid || t('cats.noColor'),
     onClick: () => setBasicTasksMeta(prev => ({
       ...prev,
       [taskName]: {
@@ -155,12 +156,12 @@ const SetupCatsView = ({
     value: newBasicTask,
     onChange: e => setNewBasicTask(e.target.value),
     onKeyDown: e => e.key === 'Enter' && addBasicTask(),
-    placeholder: "Neuer Basic Task",
+    placeholder: t('cats.newBasicTask'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addBasicTask,
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, hardcodedBasicTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
@@ -173,26 +174,26 @@ const SetupCatsView = ({
     className: "text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconPin, {
     size: 10
-  }), "Permanent")), /*#__PURE__*/React.createElement("div", {
+  }), t('cats.permanent'))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 flex-shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setBasicInactive(task),
     className: "px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-  }, "Inaktiv setzen")))), hardcodedBasicTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
+  }, t('cats.setInactive'))))), hardcodedBasicTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine aktiven Basic Tasks.")))), section('other', 'Other Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t('cats.noBasicTasks'))))), section('other', 'Other Tasks', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: newOtherTask,
     onChange: e => setNewOtherTask(e.target.value),
     onKeyDown: e => e.key === 'Enter' && addOtherTask(),
-    placeholder: "Neuer Other Task",
+    placeholder: t('cats.newOtherTask'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: addOtherTask,
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, otherTasks.map(task => {
     const meta = basicTasksMeta?.[task] || {};
@@ -209,9 +210,11 @@ const SetupCatsView = ({
       className: "text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(IconPin, {
       size: 10
-    }), "Permanent") : weeksLeft !== null && /*#__PURE__*/React.createElement("span", {
+    }), t('cats.permanent')) : weeksLeft !== null && /*#__PURE__*/React.createElement("span", {
       className: "text-xs text-slate-400"
-    }, "(l\xE4uft ab in ", weeksLeft, " Wo.)")), /*#__PURE__*/React.createElement("div", {
+    }, "(", t('cats.expiresIn', {
+      n: weeksLeft
+    }), ")")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 flex-shrink-0"
     }, renderColorPicker(task), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBasicTasksMeta(prev => ({
@@ -224,10 +227,10 @@ const SetupCatsView = ({
       className: `px-2 py-1 text-xs border rounded flex items-center gap-1 ${isPerm ? 'bg-gea-50 text-gea-700 border-gea-200 hover:bg-gea-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`
     }, /*#__PURE__*/React.createElement(IconPin, {
       size: 10
-    }), isPerm ? 'Permanent' : 'Temporär'), /*#__PURE__*/React.createElement("button", {
+    }), isPerm ? t('cats.permanent') : t('cats.temporary')), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBasicInactive(task),
       className: "px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-    }, "Inaktiv setzen"), !isPerm && /*#__PURE__*/React.createElement("button", {
+    }, t('cats.setInactive')), !isPerm && /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBasicTasks(prev => prev.filter(t => t !== task));
         setBasicTasksMeta(prev => {
@@ -244,7 +247,7 @@ const SetupCatsView = ({
     }))));
   }), otherTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine aktiven Other Tasks.")))), section('support', 'Support', /*#__PURE__*/React.createElement("ul", {
+  }, t('cats.noOtherTasks'))))), section('support', 'Support', /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, activeSupportTasks.map(task => {
     const sc = SUPPORT_CHIP_COLORS[task] || {};
@@ -261,13 +264,13 @@ const SetupCatsView = ({
       className: "text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(IconPin, {
       size: 10
-    }), "Permanent")), /*#__PURE__*/React.createElement("button", {
+    }), t('cats.permanent'))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setInactiveSupportTasks(prev => [...(prev || []), task]),
       className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-    }, "Inaktiv setzen"));
+    }, t('cats.setInactive')));
   }), activeSupportTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Alle Support-Tasks sind inaktiv."))), section('training', 'Trainings', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t('cats.allSupportInactive')))), section('training', 'Trainings', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -282,7 +285,7 @@ const SetupCatsView = ({
         }
       }
     },
-    placeholder: "Neues Training",
+    placeholder: t('cats.newTraining'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -293,7 +296,7 @@ const SetupCatsView = ({
       }
     },
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, activeTrainingTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
@@ -308,10 +311,10 @@ const SetupCatsView = ({
     className: "text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconPin, {
     size: 10
-  }), "Permanent")), /*#__PURE__*/React.createElement("button", {
+  }), t('cats.permanent'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveTrainingTasks(prev => [...(prev || []), task]),
     className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-  }, "Inaktiv setzen"))), activeCustomTraining.map(task => /*#__PURE__*/React.createElement("li", {
+  }, t('cats.setInactive')))), activeCustomTraining.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "p-4 flex justify-between items-center text-sm"
   }, /*#__PURE__*/React.createElement("div", {
@@ -325,12 +328,12 @@ const SetupCatsView = ({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveTrainingTasks(prev => [...(prev || []), task]),
     className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-  }, "Inaktiv setzen"), /*#__PURE__*/React.createElement("button", {
+  }, t('cats.setInactive')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setCustomTrainingTasks(prev => (prev || []).filter(t => t !== task)),
     className: "text-rose-500 hover:text-rose-700"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 16
-  })))))))), section('offtime', 'Abwesenheiten (Offtime)', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  })))))))), section('offtime', t('cats.section.absences'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -342,7 +345,7 @@ const SetupCatsView = ({
         setNewOfftimeTask('');
       }
     },
-    placeholder: "Neue Abwesenheitsart",
+    placeholder: t('cats.newAbsenceType'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -352,7 +355,7 @@ const SetupCatsView = ({
       }
     },
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-200"
   }, activeOfftimeTasks.map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
@@ -366,14 +369,14 @@ const SetupCatsView = ({
       name: task
     }]),
     className: "px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100"
-  }, "Inaktiv setzen"), /*#__PURE__*/React.createElement("button", {
+  }, t('cats.setInactive')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOfftimeTasks(offtimeTasks.filter(t2 => t2 !== task)),
     className: "text-rose-500 hover:text-rose-700"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 16
   }))))), activeOfftimeTasks.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine aktiven Abwesenheitsarten.")))), section('empCats', 'Mitarbeiter-Kategorien', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, t('cats.noAbsenceTypes'))))), section('empCats', t('cats.section.empCats'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -385,7 +388,7 @@ const SetupCatsView = ({
         setNewEmpCat('');
       }
     },
-    placeholder: "Neue Mitarbeiter-Kategorie",
+    placeholder: t('cats.newEmpCat'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -395,7 +398,7 @@ const SetupCatsView = ({
       }
     },
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-100"
   }, empCategories.map(cat => /*#__PURE__*/React.createElement("li", {
     key: cat,
@@ -407,7 +410,7 @@ const SetupCatsView = ({
     className: "text-rose-500 hover:text-rose-700"
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 16
-  }))))))), section('projCats', 'Projekt-Kategorien', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }))))))), section('projCats', t('cats.section.projCats'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "p-4 flex gap-2 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("input", {
     type: "text",
@@ -419,7 +422,7 @@ const SetupCatsView = ({
         setNewProjCat('');
       }
     },
-    placeholder: "Neue Projekt-Kategorie",
+    placeholder: t('cats.newProjCat'),
     className: "flex-1 p-2 border border-slate-300 rounded text-sm"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -429,7 +432,7 @@ const SetupCatsView = ({
       }
     },
     className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
-  }, "Hinzuf\xFCgen")), /*#__PURE__*/React.createElement("ul", {
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-100"
   }, projCategories.map(cat => /*#__PURE__*/React.createElement("li", {
     key: cat,
@@ -443,7 +446,7 @@ const SetupCatsView = ({
     size: 16
   })))), projCategories.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine Projekt-Kategorien angelegt.")))), /*#__PURE__*/React.createElement("div", {
+  }, t('cats.noProjCategories'))))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveOpen(o => !o),
@@ -452,7 +455,7 @@ const SetupCatsView = ({
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-lg text-slate-900 font-medium"
-  }, "Inaktiv"), totalInactive > 0 && /*#__PURE__*/React.createElement("span", {
+  }, t('cats.inactive')), totalInactive > 0 && /*#__PURE__*/React.createElement("span", {
     className: "bg-slate-200 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full"
   }, totalInactive)), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500"
@@ -462,7 +465,7 @@ const SetupCatsView = ({
     size: 20
   }))), inactiveOpen && /*#__PURE__*/React.createElement("div", null, totalInactive === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, "Keine inaktiven Kategorien.") : /*#__PURE__*/React.createElement("ul", {
+  }, t('cats.noInactive')) : /*#__PURE__*/React.createElement("ul", {
     className: "divide-y divide-slate-100"
   }, inactiveBasicTasks.map(item => /*#__PURE__*/React.createElement("li", {
     key: item.name,
@@ -473,10 +476,10 @@ const SetupCatsView = ({
     className: "flex-1 text-slate-700"
   }, item.name), /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-400 shrink-0"
-  }, "seit ", new Date(item.createdAt).toLocaleDateString('de-DE')), /*#__PURE__*/React.createElement("button", {
+  }, t('cats.since'), " ", new Date(item.createdAt).toLocaleDateString('de-DE')), /*#__PURE__*/React.createElement("button", {
     onClick: () => reactivateBasic(item),
     className: "px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0"
-  }, "Reaktivieren"), /*#__PURE__*/React.createElement("button", {
+  }, t('cats.reactivate')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveBasicTasks(prev => prev.filter(t => t.name !== item.name)),
     className: "text-rose-400 hover:text-rose-600 shrink-0"
   }, /*#__PURE__*/React.createElement(IconX, {
@@ -491,7 +494,7 @@ const SetupCatsView = ({
   }, item.name), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveOfftimeTasks(prev => prev.filter(t => t.name !== item.name)),
     className: "px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0"
-  }, "Reaktivieren"))), (inactiveSupportTasks || []).map(task => /*#__PURE__*/React.createElement("li", {
+  }, t('cats.reactivate')))), (inactiveSupportTasks || []).map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "px-4 py-3 flex items-center gap-3 text-sm"
   }, /*#__PURE__*/React.createElement("span", {
@@ -501,7 +504,7 @@ const SetupCatsView = ({
   }, task), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveSupportTasks(prev => prev.filter(t => t !== task)),
     className: "px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0"
-  }, "Reaktivieren"))), (inactiveTrainingTasks || []).map(task => /*#__PURE__*/React.createElement("li", {
+  }, t('cats.reactivate')))), (inactiveTrainingTasks || []).map(task => /*#__PURE__*/React.createElement("li", {
     key: task,
     className: "px-4 py-3 flex items-center gap-3 text-sm"
   }, /*#__PURE__*/React.createElement("span", {
@@ -511,5 +514,5 @@ const SetupCatsView = ({
   }, task), /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveTrainingTasks(prev => prev.filter(t => t !== task)),
     className: "px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0"
-  }, "Reaktivieren"))))))));
+  }, t('cats.reactivate')))))))));
 };

@@ -5,6 +5,7 @@ const SetupCatsView = ({ s, h }) => {
         inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
         inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks,
         expandedSetupCats, newEmpCat, newProjCat, newBasicTask, newOfftimeTask,
+        t,
     } = s;
     const {
         setEmpCategories, setProjCategories, setBasicTasks, setBasicTasksMeta,
@@ -50,7 +51,7 @@ const SetupCatsView = ({ s, h }) => {
     const renderColorPicker = (taskName) => (
         <div className="flex gap-1 items-center">
             {COLOR_SWATCHES.map((cid, i) => (
-                <button key={i} title={cid || 'Keine Farbe'}
+                <button key={i} title={cid || t('cats.noColor')}
                     onClick={() => setBasicTasksMeta(prev => ({...prev, [taskName]: {...(prev[taskName]||{}), color: cid || undefined}}))}
                     className={`w-5 h-5 rounded-full border-2 transition-all ${(basicTasksMeta[taskName]?.color || null) === cid ? 'border-gea-600 scale-110' : 'border-transparent hover:border-slate-400'} ${cid ? resolveProjectColor(cid).dot : 'bg-white border-slate-300'}`}>
                 </button>
@@ -109,11 +110,11 @@ const SetupCatsView = ({ s, h }) => {
                             <input type="text" value={newBasicTask}
                                 onChange={e => setNewBasicTask(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && addBasicTask()}
-                                placeholder="Neuer Basic Task"
+                                placeholder={t('cats.newBasicTask')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={addBasicTask}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
@@ -121,17 +122,17 @@ const SetupCatsView = ({ s, h }) => {
                                 <li key={task} className="p-4 flex justify-between items-center gap-3 text-sm">
                                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                         <span className="text-slate-800 font-medium">{task}</span>
-                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>{t('cats.permanent')}</span>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <button onClick={() => setBasicInactive(task)}
                                             className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                            Inaktiv setzen
+                                            {t('cats.setInactive')}
                                         </button>
                                     </div>
                                 </li>
                             ))}
-                            {hardcodedBasicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Basic Tasks.</li>}
+                            {hardcodedBasicTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">{t('cats.noBasicTasks')}</li>}
                         </ul>
                     </div>
                 ))}
@@ -143,11 +144,11 @@ const SetupCatsView = ({ s, h }) => {
                             <input type="text" value={newOtherTask}
                                 onChange={e => setNewOtherTask(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && addOtherTask()}
-                                placeholder="Neuer Other Task"
+                                placeholder={t('cats.newOtherTask')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={addOtherTask}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
@@ -162,8 +163,8 @@ const SetupCatsView = ({ s, h }) => {
                                         <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                             <span className="text-slate-800 font-medium">{task}</span>
                                             {isPerm
-                                                ? <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
-                                                : weeksLeft !== null && <span className="text-xs text-slate-400">(läuft ab in {weeksLeft} Wo.)</span>
+                                                ? <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>{t('cats.permanent')}</span>
+                                                : weeksLeft !== null && <span className="text-xs text-slate-400">({t('cats.expiresIn', { n: weeksLeft })})</span>
                                             }
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -171,11 +172,11 @@ const SetupCatsView = ({ s, h }) => {
                                             <button
                                                 onClick={() => setBasicTasksMeta(prev => ({...prev, [task]: {...(prev[task]||{}), permanent: !isPerm}}))}
                                                 className={`px-2 py-1 text-xs border rounded flex items-center gap-1 ${isPerm ? 'bg-gea-50 text-gea-700 border-gea-200 hover:bg-gea-100' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
-                                                <IconPin size={10}/>{isPerm ? 'Permanent' : 'Temporär'}
+                                                <IconPin size={10}/>{isPerm ? t('cats.permanent') : t('cats.temporary')}
                                             </button>
                                             <button onClick={() => setBasicInactive(task)}
                                                 className="px-2 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                                Inaktiv setzen
+                                                {t('cats.setInactive')}
                                             </button>
                                             {!isPerm && (
                                                 <button onClick={() => { setBasicTasks(prev => prev.filter(t => t !== task)); setBasicTasksMeta(prev => { const n = {...prev}; delete n[task]; return n; }); }}
@@ -187,7 +188,7 @@ const SetupCatsView = ({ s, h }) => {
                                     </li>
                                 );
                             })}
-                            {otherTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Other Tasks.</li>}
+                            {otherTasks.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">{t('cats.noOtherTasks')}</li>}
                         </ul>
                     </div>
                 ))}
@@ -202,17 +203,17 @@ const SetupCatsView = ({ s, h }) => {
                                     <div className="flex items-center gap-2">
                                         <span className={`w-3 h-3 rounded-full ${sc.dot || 'bg-slate-400'}`}></span>
                                         <span className="font-medium text-slate-800">{task}</span>
-                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>{t('cats.permanent')}</span>
                                     </div>
                                     <button onClick={() => setInactiveSupportTasks(prev => [...(prev||[]), task])}
                                         className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                        Inaktiv setzen
+                                        {t('cats.setInactive')}
                                     </button>
                                 </li>
                             );
                         })}
                         {activeSupportTasks.length === 0 &&
-                            <li className="p-6 text-sm text-slate-400 text-center">Alle Support-Tasks sind inaktiv.</li>}
+                            <li className="p-6 text-sm text-slate-400 text-center">{t('cats.allSupportInactive')}</li>}
                     </ul>
                 ))}
 
@@ -223,11 +224,11 @@ const SetupCatsView = ({ s, h }) => {
                             <input type="text" value={newTrainingTask}
                                 onChange={e => setNewTrainingTask(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') { const t = newTrainingTask.trim(); if (t && !TRAINING_TASKS.includes(t) && !(customTrainingTasks||[]).includes(t)) { setCustomTrainingTasks(prev => [...(prev||[]), t]); setNewTrainingTask(''); } } }}
-                                placeholder="Neues Training"
+                                placeholder={t('cats.newTraining')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={() => { const t = newTrainingTask.trim(); if (t && !TRAINING_TASKS.includes(t) && !(customTrainingTasks||[]).includes(t)) { setCustomTrainingTasks(prev => [...(prev||[]), t]); setNewTrainingTask(''); } }}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
@@ -236,11 +237,11 @@ const SetupCatsView = ({ s, h }) => {
                                     <div className="flex items-center gap-2">
                                         <span className="w-3 h-3 rounded-full bg-sky-500"></span>
                                         <span className="font-medium text-slate-800">{task}</span>
-                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>Permanent</span>
+                                        <span className="text-xs bg-gea-50 text-gea-700 border border-gea-200 px-1.5 py-0.5 rounded flex items-center gap-1"><IconPin size={10}/>{t('cats.permanent')}</span>
                                     </div>
                                     <button onClick={() => setInactiveTrainingTasks(prev => [...(prev||[]), task])}
                                         className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                        Inaktiv setzen
+                                        {t('cats.setInactive')}
                                     </button>
                                 </li>
                             ))}
@@ -253,7 +254,7 @@ const SetupCatsView = ({ s, h }) => {
                                     <div className="flex gap-2">
                                         <button onClick={() => setInactiveTrainingTasks(prev => [...(prev||[]), task])}
                                             className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                            Inaktiv setzen
+                                            {t('cats.setInactive')}
                                         </button>
                                         <button onClick={() => setCustomTrainingTasks(prev => (prev||[]).filter(t => t !== task))}
                                             className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
@@ -265,17 +266,17 @@ const SetupCatsView = ({ s, h }) => {
                 ))}
 
                 {/* ── Abwesenheiten ───────────────────────────────────── */}
-                {section('offtime', 'Abwesenheiten (Offtime)', (
+                {section('offtime', t('cats.section.absences'), (
                     <div>
                         <div className="p-4 flex gap-2 border-b border-slate-200">
                             <input type="text" value={newOfftimeTask}
                                 onChange={e => setNewOfftimeTask(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && newOfftimeTask.trim() && !offtimeTasks.includes(newOfftimeTask.trim())) { setOfftimeTasks([...offtimeTasks, newOfftimeTask.trim()]); setNewOfftimeTask(''); } }}
-                                placeholder="Neue Abwesenheitsart"
+                                placeholder={t('cats.newAbsenceType')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={() => { if (newOfftimeTask.trim() && !offtimeTasks.includes(newOfftimeTask.trim())) { setOfftimeTasks([...offtimeTasks, newOfftimeTask.trim()]); setNewOfftimeTask(''); } }}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-200">
@@ -285,7 +286,7 @@ const SetupCatsView = ({ s, h }) => {
                                     <div className="flex gap-2">
                                         <button onClick={() => setInactiveOfftimeTasks(prev => [...(prev||[]), { name: task }])}
                                             className="px-2.5 py-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 rounded hover:bg-slate-100">
-                                            Inaktiv setzen
+                                            {t('cats.setInactive')}
                                         </button>
                                         <button onClick={() => setOfftimeTasks(offtimeTasks.filter(t2 => t2 !== task))}
                                             className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
@@ -293,23 +294,23 @@ const SetupCatsView = ({ s, h }) => {
                                 </li>
                             ))}
                             {activeOfftimeTasks.length === 0 &&
-                                <li className="p-6 text-sm text-slate-400 text-center">Keine aktiven Abwesenheitsarten.</li>}
+                                <li className="p-6 text-sm text-slate-400 text-center">{t('cats.noAbsenceTypes')}</li>}
                         </ul>
                     </div>
                 ))}
 
                 {/* ── Mitarbeiter-Kategorien ──────────────────────────── */}
-                {section('empCats', 'Mitarbeiter-Kategorien', (
+                {section('empCats', t('cats.section.empCats'), (
                     <div>
                         <div className="p-4 flex gap-2 border-b border-slate-200">
                             <input type="text" value={newEmpCat}
                                 onChange={e => setNewEmpCat(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && newEmpCat.trim() && !empCategories.includes(newEmpCat.trim())) { setEmpCategories([...empCategories, newEmpCat.trim()]); setNewEmpCat(''); } }}
-                                placeholder="Neue Mitarbeiter-Kategorie"
+                                placeholder={t('cats.newEmpCat')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={() => { if (newEmpCat.trim() && !empCategories.includes(newEmpCat.trim())) { setEmpCategories([...empCategories, newEmpCat.trim()]); setNewEmpCat(''); } }}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-100">
@@ -325,17 +326,17 @@ const SetupCatsView = ({ s, h }) => {
                 ))}
 
                 {/* ── Projekt-Kategorien ──────────────────────────────── */}
-                {section('projCats', 'Projekt-Kategorien', (
+                {section('projCats', t('cats.section.projCats'), (
                     <div>
                         <div className="p-4 flex gap-2 border-b border-slate-200">
                             <input type="text" value={newProjCat}
                                 onChange={e => setNewProjCat(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && newProjCat.trim() && !projCategories.includes(newProjCat.trim())) { setProjCategories([...projCategories, newProjCat.trim()]); setNewProjCat(''); } }}
-                                placeholder="Neue Projekt-Kategorie"
+                                placeholder={t('cats.newProjCat')}
                                 className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
                             <button onClick={() => { if (newProjCat.trim() && !projCategories.includes(newProjCat.trim())) { setProjCategories([...projCategories, newProjCat.trim()]); setNewProjCat(''); } }}
                                 className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
-                                Hinzufügen
+                                {t('btn.add')}
                             </button>
                         </div>
                         <ul className="divide-y divide-slate-100">
@@ -346,7 +347,7 @@ const SetupCatsView = ({ s, h }) => {
                                         className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
                                 </li>
                             ))}
-                            {projCategories.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Keine Projekt-Kategorien angelegt.</li>}
+                            {projCategories.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">{t('cats.noProjCategories')}</li>}
                         </ul>
                     </div>
                 ))}
@@ -356,7 +357,7 @@ const SetupCatsView = ({ s, h }) => {
                     <button onClick={() => setInactiveOpen(o => !o)}
                         className="w-full p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center hover:bg-slate-100 transition-colors">
                         <div className="flex items-center gap-3">
-                            <h2 className="text-lg text-slate-900 font-medium">Inaktiv</h2>
+                            <h2 className="text-lg text-slate-900 font-medium">{t('cats.inactive')}</h2>
                             {totalInactive > 0 && (
                                 <span className="bg-slate-200 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full">{totalInactive}</span>
                             )}
@@ -366,17 +367,17 @@ const SetupCatsView = ({ s, h }) => {
                     {inactiveOpen && (
                         <div>
                             {totalInactive === 0 ? (
-                                <p className="p-6 text-sm text-slate-400 text-center">Keine inaktiven Kategorien.</p>
+                                <p className="p-6 text-sm text-slate-400 text-center">{t('cats.noInactive')}</p>
                             ) : (
                                 <ul className="divide-y divide-slate-100">
                                     {inactiveBasicTasks.map(item => (
                                         <li key={item.name} className="px-4 py-3 flex items-center gap-3 text-sm">
                                             <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded shrink-0">Basic</span>
                                             <span className="flex-1 text-slate-700">{item.name}</span>
-                                            <span className="text-xs text-slate-400 shrink-0">seit {new Date(item.createdAt).toLocaleDateString('de-DE')}</span>
+                                            <span className="text-xs text-slate-400 shrink-0">{t('cats.since')} {new Date(item.createdAt).toLocaleDateString('de-DE')}</span>
                                             <button onClick={() => reactivateBasic(item)}
                                                 className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0">
-                                                Reaktivieren
+                                                {t('cats.reactivate')}
                                             </button>
                                             <button onClick={() => setInactiveBasicTasks(prev => prev.filter(t => t.name !== item.name))}
                                                 className="text-rose-400 hover:text-rose-600 shrink-0"><IconX size={14}/></button>
@@ -388,7 +389,7 @@ const SetupCatsView = ({ s, h }) => {
                                             <span className="flex-1 text-slate-700">{item.name}</span>
                                             <button onClick={() => setInactiveOfftimeTasks(prev => prev.filter(t => t.name !== item.name))}
                                                 className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0">
-                                                Reaktivieren
+                                                {t('cats.reactivate')}
                                             </button>
                                         </li>
                                     ))}
@@ -398,7 +399,7 @@ const SetupCatsView = ({ s, h }) => {
                                             <span className="flex-1 text-slate-700">{task}</span>
                                             <button onClick={() => setInactiveSupportTasks(prev => prev.filter(t => t !== task))}
                                                 className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0">
-                                                Reaktivieren
+                                                {t('cats.reactivate')}
                                             </button>
                                         </li>
                                     ))}
@@ -408,7 +409,7 @@ const SetupCatsView = ({ s, h }) => {
                                             <span className="flex-1 text-slate-700">{task}</span>
                                             <button onClick={() => setInactiveTrainingTasks(prev => prev.filter(t => t !== task))}
                                                 className="px-2.5 py-1 text-xs bg-gea-50 text-gea-700 border border-gea-200 rounded hover:bg-gea-100 shrink-0">
-                                                Reaktivieren
+                                                {t('cats.reactivate')}
                                             </button>
                                         </li>
                                     ))}

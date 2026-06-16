@@ -16,7 +16,8 @@ const OverviewView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -89,34 +90,34 @@ const OverviewView = ({ s, h }) => {
                 <div className="max-w-6xl mx-auto space-y-6">
                     <div className="grid grid-cols-4 gap-4">
                         <div className="bg-white border border-slate-300 border-l-4 border-l-gea-500 rounded-xl p-5 shadow-md">
-                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Aktive Projekte</p>
+                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.activeProjects')}</p>
                             <p className="text-3xl font-bold text-gea-700 mt-1">{activeProjects}</p>
                             <p className="text-xs text-slate-500 mt-1">von {projects.length} gesamt (ohne abgeschl.)</p>
                         </div>
                         <div className="bg-white border border-slate-300 border-l-4 border-l-gea-400 rounded-xl p-5 shadow-md">
-                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Mitarbeiter</p>
+                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.employees')}</p>
                             <p className="text-3xl font-bold text-slate-800 mt-1">{activeEmps.length}</p>
                             <p className="text-xs text-slate-500 mt-1">aktiv</p>
                         </div>
                         <div className={`bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${avgUtil >= 100 ? 'border-rose-300 border-l-rose-500' : avgUtil >= 80 ? 'border-amber-300 border-l-amber-500' : 'border-slate-300 border-l-emerald-500'}`}
                             onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }}
                             title="Zur Ressourcenansicht – aktuelle KW">
-                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Ø Auslastung diese KW</p>
+                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.avgUtil')}</p>
                             <p className={`text-3xl font-bold mt-1 ${avgUtil >= 100 ? 'text-rose-600' : avgUtil >= 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{avgUtil}%</p>
                             <p className="text-xs text-slate-500 mt-1">{currentWeekStr}</p>
                         </div>
                         <div className={`bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${overbookedCount > 0 ? 'border-rose-300 border-l-rose-500' : 'border-slate-300 border-l-slate-400'}`}
                             onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }}
                             title="Zur Ressourcenansicht – aktuelle KW">
-                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Überlastet diese KW</p>
+                            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.overloaded')}</p>
                             <p className={`text-3xl font-bold mt-1 ${overbookedCount > 0 ? 'text-rose-600' : 'text-slate-800'}`}>{overbookedCount}</p>
-                            <p className="text-xs text-slate-500 mt-1">{overbookedCount > 0 ? 'Mitarbeiter >100%' : 'Alles im Rahmen'}</p>
+                            <p className="text-xs text-slate-500 mt-1">{overbookedCount > 0 ? t('overview.overloadedCount') : t('overview.allOk')}</p>
                         </div>
                     </div>
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl text-gea-800 font-semibold">Projektübersicht</h2>
+                        <h2 className="text-xl text-gea-800 font-semibold">{t('overview.title')}</h2>
                         <div className="flex items-center gap-4 text-sm text-slate-500">
-                            <span>{rows.length} offene / geplante Projekte</span>
+                            <span>{t('overview.projects', { n: rows.length })}</span>
                             <span className="text-slate-300">|</span>
                             <span>{fmt(totalHoursAll)} h gesamt</span>
                             <span className="text-slate-300">|</span>
@@ -127,21 +128,21 @@ const OverviewView = ({ s, h }) => {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-gea-50 border-b-2 border-gea-200">
                                 <tr>
-                                    <th className="p-4 text-gea-800 font-semibold">Projekt</th>
-                                    <th className="p-4 text-gea-800 font-semibold">Land</th>
-                                    <th className="p-4 text-gea-800 font-semibold">Status</th>
+                                    <th className="p-4 text-gea-800 font-semibold">{t('overview.colProject')}</th>
+                                    <th className="p-4 text-gea-800 font-semibold">{t('overview.colCountry')}</th>
+                                    <th className="p-4 text-gea-800 font-semibold">{t('overview.colStatus')}</th>
                                     <th className="p-4 text-gea-800 font-semibold">IBN</th>
-                                    <th className="p-4 text-gea-800 font-semibold text-right">Stunden</th>
-                                    <th className="p-4 text-gea-800 font-semibold text-right">Lohnkosten</th>
-                                    <th className="p-4 text-gea-800 font-semibold text-right">Zusatzkosten</th>
-                                    <th className="p-4 text-gea-800 font-semibold text-right">Gesamt</th>
+                                    <th className="p-4 text-gea-800 font-semibold text-right">{t('overview.colHours')}</th>
+                                    <th className="p-4 text-gea-800 font-semibold text-right">{t('overview.colLabor')}</th>
+                                    <th className="p-4 text-gea-800 font-semibold text-right">{t('overview.colExtra')}</th>
+                                    <th className="p-4 text-gea-800 font-semibold text-right">{t('overview.colTotal')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
                                 {groupedRows.map(([cat, catRows]) => (
                                     <React.Fragment key={cat}>
                                         <tr className="bg-slate-50 border-y border-slate-200">
-                                            <td colSpan={8} className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{cat || '(Ohne Kategorie)'}</td>
+                                            <td colSpan={8} className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{cat || t('overview.noCategory')}</td>
                                         </tr>
                                         {catRows.map(({ p, totalHours, totalLaborCost, zusatzkosten, gesamtkosten }) => {
                                             const cc = resolveCountryCode(p.country);
@@ -178,13 +179,13 @@ const OverviewView = ({ s, h }) => {
                                     </React.Fragment>
                                 ))}
                                 {rows.length === 0 && (
-                                    <tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">Keine Projekte vorhanden.</td></tr>
+                                    <tr><td colSpan={8} className="text-center text-slate-400 text-sm py-12">{t('overview.noProjects')}</td></tr>
                                 )}
                             </tbody>
                             {rows.length > 0 && (
                                 <tfoot className="border-t-2 border-gea-200 bg-gea-50">
                                     <tr>
-                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={4}>Gesamt</td>
+                                        <td className="p-4 text-gea-800 font-semibold text-sm" colSpan={4}>{t('overview.total')}</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(totalHoursAll)} h</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.totalLaborCost,0))} €</td>
                                         <td className="p-4 text-right font-semibold text-slate-900 tabular-nums">{fmt(rows.reduce((a,r)=>a+r.zusatzkosten,0))} €</td>

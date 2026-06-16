@@ -67,7 +67,8 @@ const SetupProjView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -181,7 +182,7 @@ const SetupProjView = ({
       className: "p-4"
     }, /*#__PURE__*/React.createElement("span", {
       className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
-      title: "Land"
+      title: t('proj.colCountry')
     }, cc)), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-500 font-mono text-xs"
     }, p.projectNumber || '–'), /*#__PURE__*/React.createElement("td", {
@@ -197,10 +198,10 @@ const SetupProjView = ({
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => handleEditProject(p),
       className: "text-gea-600 text-xs font-medium hover:text-gea-700"
-    }, "Bearbeiten"), /*#__PURE__*/React.createElement("button", {
+    }, t('btn.edit')), /*#__PURE__*/React.createElement("button", {
       onClick: () => requestDeleteProject(p.id),
       className: "text-rose-600 text-xs font-medium hover:text-rose-700"
-    }, "L\xF6schen"))));
+    }, t('btn.delete')))));
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-auto p-8 bg-slate-50"
@@ -210,7 +211,7 @@ const SetupProjView = ({
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-gea-800 font-semibold"
-  }, "Projekte"), /*#__PURE__*/React.createElement("button", {
+  }, t('proj.title')), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setEditingProjectId(null);
       setProjForm({
@@ -228,12 +229,12 @@ const SetupProjView = ({
     className: "flex items-center gap-2 bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors shadow-sm"
   }, /*#__PURE__*/React.createElement(IconPlus, {
     size: 16
-  }), " Neues Projekt")), activeCats.length === 0 && activeProjects.length === 0 && /*#__PURE__*/React.createElement(EmptyState, {
+  }), " ", t('proj.new'))), activeCats.length === 0 && activeProjects.length === 0 && /*#__PURE__*/React.createElement(EmptyState, {
     icon: /*#__PURE__*/React.createElement(IconBriefcase, {
       size: 32
     }),
-    title: "Noch keine aktiven Projekte",
-    description: "Legen Sie Ihr erstes Projekt an \u2014 der Plus-Button oben rechts startet das Formular."
+    title: t('proj.noActive'),
+    description: t('proj.noActiveDesc')
   }), activeCats.map(cat => {
     const catProjs = activeProjects.filter(p => p.category === cat);
     const isCollapsed = collapsedProjCategories[cat];
@@ -259,15 +260,15 @@ const SetupProjView = ({
       className: "bg-slate-50 border-b border-slate-200"
     }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
-    }, "Name"), /*#__PURE__*/React.createElement("th", {
+    }, t('proj.colName')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
-    }, "Land"), /*#__PURE__*/React.createElement("th", {
+    }, t('proj.colCountry')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
-    }, "Nr."), /*#__PURE__*/React.createElement("th", {
+    }, t('proj.colNr')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
-    }, "Status"), /*#__PURE__*/React.createElement("th", {
+    }, t('proj.colStatus')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
-    }, "Zeitraum"), /*#__PURE__*/React.createElement("th", {
+    }, t('proj.colPeriod')), /*#__PURE__*/React.createElement("th", {
       className: "p-4"
     }))), /*#__PURE__*/React.createElement("tbody", {
       className: "divide-y divide-slate-200"
@@ -288,7 +289,7 @@ const SetupProjView = ({
     size: 18
   })), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-700 font-semibold"
-  }, "Vergangene Projekte"), /*#__PURE__*/React.createElement("span", {
+  }, t('proj.pastProjects')), /*#__PURE__*/React.createElement("span", {
     className: "ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded-full text-xs text-slate-600 font-semibold"
   }, pastProjects.length)), pastProjectsExpanded && /*#__PURE__*/React.createElement("table", {
     className: "w-full text-left text-sm"
@@ -296,15 +297,15 @@ const SetupProjView = ({
     className: "bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
-  }, "Name"), /*#__PURE__*/React.createElement("th", {
+  }, t('proj.colName')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
-  }, "Land"), /*#__PURE__*/React.createElement("th", {
+  }, t('proj.colCountry')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
-  }, "Nr."), /*#__PURE__*/React.createElement("th", {
+  }, t('proj.colNr')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
-  }, "Status"), /*#__PURE__*/React.createElement("th", {
+  }, t('proj.colStatus')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
-  }, "Zeitraum"), /*#__PURE__*/React.createElement("th", {
+  }, t('proj.colPeriod')), /*#__PURE__*/React.createElement("th", {
     className: "p-4"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200 opacity-75"

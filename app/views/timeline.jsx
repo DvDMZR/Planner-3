@@ -16,7 +16,8 @@ const TimelineView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -123,11 +124,11 @@ const TimelineView = ({ s, h }) => {
                 <div className="flex-1 flex flex-col h-full bg-white">
                     <EmptyState
                         icon={<IconBriefcase size={32}/>}
-                        title="Noch keine Projekte angelegt"
+                        title={t('timeline.noProjects')}
                         description={isLoggedIn
-                            ? "Legen Sie Ihr erstes Projekt an, um Termine zu planen."
+                            ? t('timeline.noProjectsDesc')
                             : "Bitte melden Sie sich an, um Projekte anzulegen."}
-                        action={isLoggedIn ? { label: 'Projekt anlegen', onClick: () => setActiveTab('setup_proj') } : null}
+                        action={isLoggedIn ? { label: t('timeline.addProject'), onClick: () => setActiveTab('setup_proj') } : null}
                     />
                 </div>
             );
@@ -137,8 +138,8 @@ const TimelineView = ({ s, h }) => {
             <div className="flex-1 flex h-full overflow-hidden bg-white">
                 <div className="w-fit min-w-[10rem] max-w-[20rem] border-r border-slate-200 flex flex-col bg-slate-50 shrink-0">
                     <div className="p-4 border-b border-slate-200 bg-white">
-                        <h3 className="text-slate-900 text-lg font-medium">Mitarbeiter (Drag)</h3>
-                        <p className="text-xs text-slate-500 mt-1">Zieh Mitarbeiter in den Kalender</p>
+                        <h3 className="text-slate-900 text-lg font-medium">{t('timeline.employees')}</h3>
+                        <p className="text-xs text-slate-500 mt-1">{t('timeline.dragInstruction')}</p>
                     </div>
                     <div className="flex-1 overflow-auto">
                         {activeEmpCategories.map(category => {
@@ -186,12 +187,12 @@ const TimelineView = ({ s, h }) => {
 
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-slate-200 bg-white flex justify-between items-center gap-3">
-                        <h3 className="text-slate-900 text-lg font-medium shrink-0">Projekt-Planung</h3>
+                        <h3 className="text-slate-900 text-lg font-medium shrink-0">{t('timeline.title')}</h3>
                         <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center">
-                                <Tooltip text="4 Wochen zurück"><button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"><IconChevronLeft size={16}/></button></Tooltip>
+                                <Tooltip text={t('btn.weeks4back')}><button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200"><IconChevronLeft size={16}/></button></Tooltip>
                                 <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
-                                <Tooltip text="4 Wochen vor"><button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"><IconChevronRight size={16}/></button></Tooltip>
+                                <Tooltip text={t('btn.weeks4fwd')}><button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200"><IconChevronRight size={16}/></button></Tooltip>
                             </div>
                             <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
                                 className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
@@ -201,7 +202,7 @@ const TimelineView = ({ s, h }) => {
                                 if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => scrollToCurrentWeek(timelineScrollRef, 256), 120); }
                                 else { scrollToCurrentWeek(timelineScrollRef, 256); }
                             }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
-                                Heute
+                                {t('btn.today')}
                             </button>
                         </div>
                         <div className="flex items-center gap-2 ml-auto shrink-0">
@@ -209,7 +210,7 @@ const TimelineView = ({ s, h }) => {
                                 <div className="flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0">
                                     <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700">
                                         <IconTrash size={14} className="shrink-0"/>
-                                        Löschmodus aktiv
+                                        {t('btn.deleteModeActive')}
                                     </span>
                                     {undoStack.length > 0 && (
                                         <button
@@ -228,7 +229,7 @@ const TimelineView = ({ s, h }) => {
                             {s.currentUser && <div className="relative" ref={menuRef}>
                                 <button
                                     onClick={() => setMenuOpen(o => !o)}
-                                    aria-label="Weitere Optionen"
+                                    aria-label={t('btn.moreOptions')}
                                     className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}>
                                     <IconMoreHorizontal size={16}/>
                                 </button>
@@ -238,7 +239,7 @@ const TimelineView = ({ s, h }) => {
                                             onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
                                             className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
                                             <IconX size={14} className={`shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`}/>
-                                            <span>Löschmodus</span>
+                                            <span>{t('btn.deleteMode')}</span>
                                             {isDeleteMode && <span className="ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"/>}
                                         </button>
                                     </div>
@@ -262,7 +263,7 @@ const TimelineView = ({ s, h }) => {
                         <table className="w-full border-collapse text-sm text-left">
                             <thead className="bg-white z-20">
                                 <tr>
-                                    <th className="p-3 border-b border-slate-200 sticky-col-divider w-[72rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium ">Projekt</th>
+                                    <th className="p-3 border-b border-slate-200 sticky-col-divider w-[72rem] bg-slate-50 sticky top-0 left-0 z-30 text-slate-600 font-medium ">{t('timeline.colProject')}</th>
                                     {timelineWeeks.map(w => (
                                         <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
                                             className={`p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
@@ -277,7 +278,7 @@ const TimelineView = ({ s, h }) => {
                                 {projects.length === 0 ? (
                                     <tr>
                                         <td colSpan={timelineWeeks.length + 1} className="p-8 text-center text-slate-400">
-                                            Noch keine Projekte angelegt.
+                                            {t('timeline.noProjects')}
                                         </td>
                                     </tr>
                                 ) : activeProjCategories.map(category => {
@@ -334,11 +335,11 @@ const TimelineView = ({ s, h }) => {
                                                                         return (
                                                                             <div key={a.id}
                                                                                 draggable={!isDeleteMode}
-                                                                                title={isTentative ? (a.comment ? a.comment + ' · Unter Vorbehalt (0 h)' : 'Unter Vorbehalt (0 h)') : (a.comment || undefined)}
+                                                                                title={isTentative ? (a.comment ? a.comment + ' · ' + t('resource.tentativeHours') : t('resource.tentativeHours')) : (a.comment || undefined)}
                                                                                 onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                                 onClick={(e) => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: a.empId, week: w.id, existing: a }); setIsAssignModalOpen(true); } }}
                                                                                 className={`text-[10px] px-1.5 py-1 rounded flex justify-between items-center shadow-sm transition-all group/chip ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'cursor-grab active:cursor-grabbing hover:opacity-90'} ${pColor.chip} ${isTentative ? 'bg-hatched' : ''}`}>
-                                                                                <span className="truncate font-medium">{emp?.name || 'Unbekannt'}</span>
+                                                                                <span className="truncate font-medium">{emp?.name || t('resource.unknown')}</span>
                                                                                 {a.comment && <IconMessageSquare size={10} className="flex-shrink-0 ml-1 opacity-70"/>}
                                                                                 <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                                                                                     <span className="opacity-90 font-medium">{chipHours}h</span>
@@ -346,7 +347,7 @@ const TimelineView = ({ s, h }) => {
                                                                                         <button
                                                                                             onClick={(e) => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
                                                                                             className="opacity-0 group-hover/chip:opacity-100 text-slate-500 hover:text-gea-700 transition-opacity p-0.5 rounded"
-                                                                                            title="Kopieren">
+                                                                                            title={t('btn.copy')}>
                                                                                             <IconCopy size={10}/>
                                                                                         </button>
                                                                                     )}

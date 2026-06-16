@@ -18,7 +18,8 @@ const TrainingView = ({ s, h }) => {
         assignmentsByProjectWeek, costItemsByProject, projectStatusById,
         activeEmployees, activeEmpsByCategory, activeEmpCategories,
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
-        currentWeekColRef, resourceScrollRef, timelineScrollRef } = s;
+        currentWeekColRef, resourceScrollRef, timelineScrollRef,
+        t } = s;
     const { setActiveTab, setEmployees, setProjects, setAssignments,
         setCostItems, setEmpCategories, setProjCategories, setBasicTasks,
         setBasicTasksMeta, setInactiveBasicTasks, setBasicTasksSubTab,
@@ -145,12 +146,12 @@ const TrainingView = ({ s, h }) => {
     return (
         <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
             <div className="p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3">
-                <h2 className="text-gea-800 text-xl font-semibold shrink-0">Trainings-Planung</h2>
+                <h2 className="text-gea-800 text-xl font-semibold shrink-0">{t('training.title')}</h2>
                 <div className="flex items-center gap-2">
                     <div className="flex items-center">
-                        <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title="4 Wochen zurück"><IconChevronLeft size={16}/></button>
+                        <button onClick={() => scrollWeeks(-4)} className="p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200" title={t('btn.weeks4back')}><IconChevronLeft size={16}/></button>
                         <span className="px-2 text-xs text-slate-500 bg-gea-50 h-[30px] flex items-center min-w-[130px] justify-center border-y border-gea-100 font-mono tabular-nums">{scrollInfo.label || '—'}</span>
-                        <button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200" title="4 Wochen vor"><IconChevronRight size={16}/></button>
+                        <button onClick={() => scrollWeeks(4)} className="p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200" title={t('btn.weeks4fwd')}><IconChevronRight size={16}/></button>
                     </div>
                     <select value={timelineYear} onChange={e => setTimelineYear(Number(e.target.value))}
                         className="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-gea-400">
@@ -160,14 +161,14 @@ const TrainingView = ({ s, h }) => {
                         if (timelineYear !== currentYear) { setTimelineYear(currentYear); setTimeout(() => scrollToCurrentWeek(scrollRef, 288), 120); }
                         else { scrollToCurrentWeek(scrollRef, 288); }
                     }} className="px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors">
-                        Heute
+                        {t('btn.today')}
                     </button>
                 </div>
                 {isDeleteMode && (
                     <div className="flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0">
                         <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700">
                             <IconTrash size={14} className="shrink-0"/>
-                            Löschmodus aktiv
+                            {t('btn.deleteModeActive')}
                         </span>
                         {undoStack.length > 0 && (
                             <button
@@ -187,7 +188,7 @@ const TrainingView = ({ s, h }) => {
                     <div className="relative" ref={menuRef}>
                         <button
                             onClick={() => setMenuOpen(o => !o)}
-                            aria-label="Weitere Optionen"
+                            aria-label={t('btn.moreOptions')}
                             className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`}>
                             <IconMoreHorizontal size={16}/>
                         </button>
@@ -197,14 +198,14 @@ const TrainingView = ({ s, h }) => {
                                     onClick={() => { setCompact(c => !c); setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                                     <IconList size={14} className="shrink-0 text-slate-400"/>
-                                    <span>Kompaktansicht</span>
+                                    <span>{t('btn.compactView')}</span>
                                     {compact && <span className="ml-auto text-gea-600 font-bold text-xs">✓</span>}
                                 </button>
                                 {s.currentUser && <button
                                     onClick={() => { setIsDeleteMode(m => !m); setMenuOpen(false); }}
                                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${isDeleteMode ? 'text-rose-600' : 'text-slate-700'}`}>
                                     <IconX size={14} className={`shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`}/>
-                                    <span>Löschmodus</span>
+                                    <span>{t('btn.deleteMode')}</span>
                                     {isDeleteMode && <span className="ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"/>}
                                 </button>}
                                 <div className="my-1 border-t border-slate-100"/>
@@ -212,7 +213,7 @@ const TrainingView = ({ s, h }) => {
                                     onClick={() => { setIsHelpModalOpen(true); setMenuOpen(false); }}
                                     className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                                     <span className="text-sm font-bold w-3.5 text-center text-slate-400 shrink-0">?</span>
-                                    <span>Hilfe &amp; Legende</span>
+                                    <span>{t('btn.helpLegend')}</span>
                                 </button>
                             </div>
                         )}
@@ -243,7 +244,7 @@ const TrainingView = ({ s, h }) => {
                             ))}
                         </tr>
                         <tr>
-                            <th className="p-4 border-b-2 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium sticky-col-divider">Mitarbeiter</th>
+                            <th className="p-4 border-b-2 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium sticky-col-divider">{t('resource.colEmployee')}</th>
                             {trainingWeeks.map(w => {
                                 const isCurrent = w.id === currentWeek;
                                 const isPast = w.id < currentWeek;
@@ -312,7 +313,7 @@ const TrainingView = ({ s, h }) => {
                                                                 return (
                                                                     <div key={a.id}
                                                                         draggable={!isDeleteMode}
-                                                                        title={pct === 0 ? (a.comment ? a.comment + ' · Unter Vorbehalt (0 %)' : 'Unter Vorbehalt (0 %)') : (a.comment || undefined)}
+                                                                        title={pct === 0 ? (a.comment ? `${a.comment} · ${t('resource.tentative')}` : t('resource.tentative')) : (a.comment || undefined)}
                                                                         onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('assignmentId', a.id); }}
                                                                         onClick={e => { e.stopPropagation(); if (isDeleteMode) { deleteWithUndo(a.id); } else { setAssignContext({ empId: emp.id, week: w.id, existing: a, allowedType: 'training' }); setIsAssignModalOpen(true); } }}
                                                                         className={`text-[11px] rounded-md border flex justify-between items-stretch shadow-sm transition-all group/chip overflow-hidden ${isDeleteMode ? 'cursor-pointer hover:bg-rose-50 hover:border-rose-300 hover:text-rose-700 hover:line-through' : 'hover:shadow hover:-translate-y-0.5 cursor-grab active:cursor-grabbing'} bg-sky-50 border-sky-200 text-sky-800 ${pct === 0 ? 'bg-hatched' : ''}`}>
@@ -328,7 +329,7 @@ const TrainingView = ({ s, h }) => {
                                                                                 <button
                                                                                     onClick={e => { e.stopPropagation(); setCopyContext({ assignment: a }); setIsCopyModalOpen(true); }}
                                                                                     className="opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded"
-                                                                                    title="Kopieren">
+                                                                                    title={t('btn.copy')}>
                                                                                     <IconCopy size={10}/>
                                                                                 </button>
                                                                             )}
@@ -341,7 +342,7 @@ const TrainingView = ({ s, h }) => {
                                                                 <div
                                                                     onClick={e => { e.stopPropagation(); setAssignContext({ empId: emp.id, week: w.id, defaultType: 'training', allowedType: 'training' }); setIsAssignModalOpen(true); }}
                                                                     className="opacity-0 group-hover/cell:opacity-100 text-[10px] px-2 py-1.5 rounded-md border border-dashed border-gea-300 text-gea-600 flex justify-center items-center shadow-sm hover:bg-gea-50 transition-all mt-0.5">
-                                                                    <IconPlus size={12} className="mr-1"/> weitere
+                                                                    <IconPlus size={12} className="mr-1"/> {t('resource.more')}
                                                                 </div>
                                                             )}
                                                         </div>

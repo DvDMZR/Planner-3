@@ -68,7 +68,8 @@ const SetupEmpView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -209,12 +210,12 @@ const SetupEmpView = ({
     className: "p-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-slate-900 font-medium"
-  }, "Mitarbeiterverwaltung"), /*#__PURE__*/React.createElement("button", {
+  }, t('emp.title')), /*#__PURE__*/React.createElement("button", {
     onClick: openCreateForm,
     className: "bg-gea-600 text-white px-4 py-2 rounded text-sm hover:bg-gea-700 font-medium transition-colors flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(IconPlus, {
     size: 16
-  }), " Mitarbeiter hinzuf\xFCgen"))), /*#__PURE__*/React.createElement("div", {
+  }), " ", t('emp.add')))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, empCategories.map(category => {
     const isCollapsed = collapsedEmpSetup[category];
@@ -241,13 +242,13 @@ const SetupEmpView = ({
       className: "bg-slate-50/50"
     }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium"
-    }, "Name"), /*#__PURE__*/React.createElement("th", {
+    }, t('emp.colName')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium"
-    }, "Email"), /*#__PURE__*/React.createElement("th", {
+    }, t('emp.colEmail')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium text-center"
-    }, "Std./Woche"), /*#__PURE__*/React.createElement("th", {
+    }, t('emp.colHours')), /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-500 font-medium"
-    }, "Status"), /*#__PURE__*/React.createElement("th", {
+    }, t('emp.colStatus')), /*#__PURE__*/React.createElement("th", {
       className: "p-4"
     }))), /*#__PURE__*/React.createElement("tbody", {
       className: "divide-y divide-slate-300"
@@ -273,20 +274,20 @@ const SetupEmpView = ({
       className: "p-4"
     }, /*#__PURE__*/React.createElement("span", {
       className: `px-2 py-1 rounded text-xs font-medium ${e.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`
-    }, e.active ? 'Aktiv' : 'Inaktiv')), /*#__PURE__*/React.createElement("td", {
+    }, e.active ? t('emp.active') : t('emp.inactive'))), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-right flex justify-end gap-3"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => handleEditEmp(e),
       className: "text-gea-600 text-xs font-medium hover:text-gea-700"
-    }, "Bearbeiten"), /*#__PURE__*/React.createElement("button", {
+    }, t('btn.edit')), /*#__PURE__*/React.createElement("button", {
       onClick: () => setEmployees(employees.map(x => x.id === e.id ? {
         ...x,
         active: !x.active
       } : x)),
       className: "text-gea-600 text-xs font-medium hover:text-gea-700"
-    }, "Toggle Status")))))) : /*#__PURE__*/React.createElement("div", {
+    }, t('emp.toggleStatus'))))))) : /*#__PURE__*/React.createElement("div", {
       className: "p-4 text-sm text-slate-400 text-center bg-white"
-    }, "Keine Mitarbeiter in dieser Kategorie.")));
+    }, t('emp.noInCategory'))));
   }))), isEmpFormOpen && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
@@ -295,7 +296,7 @@ const SetupEmpView = ({
       maxHeight: '90vh'
     }
   }, /*#__PURE__*/React.createElement(ModalHeader, {
-    title: editingEmpId ? 'Mitarbeiter bearbeiten' : 'Mitarbeiter hinzufügen',
+    title: editingEmpId ? t('emp.editTitle') : t('emp.addTitle'),
     onClose: closeForm
   }), /*#__PURE__*/React.createElement("div", {
     className: "p-6 space-y-4 overflow-y-auto",
@@ -319,7 +320,7 @@ const SetupEmpView = ({
     className: "w-full p-2 border border-slate-300 rounded text-sm"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Kategorie"), /*#__PURE__*/React.createElement("select", {
+  }, t('emp.fieldCategory')), /*#__PURE__*/React.createElement("select", {
     value: empForm.category,
     onChange: e => setEmpForm({
       ...empForm,
@@ -331,7 +332,7 @@ const SetupEmpView = ({
     value: c
   }, c)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Std./Woche"), /*#__PURE__*/React.createElement("input", {
+  }, t('emp.colHours')), /*#__PURE__*/React.createElement("input", {
     type: "number",
     min: "1",
     max: "80",
@@ -356,42 +357,42 @@ const SetupEmpView = ({
     className: `w-full p-2 border rounded text-sm ${emailValid ? 'border-slate-300' : 'border-rose-400 bg-rose-50'}`
   }), !emailValid && /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-rose-600 mt-1"
-  }, "Bitte eine g\xFCltige Email-Adresse eingeben."), /*#__PURE__*/React.createElement("p", {
+  }, t('emp.emailInvalid')), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 mt-1"
-  }, "Wird f\xFCr automatische Benachrichtigungen bei neuen Planungen verwendet.")), /*#__PURE__*/React.createElement("div", {
+  }, t('emp.emailHint'))), /*#__PURE__*/React.createElement("div", {
     className: "col-span-2"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Rolle / Funktion"), /*#__PURE__*/React.createElement("input", {
+  }, t('emp.fieldRole')), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: empForm.role,
     onChange: e => setEmpForm({
       ...empForm,
       role: e.target.value
     }),
-    placeholder: "z.B. Projektleiter",
+    placeholder: t('emp.placeholderRole'),
     className: "w-full p-2 border border-slate-300 rounded text-sm"
   })), /*#__PURE__*/React.createElement("div", {
     className: "col-span-2"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1 font-medium uppercase tracking-wide"
-  }, "Notizen"), /*#__PURE__*/React.createElement("textarea", {
+  }, t('emp.fieldNotes')), /*#__PURE__*/React.createElement("textarea", {
     rows: "2",
     value: empForm.notes,
     onChange: e => setEmpForm({
       ...empForm,
       notes: e.target.value
     }),
-    placeholder: "Interne Notizen zum Mitarbeiter\u2026",
+    placeholder: t('emp.placeholderNotes'),
     className: "w-full p-2 border border-slate-300 rounded text-sm resize-none"
   })))), /*#__PURE__*/React.createElement("div", {
     className: "p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: closeForm,
     className: "px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium"
-  }, "Abbrechen"), /*#__PURE__*/React.createElement("button", {
+  }, t('btn.cancel')), /*#__PURE__*/React.createElement("button", {
     onClick: handleSaveEmp,
     disabled: !canSave,
     className: "px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
-  }, editingEmpId ? 'Speichern' : 'Hinzufügen')))));
+  }, editingEmpId ? t('btn.save') : t('btn.add'))))));
 };

@@ -5,7 +5,7 @@
 const DataView = ({ s, h }) => {
     const { useState } = React;
     const { currentUser, appUsers, autoBackup, lastBackupAt, emailTemplate,
-            invoiceRecipient } = s;
+            invoiceRecipient, t } = s;
     const { setAppUsers, loginUser, setAutoBackup, runBackup, setEmailTemplate,
             setInvoiceRecipient, exportData, importData, showToast, requestConfirm } = h;
 
@@ -26,7 +26,7 @@ const DataView = ({ s, h }) => {
     if (!currentUser) {
         return (
             <main className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-                Kein Zugriff – bitte anmelden.
+                {t('data.noAccess')}
             </main>
         );
     }
@@ -45,31 +45,31 @@ const DataView = ({ s, h }) => {
     };
 
     const handleAdd = async () => {
-        if (!newName.trim()) { setNewError('Name darf nicht leer sein.'); return; }
-        if (newPin.length < 4) { setNewError('PIN muss mindestens 4 Zeichen haben.'); return; }
-        if (newPin !== newPinConfirm) { setNewError('PINs stimmen nicht überein.'); return; }
+        if (!newName.trim()) { setNewError(t('data.nameRequired')); return; }
+        if (newPin.length < 4) { setNewError(t('data.pinTooShort')); return; }
+        if (newPin !== newPinConfirm) { setNewError(t('data.pinMismatch')); return; }
         if (appUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase())) {
-            setNewError('Ein Nutzer mit diesem Namen existiert bereits.'); return;
+            setNewError(t('data.userExists')); return;
         }
         const pinSalt = generatePinSalt();
         const pinHash = await hashPin(newPin, pinSalt);
         const user = { id: makeId('usr'), name: newName.trim(), pinHash, pinSalt, pinAlgo: PIN_PBKDF2_ALGO, role: 'active' };
         setAppUsers(prev => [...prev, user]);
         setNewName(''); setNewPin(''); setNewPinConfirm(''); setNewError('');
-        showSuccess(`Nutzer „${user.name}" wurde angelegt.`);
+        showSuccess(t('data.userCreated', { name: user.name }));
     };
 
     const handleDelete = (id) => {
         const user = appUsers.find(u => u.id === id);
         if (!user) return;
         requestConfirm({
-            title: 'Nutzer löschen?',
-            message: `Nutzer „${user.name}" wird endgültig entfernt. Mitarbeiter-Datensätze und Zuweisungen sind davon nicht betroffen.`,
-            confirmLabel: 'Löschen',
+            title: t('data.deleteUserTitle'),
+            message: t('data.deleteUserMsg', { name: user.name }),
+            confirmLabel: t('btn.delete'),
             danger: true,
             onConfirm: () => {
                 setAppUsers(prev => prev.filter(u => u.id !== id));
-                showSuccess(`Nutzer „${user.name}" wurde gelöscht.`);
+                showSuccess(t('data.userDeleted', { name: user.name }));
             }
         });
     };
@@ -80,10 +80,10 @@ const DataView = ({ s, h }) => {
     };
 
     const handleSaveEdit = async (user) => {
-        if (isAdmin && !editName.trim()) { setEditError('Name darf nicht leer sein.'); return; }
-        if (editPin && editPin.length < 4) { setEditError('PIN muss mindestens 4 Zeichen haben.'); return; }
-        if (editPin && editPin !== editPinConfirm) { setEditError('PINs stimmen nicht überein.'); return; }
-        if (!editPin) { setEditError('Bitte einen neuen PIN eingeben.'); return; }
+        if (isAdmin && !editName.trim()) { setEditError(t('data.nameRequired')); return; }
+        if (editPin && editPin.length < 4) { setEditError(t('data.pinTooShort')); return; }
+        if (editPin && editPin !== editPinConfirm) { setEditError(t('data.pinMismatch')); return; }
+        if (!editPin) { setEditError(t('data.enterNewPin')); return; }
         const pinSalt = generatePinSalt();
         const pinHash = await hashPin(editPin, pinSalt);
         const { pin: _legacyPin, ...rest } = user;
@@ -95,7 +95,7 @@ const DataView = ({ s, h }) => {
         setAppUsers(prev => prev.map(u => u.id === user.id ? updated : u));
         if (currentUser.id === user.id) loginUser(updated);
         setEditingId(null);
-        showSuccess(`PIN für „${updated.name}" wurde gespeichert.`);
+        showSuccess(t('data.pinSaved', { name: updated.name }));
     };
 
     const canEdit = (user) => isAdmin ? user.role !== 'admin' : user.id === currentUser.id;
@@ -116,8 +116,8 @@ const DataView = ({ s, h }) => {
                 <div className="flex items-center gap-4">
                     <IconSettings size={36} className="text-slate-300 shrink-0"/>
                     <div>
-                        <h2 className="text-xl text-slate-900 font-medium">System &amp; Export</h2>
-                        <p className="text-sm text-slate-500">Benutzer, Sicherung, Vorlagen, Import/Export und System-Wartung.</p>
+                        <h2 className="text-xl text-slate-900 font-medium">{t('data.title')}</h2>
+                        <p className="text-sm text-slate-500">{t('data.subtitle')}</p>
                     </div>
                 </div>
 
@@ -128,9 +128,9 @@ const DataView = ({ s, h }) => {
                 )}
 
                 {/* ── Benutzer ─────────────────────────────────────────── */}
-                {section('Benutzer', (
+                {section(t('data.sectionUsers'), (
                     appUsers.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-slate-400 text-sm">Keine Nutzer vorhanden.</div>
+                        <div className="px-4 py-6 text-center text-slate-400 text-sm">{t('data.noUsers')}</div>
                     ) : (
                         <div className="divide-y divide-slate-100">
                             {appUsers.map(user => (
@@ -139,7 +139,7 @@ const DataView = ({ s, h }) => {
                                         <div className="p-4 space-y-3 bg-gea-50">
                                             {isAdmin && (
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldName')}</label>
                                                     <input type="text" value={editName}
                                                         onChange={e => { setEditName(e.target.value); setEditError(''); }}
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"/>
@@ -147,25 +147,25 @@ const DataView = ({ s, h }) => {
                                             )}
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Neuer PIN</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldNewPin')}</label>
                                                     <input type="password" value={editPin} autoFocus
                                                         onChange={e => { setEditPin(e.target.value); setEditError(''); }}
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                                        placeholder="Min. 4 Zeichen"/>
+                                                        placeholder={t('data.pinMinLength')}/>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">PIN bestätigen</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldConfirmPin')}</label>
                                                     <input type="password" value={editPinConfirm}
                                                         onChange={e => { setEditPinConfirm(e.target.value); setEditError(''); }}
                                                         onKeyDown={e => e.key === 'Enter' && handleSaveEdit(user)}
                                                         className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                                        placeholder="Wiederholen"/>
+                                                        placeholder={t('data.pinRepeat')}/>
                                                 </div>
                                             </div>
                                             {editError && <p className="text-rose-600 text-xs">{editError}</p>}
                                             <div className="flex gap-2">
-                                                <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Abbrechen</button>
-                                                <button onClick={() => handleSaveEdit(user)} className="px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors">Speichern</button>
+                                                <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">{t('btn.cancel')}</button>
+                                                <button onClick={() => handleSaveEdit(user)} className="px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors">{t('btn.save')}</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -177,21 +177,21 @@ const DataView = ({ s, h }) => {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-medium text-slate-900 truncate">{user.name}</span>
                                                     {user.role === 'admin' && (
-                                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-gea-100 text-gea-700 font-medium shrink-0">Admin</span>
+                                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-gea-100 text-gea-700 font-medium shrink-0">{t('data.roleAdmin')}</span>
                                                     )}
                                                     {currentUser.id === user.id && (
-                                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0">Ich</span>
+                                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0">{t('data.roleMe')}</span>
                                                     )}
                                                 </div>
                                             </div>
                                             {canEdit(user) && (
                                                 <div className="flex items-center gap-1 shrink-0">
                                                     <button onClick={() => startEdit(user)} className="px-2.5 py-1.5 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-                                                        {isAdmin ? 'Bearbeiten' : 'PIN ändern'}
+                                                        {isAdmin ? t('btn.edit') : t('btn.changePin')}
                                                     </button>
                                                     {isAdmin && (
                                                         <button onClick={() => handleDelete(user.id)} className="px-2.5 py-1.5 text-xs rounded text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors">
-                                                            Löschen
+                                                            {t('btn.delete')}
                                                         </button>
                                                     )}
                                                 </div>
@@ -205,51 +205,51 @@ const DataView = ({ s, h }) => {
                 ))}
 
                 {/* Neuen Nutzer anlegen – Admins */}
-                {isAdmin && section('Neuen Nutzer anlegen', (
+                {isAdmin && section(t('data.sectionNewUser'), (
                     <div className="p-4 space-y-3">
                         <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Name</label>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldName')}</label>
                                 <input type="text" value={newName}
                                     onChange={e => { setNewName(e.target.value); setNewError(''); }}
                                     className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
                                     placeholder="z.B. Max Mustermann"/>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">PIN</label>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldNewPin')}</label>
                                 <input type="password" value={newPin}
                                     onChange={e => { setNewPin(e.target.value); setNewError(''); }}
                                     className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="Min. 4 Zeichen"/>
+                                    placeholder={t('data.pinMinLength')}/>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">PIN bestätigen</label>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.fieldConfirmPin')}</label>
                                 <input type="password" value={newPinConfirm}
                                     onChange={e => { setNewPinConfirm(e.target.value); setNewError(''); }}
                                     onKeyDown={e => e.key === 'Enter' && handleAdd()}
                                     className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
-                                    placeholder="Wiederholen"/>
+                                    placeholder={t('data.pinRepeat')}/>
                             </div>
                         </div>
                         {newError && <p className="text-rose-600 text-xs">{newError}</p>}
                         <button onClick={handleAdd}
                             className="px-4 py-2 bg-gea-600 text-white rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors">
-                            Nutzer anlegen
+                            {t('btn.add')}
                         </button>
-                        <p className="text-xs text-slate-400">Neue Nutzer erhalten die Rolle „Aktiver Nutzer".</p>
+                        <p className="text-xs text-slate-400">{t('data.newUserRole')}</p>
                     </div>
                 ))}
 
                 {/* Auto-Backup – Admins */}
-                {isAdmin && autoBackup && section('Auto-Backup', (
+                {isAdmin && autoBackup && section(t('data.sectionBackup'), (
                     <div className="p-4 space-y-3">
                         <label className="flex items-center gap-2 text-sm text-slate-700">
                             <input type="checkbox" checked={!!autoBackup.enabled}
                                 onChange={e => setAutoBackup(prev => ({ ...prev, enabled: e.target.checked }))}/>
-                            Periodisches Backup nach SharePoint aktivieren
+                            {t('data.enableBackup')}
                         </label>
                         <div className="flex items-center gap-2 text-sm text-slate-700">
-                            <span>Intervall:</span>
+                            <span>{t('data.fieldInterval')}</span>
                             <input type="number" min="5" step="5"
                                 value={autoBackup.intervalMinutes || 60}
                                 onChange={e => {
@@ -258,99 +258,96 @@ const DataView = ({ s, h }) => {
                                     setAutoBackup(prev => ({ ...prev, intervalMinutes: v }));
                                 }}
                                 className="w-20 p-1 border border-slate-300 rounded text-sm"/>
-                            <span>Minuten</span>
+                            <span>{t('data.fieldMinutes')}</span>
                         </div>
                         <div className="text-xs text-slate-500">
-                            Letztes Backup: {lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'}
+                            {t('data.fieldLastBackup')} {lastBackupAt ? new Date(lastBackupAt).toLocaleString('de-DE') : '—'}
                         </div>
                         <button
                             onClick={async () => {
                                 const res = await runBackup('manual');
                                 if (res.ok) {
-                                    showSuccess(`Backup wurde erstellt (${res.target === 'fs' ? 'lokal' : 'SharePoint'}).`);
+                                    showSuccess(t('data.backupCreated', { target: res.target === 'fs' ? t('data.backupLocal') : 'SharePoint' }));
                                 } else {
-                                    showSuccess(`Backup fehlgeschlagen: ${res.error || 'unbekannter Fehler'}`, 'warning');
+                                    showSuccess(t('data.backupFailed', { error: res.error || t('data.backupErrUnknown') }), 'warning');
                                 }
                             }}
                             className="px-3 py-1.5 text-xs rounded bg-gea-600 text-white hover:bg-gea-700 transition-colors">
-                            Jetzt sichern
+                            {t('data.backupNow')}
                         </button>
-                        <p className="text-xs text-slate-400">
-                            Backups landen in <code className="text-slate-600">planner-data/backups/</code>
-                            {' '}als zeitgestempelte JSON-Dateien.
-                        </p>
+                        <p className="text-xs text-slate-400">{t('data.backupLocation')}</p>
                     </div>
                 ))}
 
                 {/* Email-Vorlage – Admins */}
-                {isAdmin && emailTemplate && section('Email-Vorlage (Planungs-Benachrichtigung)', (
+                {isAdmin && emailTemplate && section(t('data.sectionEmail'), (
                     <div className="p-4 space-y-3">
                         <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Betreff</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.emailSubject')}</label>
                             <input type="text" value={emailTemplate.subject || ''}
                                 onChange={e => setEmailTemplate(prev => ({ ...prev, subject: e.target.value }))}
                                 className="w-full p-2 border border-slate-300 rounded text-sm font-mono"/>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Text</label>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">{t('data.emailBody')}</label>
                             <textarea value={emailTemplate.body || ''}
                                 onChange={e => setEmailTemplate(prev => ({ ...prev, body: e.target.value }))}
                                 rows={12}
                                 className="w-full p-2 border border-slate-300 rounded text-xs font-mono leading-relaxed"/>
                         </div>
                         <div className="text-xs text-slate-500 leading-relaxed">
-                            Verfügbare Platzhalter:
+                            {t('data.emailPlaceholders')}
                             {' '}<code>{'{firstName}'}</code>,
                             {' '}<code>{'{refLabel}'}</code>,
                             {' '}<code>{'{typeLabel}'}</code>,
                             {' '}<code>{'{weekRange}'}</code>,
                             {' '}<code>{'{comment}'}</code>,
                             {' '}<code>{'{attachmentNote}'}</code>.<br/>
-                            Optionale Blöcke (werden nur eingefügt, wenn der Wert vorhanden ist):
+                            {t('data.emailOptBlocks')}
                             {' '}<code>{'{{#comment}}…{{/comment}}'}</code>,
                             {' '}<code>{'{{#attachmentNote}}…{{/attachmentNote}}'}</code>.
                         </div>
                         <button
-                            onClick={() => { setEmailTemplate(DEFAULT_EMAIL_TEMPLATE); showSuccess('Vorlage zurückgesetzt.'); }}
+                            onClick={() => { setEmailTemplate(DEFAULT_EMAIL_TEMPLATE); showSuccess(t('data.templateReset')); }}
                             className="px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-                            Auf Standard zurücksetzen
+                            {t('data.resetToDefault')}
                         </button>
                     </div>
                 ))}
 
                 {/* Rechnungsempfänger */}
-                {section('Rechnungsempfänger', (
+                {section(t('data.sectionInvoice'), (
                     <div className="p-4">
                         <input type="email" value={invoiceRecipient}
                             onChange={e => setInvoiceRecipient(e.target.value)}
                             placeholder="rechnung@kunde.de"
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gea-400"/>
-                        <p className="text-xs text-slate-400 mt-1">Standard-Empfänger für den „Per E-Mail"-Button im Rechnungsdialog.</p>
+                        <p className="text-xs text-slate-400 mt-1">{t('data.invoiceHint')}</p>
                     </div>
                 ))}
 
                 {/* Export / Import */}
-                {section('Export & Import', (
+                {section(t('data.sectionExport'), (
                     <div className="p-4 space-y-3">
                         <div className="grid grid-cols-2 gap-4">
                             <button onClick={exportData} className="bg-gea-600 hover:bg-gea-700 text-white py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
-                                <IconDownload size={18}/> Backup exportieren (JSON)
+                                <IconDownload size={18}/> {t('data.exportBtn')}
                             </button>
                             <div className="relative">
                                 <input type="file" accept=".json" onChange={importData} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                 <button className="w-full bg-white border-2 border-dashed border-slate-300 hover:border-gea-400 text-slate-600 py-3 rounded-lg flex justify-center items-center gap-2 font-medium transition-colors">
-                                    <IconUpload size={18}/> Daten importieren (JSON)
+                                    <IconUpload size={18}/> {t('data.importBtn')}
                                 </button>
                             </div>
                         </div>
-                        <DepsSection/>
+                        <DepsSection t={t}/>
                     </div>
                 ))}
 
                 {/* Reset */}
                 {isAdmin && (
                     <button onClick={async () => {
-                        if(confirm('Alle Daten unwiderruflich löschen?')) {
+                        if(confirm(t('data.deleteAll'))) {
                             localStorage.removeItem('teamMasterProData');
                             if (SP_CONTEXT) {
                                 try {
@@ -369,7 +366,7 @@ const DataView = ({ s, h }) => {
                             window.location.reload();
                         }
                     }} className="w-full text-rose-500 hover:bg-rose-50 py-3 rounded-lg text-sm font-medium transition-colors">
-                        System zurücksetzen
+                        {t('data.resetSystem')}
                     </button>
                 )}
             </div>

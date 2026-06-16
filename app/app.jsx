@@ -45,6 +45,10 @@ function App() {
     // change).
     const [compactView, setCompactView] = useState(true);
 
+    // UI language ('de' | 'en'). Per-user preference, stored alongside compactView.
+    const [language, setLanguage] = useState('de');
+    const t = useMemo(() => makeT(language), [language]);
+
     // Auslastung click → Ressourcen jump: target week to scroll to once
     // ResourceView mounts. Cleared after the scroll runs.
     const [scrollTarget, setScrollTarget] = useState(null);
@@ -252,11 +256,14 @@ function App() {
                 return next;
             });
         }
-        // Restore the user's UI preferences (currently only compactView).
+        // Restore the user's UI preferences (compactView + language).
         // Missing preferences mean "use last value" – nothing to apply.
         const prefs = user?.preferences;
         if (prefs && typeof prefs.compactView === 'boolean') {
             setCompactView(prefs.compactView);
+        }
+        if (prefs && (prefs.language === 'de' || prefs.language === 'en')) {
+            setLanguage(prefs.language);
         }
         // Best-effort recovery backup. Skipped when the initial load hasn't
         // populated state yet – we'd otherwise persist a near-empty snapshot.
@@ -792,6 +799,9 @@ function App() {
         if (prefs && typeof prefs.compactView === 'boolean') {
             setCompactView(prefs.compactView);
         }
+        if (prefs && (prefs.language === 'de' || prefs.language === 'en')) {
+            setLanguage(prefs.language);
+        }
     }, [appUsers, currentUser]);
 
     // Persist UI preferences back to the logged-in user. Only writes when
@@ -803,12 +813,12 @@ function App() {
         setAppUsers(prev => {
             const cur = prev.find(p => p.id === u.id);
             if (!cur) return prev;
-            if (cur.preferences?.compactView === compactView) return prev;
+            if (cur.preferences?.compactView === compactView && cur.preferences?.language === language) return prev;
             return prev.map(p => p.id === u.id
-                ? { ...p, preferences: { ...(p.preferences || {}), compactView } }
+                ? { ...p, preferences: { ...(p.preferences || {}), compactView, language } }
                 : p);
         });
-    }, [compactView, currentUser]);
+    }, [compactView, language, currentUser]);
 
     // ── AUTO-BACKUP (periodic snapshot of all data to planner-data/backups/) ──
     // Runs only when SharePoint is connected. One check per minute; writes a
@@ -2043,43 +2053,43 @@ function App() {
     const HelpModal = () => (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" style={{maxHeight:'85vh',overflowY:'auto'}}>
-                <ModalHeader title="Hilfe & Legende" onClose={() => setIsHelpModalOpen(false)}/>
+                <ModalHeader title={t('help.title')} onClose={() => setIsHelpModalOpen(false)}/>
                 <div className="p-6 space-y-6 text-sm">
                     <div>
-                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Zell-Farben im Ressourcenplaner</h3>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">{t('help.cellColors')}</h3>
                         <div className="space-y-2.5">
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-emerald-200 border border-emerald-300"></div><span className="text-slate-700">Frei / Verfügbar — keine Einsätze geplant</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-amber-200 border border-amber-300"></div><span className="text-slate-700">Auslastung ≥ 80% — Achtung, fast voll</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-rose-200 border border-rose-300"></div><span className="text-slate-700">Überlastet — Einsatz &gt; 100%</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 diagonal-stripes border border-slate-300"></div><span className="text-slate-700">Abwesenheit (Urlaub, Krank, Gleitzeit …)</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-blue-200 border border-blue-300 bg-hatched"></div><span className="text-slate-700">Einsatz zu 0% — <span className="font-semibold">Unter Vorbehalt</span> (geplant, aber nicht bestätigt)</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-gea-200 border border-gea-400"></div><span className="text-slate-700">Aktuelle Woche — farbig hervorgehoben</span></div>
-                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-slate-300 border border-slate-400"></div><span className="text-slate-700">Vergangene Woche — gedimmt angezeigt</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-emerald-200 border border-emerald-300"></div><span className="text-slate-700">{t('help.free')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-amber-200 border border-amber-300"></div><span className="text-slate-700">{t('help.almostFull')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-rose-200 border border-rose-300"></div><span className="text-slate-700">{t('help.overloaded')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 diagonal-stripes border border-slate-300"></div><span className="text-slate-700">{t('help.absence')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-blue-200 border border-blue-300 bg-hatched"></div><span className="text-slate-700">{t('help.tentative')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-gea-200 border border-gea-400"></div><span className="text-slate-700">{t('help.currentWeek')}</span></div>
+                            <div className="flex items-center gap-3"><div className="w-10 h-6 rounded flex-shrink-0 bg-slate-300 border border-slate-400"></div><span className="text-slate-700">{t('help.pastWeek')}</span></div>
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Bedienung</h3>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">{t('help.controls')}</h3>
                         <div className="space-y-2 text-slate-700">
-                            <p><span className="font-semibold">Klick auf Zelle</span> → Einsatz anlegen oder bearbeiten (Prozent oder Stunden, Projekt oder Abwesenheit)</p>
-                            <p><span className="font-semibold">Drag &amp; Drop</span> (Projekt-Zeitstrahl) → Mitarbeiter aus der linken Liste in eine Projektwoche ziehen</p>
-                            <p><span className="font-semibold">Löschmodus</span> → roten Button oben rechts aktivieren, dann Einsätze anklicken um sie zu löschen</p>
-                            <p><span className="font-semibold">Kompaktansicht</span> → Button oben rechts reduziert die Zellhöhe; Kopiersymbol bleibt per Hover erreichbar</p>
-                            <p><span className="font-semibold">Heute-Button</span> (Zeitstrahl) → springt zur aktuellen Kalenderwoche</p>
-                            <p><span className="font-semibold">Klick in der Heatmap</span> → Klick auf einen Mitarbeiter oder Monat öffnet die Ressourcenplanung mit dem Mitarbeiter vorausgewählt</p>
+                            <p>{t('help.clickCell')}</p>
+                            <p>{t('help.dragDrop')}</p>
+                            <p>{t('help.deleteMode')}</p>
+                            <p>{t('help.compactView')}</p>
+                            <p>{t('help.todayBtn')}</p>
+                            <p>{t('help.heatmapClick')}</p>
                         </div>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">Projekt-Status</h3>
+                        <h3 className="font-semibold text-gea-800 mb-3 uppercase tracking-wide text-xs border-b border-gea-100 pb-2">{t('help.projStatus')}</h3>
                         <div className="space-y-2">
                             {PROJECT_STATUSES.map(s => (
                                 <div key={s.value} className="flex items-start gap-3">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 mt-0.5 ${s.color}`}>{s.label}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 mt-0.5 ${s.color}`}>{t('status.' + s.value)}</span>
                                     <span className="text-slate-600 text-xs">{
-                                        s.value === 'planned' ? 'Start-Woche liegt noch in der Zukunft' :
-                                        s.value === 'active' ? 'Projekt hat begonnen und läuft aktuell' :
-                                        s.value === 'missing_costs' ? 'IBN-Woche ist vorbei, aber noch keine Kostenpunkte erfasst' :
-                                        s.value === 'completed' ? 'Projekt wurde als abgeschlossen markiert' :
-                                        'Kosten wurden bereits übermittelt'
+                                        s.value === 'planned'         ? t('help.statusPlanned') :
+                                        s.value === 'active'          ? t('help.statusActive') :
+                                        s.value === 'missing_costs'   ? t('help.statusMissingCosts') :
+                                        s.value === 'completed'       ? t('help.statusCompleted') :
+                                                                         t('help.statusCostsSubmitted')
                                     }</span>
                                 </div>
                             ))}
@@ -2100,30 +2110,30 @@ function App() {
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-                    <ModalHeader title="Rechnung konfigurieren" subtitle={`Projekt: ${proj.name}`} onClose={() => setIsInvoiceModalOpen(false)} />
+                    <ModalHeader title={t('invoice.title')} subtitle={`${t('overview.colProject')}: ${proj.name}`} onClose={() => setIsInvoiceModalOpen(false)} />
 
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                         {proj.billable !== false && (
                             <div>
-                                <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">Dienstleistungen (Arbeitszeit)</h4>
+                                <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">{t('invoice.laborSection')}</h4>
                                 <div className="space-y-2">
                                     {laborLines.filter(l => l.hours > 0).map(({ empId, emp, hours, rate, cost }) => (
                                         <label key={empId} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
                                             <input type="checkbox" checked={!!invoiceSelection.emps[empId]}
                                                 onChange={e => setInvoiceSelection({...invoiceSelection, emps: {...invoiceSelection.emps, [empId]: e.target.checked}})}
                                                 className="w-5 h-5 text-gea-600 rounded"/>
-                                            <div className="flex-1 text-sm text-slate-800 font-medium">{emp?.name || 'Unbekannt'}</div>
+                                            <div className="flex-1 text-sm text-slate-800 font-medium">{emp?.name || t('invoice.unknown')}</div>
                                             <div className="text-sm text-slate-500">{hours} Std. × {rate} €/h</div>
                                             <div className="text-sm text-slate-900 w-24 text-right font-medium">{cost.toFixed(2)} €</div>
                                         </label>
                                     ))}
-                                    {laborLines.length === 0 && <p className="text-sm text-slate-400">Keine Arbeitszeiten verplant.</p>}
+                                    {laborLines.length === 0 && <p className="text-sm text-slate-400">{t('invoice.noLabor')}</p>}
                                 </div>
                             </div>
                         )}
 
                         <div>
-                            <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">Kostenpunkte</h4>
+                            <h4 className="text-slate-700 text-base mb-3 border-b border-slate-300 pb-2 font-medium">{t('invoice.costSection')}</h4>
                             <div className="space-y-2">
                                 {costLines.map(({ ci, emp }) => {
                                     return (
@@ -2133,8 +2143,8 @@ function App() {
                                                     onChange={e => setInvoiceSelection({...invoiceSelection, costs: {...invoiceSelection.costs, [ci.id]: e.target.checked}})}
                                                     className="w-5 h-5 text-gea-600 rounded"/>
                                                 <div className="flex-1 text-sm">
-                                                    <span className="text-slate-800 font-medium">{ci.description || 'Kostenpunkt'}</span>
-                                                    <span className="text-slate-400 ml-2">({emp?.name || 'Unbekannt'})</span>
+                                                    <span className="text-slate-800 font-medium">{ci.description || t('invoice.costDefault')}</span>
+                                                    <span className="text-slate-400 ml-2">({emp?.name || t('invoice.unknown')})</span>
                                                 </div>
                                                 {ci.week && <div className="text-xs text-slate-400">{ci.week}</div>}
                                                 <div className="text-sm text-slate-900 w-24 text-right font-medium">{(ci.amount || 0).toFixed(2)} €</div>
@@ -2157,25 +2167,25 @@ function App() {
                                         </label>
                                     );
                                 })}
-                                {costLines.length === 0 && <p className="text-sm text-slate-400">Keine Kostenpunkte erfasst.</p>}
+                                {costLines.length === 0 && <p className="text-sm text-slate-400">{t('invoice.noCosts')}</p>}
                             </div>
                         </div>
                     </div>
 
                     <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                         <div>
-                            <p className="text-sm text-slate-500">Gesamtsumme (Netto)</p>
+                            <p className="text-sm text-slate-500">{t('invoice.totalNet')}</p>
                             <p className="text-xl text-gea-600 font-medium">{currentTotal.toFixed(2)} €</p>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">Abbrechen</button>
+                            <button onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 font-medium">{t('btn.cancel')}</button>
                             {invoiceRecipient && (
                                 <button onClick={handleInvoiceSendEmail} className="px-4 py-2 text-sm text-white bg-gea-500 rounded-md hover:bg-gea-600 flex items-center gap-2 font-medium">
-                                    ✉ Per E-Mail
+                                    ✉ {t('invoice.sendEmail')}
                                 </button>
                             )}
                             <button onClick={handleInvoiceExport} className="px-4 py-2 text-sm text-white bg-gea-600 rounded-md hover:bg-gea-700 flex items-center gap-2 font-medium">
-                                <IconFileText size={16}/> CSV Export
+                                <IconFileText size={16}/> {t('invoice.csvExport')}
                             </button>
                         </div>
                     </div>
@@ -2242,6 +2252,7 @@ function App() {
         projectsByCategory, projCategoriesFromProjects, timelineWeeks,
         currentWeekColRef, resourceScrollRef, timelineScrollRef,
         compactView, scrollTarget,
+        language, t,
         currentUser, appUsers, auditLog, isLoginModalOpen,
         autoBackup, lastBackupAt, emailTemplate,
     };
@@ -2261,6 +2272,7 @@ function App() {
         setNewProjCat, setNewBasicTask, setNewOfftimeTask, setExpandedSetupCats,
         setSyncStatus, setFsStatus,
         setCompactView, setScrollTarget,
+        setLanguage,
         setAppUsers, setAuditLog, setIsLoginModalOpen,
         setAutoBackup, runBackup, setEmailTemplate,
         showToast, dismissToast, requestConfirm,
@@ -2325,6 +2337,7 @@ function App() {
                     onDelete={handleDeleteAssignment}
                     onDeleteSeries={handleDeleteAssignmentSeries}
                     requestConfirm={requestConfirm}
+                    t={t}
                 />
             )}
             {isCopyModalOpen && copyContext && currentUser && (
@@ -2341,6 +2354,7 @@ function App() {
                     assignments={assignments}
                     setAssignments={setAssignments}
                     onClose={() => { setIsCopyModalOpen(false); setCopyContext(null); }}
+                    t={t}
                 />
             )}
             {isInvoiceModalOpen && <InvoiceModal />}
@@ -2350,7 +2364,7 @@ function App() {
             {isChangelogOpen && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" style={{maxHeight:'85vh'}}>
-                        <ModalHeader title="Changelog – Einsatzplanung" onClose={() => setIsChangelogOpen(false)}/>
+                        <ModalHeader title="Changelog" onClose={() => setIsChangelogOpen(false)}/>
                         <div className="overflow-auto p-6" style={{maxHeight:'calc(85vh - 64px)'}}>
                             <pre className="text-xs text-slate-700 font-mono whitespace-pre-wrap leading-relaxed">{CHANGELOG_CONTENT}</pre>
                         </div>
@@ -2366,15 +2380,15 @@ function App() {
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gea-600"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
                         {fsStatus === 'needs-setup' ? (<>
-                            <h2 className="text-lg font-semibold text-slate-900 mb-2">Synchronisation einrichten</h2>
-                            <p className="text-sm text-slate-500 mb-6">Wähle einmalig den Ordner, in dem <strong>index.html</strong> liegt. OneDrive verteilt Änderungen danach automatisch an alle Nutzer.</p>
-                            <button onClick={handleSetupFolder} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">Ordner wählen</button>
+                            <h2 className="text-lg font-semibold text-slate-900 mb-2">{t('fs.setupTitle')}</h2>
+                            <p className="text-sm text-slate-500 mb-6">{t('fs.setupMsg')}</p>
+                            <button onClick={handleSetupFolder} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">{t('fs.selectFolder')}</button>
                         </>) : (<>
-                            <h2 className="text-lg font-semibold text-slate-900 mb-2">Synchronisation aktivieren</h2>
-                            <p className="text-sm text-slate-500 mb-6">Klicke auf <strong>Aktivieren</strong> – der Browser fragt kurz nach Dateizugriff. Danach läuft die Synchronisation automatisch.</p>
-                            <button onClick={handleActivateSync} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">Aktivieren</button>
+                            <h2 className="text-lg font-semibold text-slate-900 mb-2">{t('fs.activateTitle')}</h2>
+                            <p className="text-sm text-slate-500 mb-6">{t('fs.activateMsg')}</p>
+                            <button onClick={handleActivateSync} className="w-full bg-gea-600 hover:bg-gea-700 text-white font-medium py-3 px-4 rounded-xl transition-colors mb-2">{t('fs.activate')}</button>
                         </>)}
-                        <button onClick={() => setFsStatus('off')} className="w-full text-slate-400 hover:text-slate-600 text-sm py-2 transition-colors">Ohne Sync starten</button>
+                        <button onClick={() => setFsStatus('off')} className="w-full text-slate-400 hover:text-slate-600 text-sm py-2 transition-colors">{t('fs.noSync')}</button>
                     </div>
                 </div>
             )}
@@ -2386,6 +2400,7 @@ function App() {
                     appUsers={appUsers}
                     onLogin={loginUser}
                     onClose={() => setIsLoginModalOpen(false)}
+                    t={t}
                 />
             )}
 
@@ -2399,6 +2414,7 @@ function App() {
                     projects={projects}
                     onConfirm={confirmCascadeDelete}
                     onCancel={() => setCascadeConfirm(null)}
+                    t={t}
                 />
             )}
 
@@ -2408,6 +2424,7 @@ function App() {
                     title={confirmDialog.title}
                     message={confirmDialog.message}
                     confirmLabel={confirmDialog.confirmLabel}
+                    cancelLabel={t('btn.cancel')}
                     danger={confirmDialog.danger}
                     onConfirm={confirmDialog.onConfirm}
                     onCancel={() => setConfirmDialog(null)}
@@ -2440,10 +2457,9 @@ class ErrorBoundary extends React.Component {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
                 <div className="max-w-md w-full bg-white border border-red-300 rounded-xl shadow-lg p-6 space-y-4">
-                    <h2 className="text-lg font-semibold text-red-700">Anwendung ist abgestürzt</h2>
+                    <h2 className="text-lg font-semibold text-red-700">Application crashed / Anwendung ist abgestürzt</h2>
                     <p className="text-sm text-slate-700">
-                        Ein interner Fehler hat das Render gestoppt. Daten in SharePoint sind
-                        nicht betroffen. Lade die Seite neu, um es erneut zu versuchen.
+                        An internal error stopped the render. Data in SharePoint is not affected. Reload the page to try again.
                     </p>
                     <pre className="text-xs bg-slate-100 text-slate-600 p-2 rounded overflow-auto max-h-32 whitespace-pre-wrap break-words">
                         {String(this.state.error?.message || this.state.error)}
@@ -2452,7 +2468,7 @@ class ErrorBoundary extends React.Component {
                         onClick={() => window.location.reload()}
                         className="w-full bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700"
                     >
-                        Seite neu laden
+                        Reload page / Seite neu laden
                     </button>
                 </div>
             </div>

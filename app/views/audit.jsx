@@ -1,7 +1,7 @@
 // ─── VERLAUF / AUDIT-LOG ─────────────────────────────────────────────────────
 const AuditView = ({ s, h }) => {
     const { useState } = React;
-    const { currentUser, auditLog, employees, projects } = s;
+    const { currentUser, auditLog, employees, projects, t } = s;
     const { setAssignments, setEmployees, setProjects, setCostItems, setAuditLog } = h;
 
     const [filter, setFilter] = useState('all'); // 'all' | '7d' | '24h'
@@ -10,7 +10,7 @@ const AuditView = ({ s, h }) => {
     if (!currentUser) {
         return (
             <main className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-                Bitte anmelden, um das Änderungsprotokoll zu sehen.
+                {t('audit.loginRequired')}
             </main>
         );
     }
@@ -100,18 +100,18 @@ const AuditView = ({ s, h }) => {
     };
 
     const actionLabels = {
-        assignment_create:        'Zuweisung erstellt',
-        assignment_copy:          'Zuweisung(en) kopiert',
-        assignment_update:        'Zuweisung bearbeitet',
-        assignment_delete:        'Zuweisung gelöscht',
-        assignment_delete_series: 'Terminserie gelöscht',
-        assignment_drop:          'Zuweisung verschoben',
-        employee_create:          'Mitarbeiter angelegt',
-        employee_update:          'Mitarbeiter bearbeitet',
-        employee_delete:          'Mitarbeiter gelöscht',
-        project_create:           'Projekt angelegt',
-        project_update:           'Projekt bearbeitet',
-        project_delete:           'Projekt gelöscht',
+        assignment_create:        t('audit.action.assignCreate'),
+        assignment_copy:          t('audit.action.assignCopy'),
+        assignment_update:        t('audit.action.assignUpdate'),
+        assignment_delete:        t('audit.action.assignDelete'),
+        assignment_delete_series: t('audit.action.assignDeleteSeries'),
+        assignment_drop:          t('audit.action.assignDrop'),
+        employee_create:          t('audit.action.empCreate'),
+        employee_update:          t('audit.action.empUpdate'),
+        employee_delete:          t('audit.action.empDelete'),
+        project_create:           t('audit.action.projCreate'),
+        project_update:           t('audit.action.projUpdate'),
+        project_delete:           t('audit.action.projDelete'),
     };
 
     const actionColors = {
@@ -134,11 +134,11 @@ const AuditView = ({ s, h }) => {
             <div className="max-w-4xl mx-auto p-6 space-y-6">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-xl font-semibold text-slate-900 mb-1">Änderungsprotokoll</h2>
-                        <p className="text-sm text-slate-500">Zeigt wer wann was geändert hat. Die Rückgängig-Funktion stellt den Zustand <strong>vor</strong> der jeweiligen Änderung wieder her.</p>
+                        <h2 className="text-xl font-semibold text-slate-900 mb-1">{t('audit.title')}</h2>
+                        <p className="text-sm text-slate-500">{t('audit.subtitle')}</p>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                        {[['all', 'Alle'], ['7d', '7 Tage'], ['24h', '24 Std.']].map(([val, label]) => (
+                        {[['all', t('audit.filterAll')], ['7d', t('audit.filter7d')], ['24h', t('audit.filter24h')]].map(([val, label]) => (
                             <button
                                 key={val}
                                 onClick={() => setFilter(val)}
@@ -154,8 +154,8 @@ const AuditView = ({ s, h }) => {
                     <div className="bg-white border border-slate-200 rounded-xl">
                         <EmptyState
                             icon={<IconHistory size={32}/>}
-                            title="Keine Einträge"
-                            description="Für den gewählten Zeitraum gibt es keine Verlaufseinträge."
+                            title={t('audit.noEntries')}
+                            description={t('audit.noEntriesEmptyDesc')}
                         />
                     </div>
                 ) : (
@@ -163,10 +163,10 @@ const AuditView = ({ s, h }) => {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">Zeitpunkt</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Nutzer</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-40">Aktion</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Beschreibung</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44">{t('audit.colTime')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">{t('audit.colUser')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-40">{t('audit.colAction')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('audit.colDesc')}</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-32"></th>
                                 </tr>
                             </thead>
@@ -196,27 +196,27 @@ const AuditView = ({ s, h }) => {
                                             {entry.undoData && (
                                                 undoConfirm === entry.id ? (
                                                     <div className="flex items-center gap-1 justify-end">
-                                                        <span className="text-xs text-slate-500">Sicher?</span>
+                                                        <span className="text-xs text-slate-500">{t('audit.sure')}</span>
                                                         <button
                                                             onClick={() => applyUndo(entry)}
                                                             className="px-2 py-1 text-xs rounded bg-rose-600 text-white hover:bg-rose-700 transition-colors font-medium"
                                                         >
-                                                            Ja
+                                                            {t('audit.yes')}
                                                         </button>
                                                         <button
                                                             onClick={() => setUndoConfirm(null)}
                                                             className="px-2 py-1 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
                                                         >
-                                                            Nein
+                                                            {t('audit.no')}
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <Tooltip text="Zustand vor dieser Änderung wiederherstellen" side="left">
+                                                    <Tooltip text={t('audit.undoTip')} side="left">
                                                         <button
                                                             onClick={() => setUndoConfirm(entry.id)}
                                                             className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors ml-auto"
                                                         >
-                                                            <IconUndo size={13}/> Rückgängig
+                                                            <IconUndo size={13}/> {t('audit.undo')}
                                                         </button>
                                                     </Tooltip>
                                                 )
@@ -231,7 +231,9 @@ const AuditView = ({ s, h }) => {
 
                 {auditLog.length > 0 && (
                     <p className="text-xs text-slate-400 text-right">
-                        {auditLog.length} Eintrag{auditLog.length !== 1 ? 'e' : ''} gespeichert (max. 500)
+                        {auditLog.length !== 1
+                            ? t('audit.entriesPlural', { n: auditLog.length })
+                            : t('audit.entries', { n: auditLog.length })}
                     </p>
                 )}
             </div>

@@ -10,7 +10,8 @@ const AuditView = ({
     currentUser,
     auditLog,
     employees,
-    projects
+    projects,
+    t
   } = s;
   const {
     setAssignments,
@@ -25,7 +26,7 @@ const AuditView = ({
   if (!currentUser) {
     return /*#__PURE__*/React.createElement("main", {
       className: "flex-1 flex items-center justify-center text-slate-400 text-sm"
-    }, "Bitte anmelden, um das \xC4nderungsprotokoll zu sehen.");
+    }, t('audit.loginRequired'));
   }
   const now = Date.now();
   const filtered = auditLog.filter(entry => {
@@ -113,18 +114,18 @@ const AuditView = ({
     setUndoConfirm(null);
   };
   const actionLabels = {
-    assignment_create: 'Zuweisung erstellt',
-    assignment_copy: 'Zuweisung(en) kopiert',
-    assignment_update: 'Zuweisung bearbeitet',
-    assignment_delete: 'Zuweisung gelöscht',
-    assignment_delete_series: 'Terminserie gelöscht',
-    assignment_drop: 'Zuweisung verschoben',
-    employee_create: 'Mitarbeiter angelegt',
-    employee_update: 'Mitarbeiter bearbeitet',
-    employee_delete: 'Mitarbeiter gelöscht',
-    project_create: 'Projekt angelegt',
-    project_update: 'Projekt bearbeitet',
-    project_delete: 'Projekt gelöscht'
+    assignment_create: t('audit.action.assignCreate'),
+    assignment_copy: t('audit.action.assignCopy'),
+    assignment_update: t('audit.action.assignUpdate'),
+    assignment_delete: t('audit.action.assignDelete'),
+    assignment_delete_series: t('audit.action.assignDeleteSeries'),
+    assignment_drop: t('audit.action.assignDrop'),
+    employee_create: t('audit.action.empCreate'),
+    employee_update: t('audit.action.empUpdate'),
+    employee_delete: t('audit.action.empDelete'),
+    project_create: t('audit.action.projCreate'),
+    project_update: t('audit.action.projUpdate'),
+    project_delete: t('audit.action.projDelete')
   };
   const actionColors = {
     assignment_create: 'bg-emerald-100 text-emerald-800',
@@ -148,11 +149,11 @@ const AuditView = ({
     className: "flex items-start justify-between gap-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-semibold text-slate-900 mb-1"
-  }, "\xC4nderungsprotokoll"), /*#__PURE__*/React.createElement("p", {
+  }, t('audit.title')), /*#__PURE__*/React.createElement("p", {
     className: "text-sm text-slate-500"
-  }, "Zeigt wer wann was ge\xE4ndert hat. Die R\xFCckg\xE4ngig-Funktion stellt den Zustand ", /*#__PURE__*/React.createElement("strong", null, "vor"), " der jeweiligen \xC4nderung wieder her.")), /*#__PURE__*/React.createElement("div", {
+  }, t('audit.subtitle'))), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1 shrink-0"
-  }, [['all', 'Alle'], ['7d', '7 Tage'], ['24h', '24 Std.']].map(([val, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [['all', t('audit.filterAll')], ['7d', t('audit.filter7d')], ['24h', t('audit.filter24h')]].map(([val, label]) => /*#__PURE__*/React.createElement("button", {
     key: val,
     onClick: () => setFilter(val),
     className: `px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${filter === val ? 'bg-gea-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`
@@ -162,8 +163,8 @@ const AuditView = ({
     icon: /*#__PURE__*/React.createElement(IconHistory, {
       size: 32
     }),
-    title: "Keine Eintr\xE4ge",
-    description: "F\xFCr den gew\xE4hlten Zeitraum gibt es keine Verlaufseintr\xE4ge."
+    title: t('audit.noEntries'),
+    description: t('audit.noEntriesEmptyDesc')
   })) : /*#__PURE__*/React.createElement("div", {
     className: "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm"
   }, /*#__PURE__*/React.createElement("table", {
@@ -172,13 +173,13 @@ const AuditView = ({
     className: "bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-44"
-  }, "Zeitpunkt"), /*#__PURE__*/React.createElement("th", {
+  }, t('audit.colTime')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28"
-  }, "Nutzer"), /*#__PURE__*/React.createElement("th", {
+  }, t('audit.colUser')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-40"
-  }, "Aktion"), /*#__PURE__*/React.createElement("th", {
+  }, t('audit.colAction')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide"
-  }, "Beschreibung"), /*#__PURE__*/React.createElement("th", {
+  }, t('audit.colDesc')), /*#__PURE__*/React.createElement("th", {
     className: "px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide w-32"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100"
@@ -211,21 +212,25 @@ const AuditView = ({
     className: "flex items-center gap-1 justify-end"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs text-slate-500"
-  }, "Sicher?"), /*#__PURE__*/React.createElement("button", {
+  }, t('audit.sure')), /*#__PURE__*/React.createElement("button", {
     onClick: () => applyUndo(entry),
     className: "px-2 py-1 text-xs rounded bg-rose-600 text-white hover:bg-rose-700 transition-colors font-medium"
-  }, "Ja"), /*#__PURE__*/React.createElement("button", {
+  }, t('audit.yes')), /*#__PURE__*/React.createElement("button", {
     onClick: () => setUndoConfirm(null),
     className: "px-2 py-1 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-  }, "Nein")) : /*#__PURE__*/React.createElement(Tooltip, {
-    text: "Zustand vor dieser \xC4nderung wiederherstellen",
+  }, t('audit.no'))) : /*#__PURE__*/React.createElement(Tooltip, {
+    text: t('audit.undoTip'),
     side: "left"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setUndoConfirm(entry.id),
     className: "flex items-center gap-1.5 px-2.5 py-1 text-xs rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors ml-auto"
   }, /*#__PURE__*/React.createElement(IconUndo, {
     size: 13
-  }), " R\xFCckg\xE4ngig"))))))))), auditLog.length > 0 && /*#__PURE__*/React.createElement("p", {
+  }), " ", t('audit.undo')))))))))), auditLog.length > 0 && /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-400 text-right"
-  }, auditLog.length, " Eintrag", auditLog.length !== 1 ? 'e' : '', " gespeichert (max. 500)")));
+  }, auditLog.length !== 1 ? t('audit.entriesPlural', {
+    n: auditLog.length
+  }) : t('audit.entries', {
+    n: auditLog.length
+  }))));
 };

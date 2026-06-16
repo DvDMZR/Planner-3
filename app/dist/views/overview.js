@@ -68,7 +68,8 @@ const OverviewView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -202,7 +203,7 @@ const OverviewView = ({
     className: "bg-white border border-slate-300 border-l-4 border-l-gea-500 rounded-xl p-5 shadow-md"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
-  }, "Aktive Projekte"), /*#__PURE__*/React.createElement("p", {
+  }, t('overview.activeProjects')), /*#__PURE__*/React.createElement("p", {
     className: "text-3xl font-bold text-gea-700 mt-1"
   }, activeProjects), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
@@ -210,7 +211,7 @@ const OverviewView = ({
     className: "bg-white border border-slate-300 border-l-4 border-l-gea-400 rounded-xl p-5 shadow-md"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
-  }, "Mitarbeiter"), /*#__PURE__*/React.createElement("p", {
+  }, t('overview.employees')), /*#__PURE__*/React.createElement("p", {
     className: "text-3xl font-bold text-slate-800 mt-1"
   }, activeEmps.length), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
@@ -223,7 +224,7 @@ const OverviewView = ({
     title: "Zur Ressourcenansicht \u2013 aktuelle KW"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
-  }, "\xD8 Auslastung diese KW"), /*#__PURE__*/React.createElement("p", {
+  }, t('overview.avgUtil')), /*#__PURE__*/React.createElement("p", {
     className: `text-3xl font-bold mt-1 ${avgUtil >= 100 ? 'text-rose-600' : avgUtil >= 80 ? 'text-amber-600' : 'text-emerald-600'}`
   }, avgUtil, "%"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
@@ -236,17 +237,19 @@ const OverviewView = ({
     title: "Zur Ressourcenansicht \u2013 aktuelle KW"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-600 font-semibold uppercase tracking-wide"
-  }, "\xDCberlastet diese KW"), /*#__PURE__*/React.createElement("p", {
+  }, t('overview.overloaded')), /*#__PURE__*/React.createElement("p", {
     className: `text-3xl font-bold mt-1 ${overbookedCount > 0 ? 'text-rose-600' : 'text-slate-800'}`
   }, overbookedCount), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-slate-500 mt-1"
-  }, overbookedCount > 0 ? 'Mitarbeiter >100%' : 'Alles im Rahmen'))), /*#__PURE__*/React.createElement("div", {
+  }, overbookedCount > 0 ? t('overview.overloadedCount') : t('overview.allOk')))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-xl text-gea-800 font-semibold"
-  }, "Projekt\xFCbersicht"), /*#__PURE__*/React.createElement("div", {
+  }, t('overview.title')), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-4 text-sm text-slate-500"
-  }, /*#__PURE__*/React.createElement("span", null, rows.length, " offene / geplante Projekte"), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, t('overview.projects', {
+    n: rows.length
+  })), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-300"
   }, "|"), /*#__PURE__*/React.createElement("span", null, fmt(totalHoursAll), " h gesamt"), /*#__PURE__*/React.createElement("span", {
     className: "text-slate-300"
@@ -260,21 +263,21 @@ const OverviewView = ({
     className: "bg-gea-50 border-b-2 border-gea-200"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
-  }, "Projekt"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colProject')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
-  }, "Land"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colCountry')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
-  }, "Status"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colStatus')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold"
   }, "IBN"), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold text-right"
-  }, "Stunden"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colHours')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold text-right"
-  }, "Lohnkosten"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colLabor')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold text-right"
-  }, "Zusatzkosten"), /*#__PURE__*/React.createElement("th", {
+  }, t('overview.colExtra')), /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-gea-800 font-semibold text-right"
-  }, "Gesamt"))), /*#__PURE__*/React.createElement("tbody", {
+  }, t('overview.colTotal')))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200"
   }, groupedRows.map(([cat, catRows]) => /*#__PURE__*/React.createElement(React.Fragment, {
     key: cat
@@ -283,7 +286,7 @@ const OverviewView = ({
   }, /*#__PURE__*/React.createElement("td", {
     colSpan: 8,
     className: "px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider"
-  }, cat || '(Ohne Kategorie)')), catRows.map(({
+  }, cat || t('overview.noCategory'))), catRows.map(({
     p,
     totalHours,
     totalLaborCost,
@@ -339,12 +342,12 @@ const OverviewView = ({
   }))), rows.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     colSpan: 8,
     className: "text-center text-slate-400 text-sm py-12"
-  }, "Keine Projekte vorhanden."))), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
+  }, t('overview.noProjects')))), rows.length > 0 && /*#__PURE__*/React.createElement("tfoot", {
     className: "border-t-2 border-gea-200 bg-gea-50"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-gea-800 font-semibold text-sm",
     colSpan: 4
-  }, "Gesamt"), /*#__PURE__*/React.createElement("td", {
+  }, t('overview.total')), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-semibold text-slate-900 tabular-nums"
   }, fmt(totalHoursAll), " h"), /*#__PURE__*/React.createElement("td", {
     className: "p-4 text-right font-semibold text-slate-900 tabular-nums"

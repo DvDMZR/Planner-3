@@ -70,7 +70,8 @@ const OfftimeView = ({
     timelineWeeks,
     currentWeekColRef,
     resourceScrollRef,
-    timelineScrollRef
+    timelineScrollRef,
+    t
   } = s;
   const {
     setActiveTab,
@@ -246,14 +247,14 @@ const OfftimeView = ({
     className: "p-4 border-b border-slate-300 bg-gea-50 flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-gea-800 text-xl font-semibold shrink-0"
-  }, "Abwesenheiten-Planung"), /*#__PURE__*/React.createElement("div", {
+  }, t('offtime.title')), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(-4),
     className: "p-1.5 rounded-l bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-r border-gea-200",
-    title: "4 Wochen zur\xFCck"
+    title: t('btn.weeks4back')
   }, /*#__PURE__*/React.createElement(IconChevronLeft, {
     size: 16
   })), /*#__PURE__*/React.createElement("span", {
@@ -261,7 +262,7 @@ const OfftimeView = ({
   }, scrollInfo.label || '—'), /*#__PURE__*/React.createElement("button", {
     onClick: () => scrollWeeks(4),
     className: "p-1.5 rounded-r bg-gea-100 text-gea-700 hover:bg-gea-200 transition-colors border-l border-gea-200",
-    title: "4 Wochen vor"
+    title: t('btn.weeks4fwd')
   }, /*#__PURE__*/React.createElement(IconChevronRight, {
     size: 16
   }))), /*#__PURE__*/React.createElement("select", {
@@ -283,14 +284,14 @@ const OfftimeView = ({
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
-  }, "Heute")), isDeleteMode && /*#__PURE__*/React.createElement("div", {
+  }, t('btn.today'))), isDeleteMode && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center bg-rose-50 border border-rose-300 rounded-lg overflow-hidden shrink-0"
   }, /*#__PURE__*/React.createElement("span", {
     className: "flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-700"
   }, /*#__PURE__*/React.createElement(IconTrash, {
     size: 14,
     className: "shrink-0"
-  }), "L\xF6schmodus aktiv"), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
+  }), t('btn.deleteModeActive')), undoStack.length > 0 && /*#__PURE__*/React.createElement("button", {
     onClick: undoDelete,
     className: "flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 border-l border-rose-300 transition-colors"
   }, "\u21A9 ", undoStack.length), /*#__PURE__*/React.createElement("button", {
@@ -305,7 +306,7 @@ const OfftimeView = ({
     ref: menuRef
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setMenuOpen(o => !o),
-    "aria-label": "Weitere Optionen",
+    "aria-label": t('btn.moreOptions'),
     className: `w-8 h-8 flex items-center justify-center rounded-lg border transition-colors ${menuOpen ? 'bg-slate-100 border-slate-400 text-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:border-gea-400 hover:text-gea-600'}`
   }, /*#__PURE__*/React.createElement(IconMoreHorizontal, {
     size: 16
@@ -320,7 +321,7 @@ const OfftimeView = ({
   }, /*#__PURE__*/React.createElement(IconList, {
     size: 14,
     className: "shrink-0 text-slate-400"
-  }), /*#__PURE__*/React.createElement("span", null, "Kompaktansicht"), compact && /*#__PURE__*/React.createElement("span", {
+  }), /*#__PURE__*/React.createElement("span", null, t('btn.compactView')), compact && /*#__PURE__*/React.createElement("span", {
     className: "ml-auto text-gea-600 font-bold text-xs"
   }, "\u2713")), s.currentUser && /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -331,7 +332,7 @@ const OfftimeView = ({
   }, /*#__PURE__*/React.createElement(IconX, {
     size: 14,
     className: `shrink-0 ${isDeleteMode ? 'text-rose-500' : 'text-slate-400'}`
-  }), /*#__PURE__*/React.createElement("span", null, "L\xF6schmodus"), isDeleteMode && /*#__PURE__*/React.createElement("span", {
+  }), /*#__PURE__*/React.createElement("span", null, t('btn.deleteMode')), isDeleteMode && /*#__PURE__*/React.createElement("span", {
     className: "ml-auto w-2 h-2 rounded-full bg-rose-500 shrink-0"
   })), /*#__PURE__*/React.createElement("div", {
     className: "my-1 border-t border-slate-100"
@@ -343,7 +344,7 @@ const OfftimeView = ({
     className: "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-sm font-bold w-3.5 text-center text-slate-400 shrink-0"
-  }, "?"), /*#__PURE__*/React.createElement("span", null, "Hilfe & Legende")))))), /*#__PURE__*/React.createElement("div", {
+  }, "?"), /*#__PURE__*/React.createElement("span", null, t('btn.helpLegend'))))))), /*#__PURE__*/React.createElement("div", {
     className: "h-0.5 bg-slate-100 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gea-400 transition-all duration-150",
@@ -385,7 +386,7 @@ const OfftimeView = ({
     className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
   }, g.month))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 border-b-2 border-slate-300 w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium sticky-col-divider"
-  }, "Mitarbeiter"), offtimeWeeks.map(w => {
+  }, t('resource.colEmployee')), offtimeWeeks.map(w => {
     const isCurrent = w.id === currentWeek;
     const isPast = w.id < currentWeek;
     return /*#__PURE__*/React.createElement("th", {
@@ -472,7 +473,7 @@ const OfftimeView = ({
           return /*#__PURE__*/React.createElement("div", {
             key: a.id,
             draggable: !isDeleteMode,
-            title: pct === 0 ? a.comment ? a.comment + ' · Unter Vorbehalt (0 %)' : 'Unter Vorbehalt (0 %)' : a.comment || undefined,
+            title: pct === 0 ? a.comment ? `${a.comment} · ${t('resource.tentative')}` : t('resource.tentative') : a.comment || undefined,
             onDragStart: e => {
               e.stopPropagation();
               e.dataTransfer.setData('assignmentId', a.id);
@@ -517,7 +518,7 @@ const OfftimeView = ({
               setIsCopyModalOpen(true);
             },
             className: "opacity-0 group-hover/chip:opacity-100 text-slate-400 hover:text-gea-600 transition-opacity p-0.5 rounded",
-            title: "Kopieren"
+            title: t('btn.copy')
           }, /*#__PURE__*/React.createElement(IconCopy, {
             size: 10
           }))));
@@ -536,7 +537,7 @@ const OfftimeView = ({
         }, /*#__PURE__*/React.createElement(IconPlus, {
           size: 12,
           className: "mr-1"
-        }), " weitere")));
+        }), " ", t('resource.more'))));
       }), rightSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
         colSpan: rightSpacerSpan,
         className: "border-b border-r border-slate-300 bg-white"
