@@ -934,12 +934,14 @@ const ModalHeader = ({
   size: 20
 })));
 const StatusBadge = ({
-  status
+  status,
+  t
 }) => {
   const s = PROJECT_STATUSES.find(x => x.value === status) || PROJECT_STATUSES[0];
+  const label = t ? t('status.' + s.value) : s.label;
   return /*#__PURE__*/React.createElement("span", {
     className: `text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`
-  }, s.label);
+  }, label);
 };
 
 // --- TOAST CONTAINER ---

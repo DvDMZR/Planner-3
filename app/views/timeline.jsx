@@ -267,7 +267,7 @@ const TimelineView = ({ s, h }) => {
                                     {timelineWeeks.map(w => (
                                         <th key={w.id} ref={w.id === currentWeekStr ? currentWeekColRef : null}
                                             className={`p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                            <div>{w.label}</div>
+                                            <div>{`${t('util.kw')} ${parseInt(w.id.split('-W')[1])}`}</div>
                                             <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
                                             {w.holidays.length > 0 && <div className="text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate" title={w.holidays.join(' · ')}>{w.holidays.join(' · ')}</div>}
                                         </th>

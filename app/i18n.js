@@ -186,6 +186,8 @@ const TRANSLATIONS = {
         'util.filterBy':       'In Ressourcenplanung nach „{name}" filtern',
         'util.navigateFilter': 'Zur Ressourcenplanung – {name}, {month}',
 
+        'util.kw':      'KW',
+
         // Utilization options
         'util.weeks4':  '4 Wochen',
         'util.weeks8':  '8 Wochen',
@@ -641,6 +643,8 @@ const TRANSLATIONS = {
         'util.navigateTo':     'Go to resource planning – {month}',
         'util.filterBy':       'Filter resource planner by "{name}"',
         'util.navigateFilter': 'Go to resource planning – {name}, {month}',
+
+        'util.kw':      'W',
 
         // Utilization options
         'util.weeks4':  '4 weeks',

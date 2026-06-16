@@ -161,7 +161,7 @@ const OverviewView = ({ s, h }) => {
                                                 <td className="p-4">
                                                     <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                                                 </td>
-                                                <td className="p-4"><StatusBadge status={computeAutoStatus(p)}/></td>
+                                                <td className="p-4"><StatusBadge status={computeAutoStatus(p)} t={t}/></td>
                                                 <td className="p-4 text-slate-500 text-xs font-mono">{p.ibnWeek || '–'}</td>
                                                 <td className="p-4 text-right text-slate-700 tabular-nums">{fmt(totalHours)} h</td>
                                                 <td className="p-4 text-right text-slate-700 tabular-nums">

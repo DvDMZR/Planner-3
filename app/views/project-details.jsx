@@ -95,7 +95,7 @@ const ProjectDetailsView = ({ s, h }) => {
 
                     {/* Status + checkboxes */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        <StatusBadge status={computeAutoStatus(proj)}/>
+                        <StatusBadge status={computeAutoStatus(proj)} t={t}/>
                         <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox"
                                 checked={!!proj.projectCompleted}
@@ -143,7 +143,7 @@ const ProjectDetailsView = ({ s, h }) => {
                                             <th className="p-3 text-left text-slate-500 font-medium border-r border-slate-200 bg-slate-50 w-40 sticky left-0">{t('projDetail.colEmployee')}</th>
                                             {presenceWeeks.map(w => (
                                                 <th key={w} className="p-2 text-center text-slate-500 font-medium border-r border-slate-200 bg-slate-50 min-w-[52px]">
-                                                    KW{w.split('-W')[1]}
+                                                    {t('util.kw')}{w.split('-W')[1]}
                                                 </th>
                                             ))}
                                             <th className="p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]">{t('projDetail.colHours')}</th>
@@ -202,7 +202,7 @@ const ProjectDetailsView = ({ s, h }) => {
                                     <tr>
                                         <th className="p-3 text-slate-500 font-medium">{t('projDetail.colEmployee')}</th>
                                         <th className="p-3 text-slate-500 font-medium">{t('projDetail.colOccasion')}</th>
-                                        <th className="p-3 text-slate-500 font-medium text-center">KW</th>
+                                        <th className="p-3 text-slate-500 font-medium text-center">{t('util.kw')}</th>
                                         <th className="p-3 text-slate-500 font-medium">{t('projDetail.colItems')}</th>
                                         <th className="p-3 text-slate-500 font-medium text-right">{t('projDetail.colAmount')}</th>
                                         <th className="p-3"></th>
@@ -221,9 +221,10 @@ const ProjectDetailsView = ({ s, h }) => {
                                                         if (ci.dateFrom) {
                                                             const kwF = parseInt(getWeekString(new Date(ci.dateFrom)).split('-W')[1]);
                                                             const kwT = ci.dateTo ? parseInt(getWeekString(new Date(ci.dateTo)).split('-W')[1]) : kwF;
-                                                            return kwF === kwT ? `KW${kwF}` : `KW${kwF}–${kwT}`;
+                                                            const kw = t('util.kw');
+                                                            return kwF === kwT ? `${kw}${kwF}` : `${kw}${kwF}–${kw}${kwT}`;
                                                         }
-                                                        return ci.week ? `KW${ci.week.split('-W')[1]}` : '–';
+                                                        return ci.week ? `${t('util.kw')}${ci.week.split('-W')[1]}` : '–';
                                                     })()}
                                                 </td>
                                                 <td className="p-3">

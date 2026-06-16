@@ -188,7 +188,8 @@ const SetupProjView = ({
     }, p.projectNumber || '–'), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement(StatusBadge, {
-      status: effStatus
+      status: effStatus,
+      t: t
     })), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-600 text-xs"
     }, p.startWeek, " \u2013 ", p.ibnWeek), /*#__PURE__*/React.createElement("td", {

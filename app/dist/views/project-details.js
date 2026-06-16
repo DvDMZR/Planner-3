@@ -206,7 +206,8 @@ const ProjectDetailsView = ({
   }), proj.category), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.startWeek, " \u2013 ", proj.ibnWeek), proj.address && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.address)))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 flex-wrap"
   }, /*#__PURE__*/React.createElement(StatusBadge, {
-    status: computeAutoStatus(proj)
+    status: computeAutoStatus(proj),
+    t: t
   }), /*#__PURE__*/React.createElement("label", {
     className: "flex items-center gap-2 cursor-pointer select-none"
   }, /*#__PURE__*/React.createElement("input", {
@@ -281,7 +282,7 @@ const ProjectDetailsView = ({
   }, t('projDetail.colEmployee')), presenceWeeks.map(w => /*#__PURE__*/React.createElement("th", {
     key: w,
     className: "p-2 text-center text-slate-500 font-medium border-r border-slate-200 bg-slate-50 min-w-[52px]"
-  }, "KW", w.split('-W')[1])), /*#__PURE__*/React.createElement("th", {
+  }, t('util.kw'), w.split('-W')[1])), /*#__PURE__*/React.createElement("th", {
     className: "p-2 text-center text-slate-500 font-medium bg-slate-50 min-w-[60px]"
   }, t('projDetail.colHours')))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-100"
@@ -341,7 +342,7 @@ const ProjectDetailsView = ({
     className: "p-3 text-slate-500 font-medium"
   }, t('projDetail.colOccasion')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-center"
-  }, "KW"), /*#__PURE__*/React.createElement("th", {
+  }, t('util.kw')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium"
   }, t('projDetail.colItems')), /*#__PURE__*/React.createElement("th", {
     className: "p-3 text-slate-500 font-medium text-right"
@@ -365,9 +366,10 @@ const ProjectDetailsView = ({
       if (ci.dateFrom) {
         const kwF = parseInt(getWeekString(new Date(ci.dateFrom)).split('-W')[1]);
         const kwT = ci.dateTo ? parseInt(getWeekString(new Date(ci.dateTo)).split('-W')[1]) : kwF;
-        return kwF === kwT ? `KW${kwF}` : `KW${kwF}–${kwT}`;
+        const kw = t('util.kw');
+        return kwF === kwT ? `${kw}${kwF}` : `${kw}${kwF}–${kw}${kwT}`;
       }
-      return ci.week ? `KW${ci.week.split('-W')[1]}` : '–';
+      return ci.week ? `${t('util.kw')}${ci.week.split('-W')[1]}` : '–';
     })()), /*#__PURE__*/React.createElement("td", {
       className: "p-3"
     }, ciLines.length === 0 ? /*#__PURE__*/React.createElement("span", {

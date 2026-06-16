@@ -68,7 +68,7 @@ const SetupProjView = ({ s, h }) => {
                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title={t('proj.colCountry')}>{cc}</span>
                     </td>
                     <td className="p-4 text-slate-500 font-mono text-xs">{p.projectNumber || '–'}</td>
-                    <td className="p-4"><StatusBadge status={effStatus}/></td>
+                    <td className="p-4"><StatusBadge status={effStatus} t={t}/></td>
                     <td className="p-4 text-slate-600 text-xs">{p.startWeek} – {p.ibnWeek}</td>
                     <td className="p-4 text-right">
                         <div className="flex justify-end gap-3">

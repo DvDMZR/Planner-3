@@ -321,7 +321,8 @@ const OverviewView = ({
     }, cc)), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement(StatusBadge, {
-      status: computeAutoStatus(p)
+      status: computeAutoStatus(p),
+      t: t
     })), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-500 text-xs font-mono"
     }, p.ibnWeek || '–'), /*#__PURE__*/React.createElement("td", {

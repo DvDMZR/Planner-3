@@ -177,12 +177,22 @@ const _SidebarBase = ({ s, h }) => {
                         </Tooltip>
                     </div>
                 ) : (
-                    <button
-                        onClick={() => setIsLoginModalOpen(true)}
-                        className="w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
-                    >
-                        <IconLogIn size={15}/> {t('auth.login')}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setIsLoginModalOpen(true)}
+                            className="flex-1 flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
+                        >
+                            <IconLogIn size={15}/> {t('auth.login')}
+                        </button>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                            {['de', 'en'].map(lng => (
+                                <button key={lng} onClick={() => setLanguage(lng)}
+                                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${language === lng ? 'bg-gea-600 text-white' : 'text-gea-500 hover:text-gea-300'}`}>
+                                    {lng.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
 

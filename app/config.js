@@ -662,4 +662,5 @@ const PROJECT_STATUSES = [
 ];
 
 // Month names – used by utils.js and React components
-const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const MONTH_NAMES    = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
