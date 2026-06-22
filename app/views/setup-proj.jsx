@@ -57,11 +57,11 @@ const SetupProjView = ({ s, h }) => {
             const cc = resolveCountryCode(p.country);
             return (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4">
+                    <td className="p-4 max-w-0 overflow-hidden">
                         <button onClick={() => setSelectedProjectDetails(p.id)}
-                            className="flex items-center gap-2 text-left group">
+                            className="flex items-center gap-2 text-left group min-w-0 w-full">
                             <div className={`w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
-                            <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors">{p.name}</span>
+                            <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors truncate" title={p.name}>{p.name}</span>
                         </button>
                     </td>
                     <td className="p-4">
