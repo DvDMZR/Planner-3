@@ -320,12 +320,20 @@ const _SidebarBase = ({
     className: "text-gea-400 hover:text-white p-1 rounded hover:bg-gea-700 transition-colors shrink-0"
   }, /*#__PURE__*/React.createElement(IconLogOut, {
     size: 15
-  })))) : /*#__PURE__*/React.createElement("button", {
+  })))) : /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setIsLoginModalOpen(true),
-    className: "w-full flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
+    className: "flex-1 flex items-center gap-2 text-gea-400 hover:text-white text-xs px-2 py-1.5 rounded hover:bg-gea-800 transition-colors"
   }, /*#__PURE__*/React.createElement(IconLogIn, {
     size: 15
-  }), " ", t('auth.login'))), (SP_CONTEXT || fsStatus === 'connected') && /*#__PURE__*/React.createElement("div", {
+  }), " ", t('auth.login')), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-0.5 shrink-0"
+  }, ['de', 'en'].map(lng => /*#__PURE__*/React.createElement("button", {
+    key: lng,
+    onClick: () => setLanguage(lng),
+    className: `px-1.5 py-0.5 text-[10px] font-bold rounded transition-colors ${language === lng ? 'bg-gea-600 text-white' : 'text-gea-500 hover:text-gea-300'}`
+  }, lng.toUpperCase()))))), (SP_CONTEXT || fsStatus === 'connected') && /*#__PURE__*/React.createElement("div", {
     className: "px-4 py-3 border-t border-gea-700 flex items-center gap-2 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: `w-2 h-2 rounded-full shrink-0 ${syncStatus === 'idle' ? 'bg-emerald-400' : syncStatus === 'syncing' ? 'bg-amber-400 animate-pulse' : syncStatus === 'updated' ? 'bg-blue-400' : syncStatus === 'conflict-reload' ? 'bg-orange-400' : syncStatus === 'reconnecting' ? 'bg-amber-400 animate-pulse' : syncStatus === 'needs-auth' ? 'bg-rose-500' : syncStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-400 animate-pulse'}`

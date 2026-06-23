@@ -170,14 +170,15 @@ const SetupProjView = ({
       key: p.id,
       className: "hover:bg-slate-50 transition-colors"
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-4"
+      className: "p-4 max-w-0 overflow-hidden"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSelectedProjectDetails(p.id),
-      className: "flex items-center gap-2 text-left group"
+      className: "flex items-center gap-2 text-left group min-w-0 w-full"
     }, /*#__PURE__*/React.createElement("div", {
       className: `w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`
     }), /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-900 font-medium group-hover:text-gea-600 transition-colors"
+      className: "text-slate-900 font-medium group-hover:text-gea-600 transition-colors truncate",
+      title: p.name
     }, p.name))), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement("span", {
@@ -188,7 +189,8 @@ const SetupProjView = ({
     }, p.projectNumber || '–'), /*#__PURE__*/React.createElement("td", {
       className: "p-4"
     }, /*#__PURE__*/React.createElement(StatusBadge, {
-      status: effStatus
+      status: effStatus,
+      t: t
     })), /*#__PURE__*/React.createElement("td", {
       className: "p-4 text-slate-600 text-xs"
     }, p.startWeek, " \u2013 ", p.ibnWeek), /*#__PURE__*/React.createElement("td", {

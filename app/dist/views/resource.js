@@ -68,6 +68,7 @@ const ResourceView = ({
     currentWeekColRef,
     resourceScrollRef,
     timelineScrollRef,
+    language,
     t
   } = s;
   const {
@@ -496,11 +497,14 @@ const ResourceView = ({
     className: "sticky top-0 bg-white z-20 shadow-sm"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "border-b border-slate-200 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 "
-  }), monthGroups.map(g => /*#__PURE__*/React.createElement("th", {
-    key: g.month,
-    colSpan: g.count,
-    className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
-  }, g.month))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+  }), monthGroups.map(g => {
+    const localMonth = language === 'de' ? g.month : MONTH_NAMES.reduce((s, de, i) => s.replace(de, MONTH_NAMES_EN[i]), g.month);
+    return /*#__PURE__*/React.createElement("th", {
+      key: g.month,
+      colSpan: g.count,
+      className: "px-2 py-1 border-b border-r border-slate-200 text-center text-[11px] font-semibold text-gea-700 bg-gea-50/80 uppercase tracking-wide"
+    }, localMonth);
+  })), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 border-b-2 border-slate-300 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 text-slate-500 uppercase tracking-wider text-xs font-medium "
   }, t('resource.colEmployee')), resourceWeeks.map(w => {
     const isCurrent = w.id === currentWeek;
@@ -509,7 +513,7 @@ const ResourceView = ({
       key: w.id,
       ref: isCurrent ? currentWeekColRef : null,
       className: `p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`
-    }, /*#__PURE__*/React.createElement("div", null, w.label), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("div", null, `${t('util.kw')} ${parseInt(w.id.split('-W')[1])}`), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-normal opacity-70"
     }, w.sub), w.holidays.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate",

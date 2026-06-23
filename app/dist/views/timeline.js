@@ -403,7 +403,7 @@ const TimelineView = ({
     key: w.id,
     ref: w.id === currentWeekStr ? currentWeekColRef : null,
     className: `p-2 border-b border-r min-w-[120px] text-center font-medium sticky top-0 z-20 ${w.id === currentWeekStr ? 'bg-gea-100 text-gea-800 border-b-2 border-b-gea-500 border-slate-200' : w.id < currentWeekStr ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`
-  }, /*#__PURE__*/React.createElement("div", null, w.label), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, `${t('util.kw')} ${parseInt(w.id.split('-W')[1])}`), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-normal opacity-70"
   }, w.sub), w.holidays.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate",

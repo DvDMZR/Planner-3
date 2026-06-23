@@ -57,18 +57,18 @@ const SetupProjView = ({ s, h }) => {
             const cc = resolveCountryCode(p.country);
             return (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4">
+                    <td className="p-4 max-w-0 overflow-hidden">
                         <button onClick={() => setSelectedProjectDetails(p.id)}
-                            className="flex items-center gap-2 text-left group">
+                            className="flex items-center gap-2 text-left group min-w-0 w-full">
                             <div className={`w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
-                            <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors">{p.name}</span>
+                            <span className="text-slate-900 font-medium group-hover:text-gea-600 transition-colors truncate" title={p.name}>{p.name}</span>
                         </button>
                     </td>
                     <td className="p-4">
                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title={t('proj.colCountry')}>{cc}</span>
                     </td>
                     <td className="p-4 text-slate-500 font-mono text-xs">{p.projectNumber || '–'}</td>
-                    <td className="p-4"><StatusBadge status={effStatus}/></td>
+                    <td className="p-4"><StatusBadge status={effStatus} t={t}/></td>
                     <td className="p-4 text-slate-600 text-xs">{p.startWeek} – {p.ibnWeek}</td>
                     <td className="p-4 text-right">
                         <div className="flex justify-end gap-3">
