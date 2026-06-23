@@ -57,7 +57,7 @@ const SetupProjView = ({ s, h }) => {
             const cc = resolveCountryCode(p.country);
             return (
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 max-w-0 overflow-hidden">
+                    <td className="p-4 overflow-hidden">
                         <button onClick={() => setSelectedProjectDetails(p.id)}
                             className="flex items-center gap-2 text-left group min-w-0 w-full">
                             <div className={`w-3 h-3 rounded-full flex-shrink-0 ${resolveProjectColor(p.color).dot}`}></div>
@@ -117,15 +117,15 @@ const SetupProjView = ({ s, h }) => {
                                     <span className="ml-2 px-2 py-0.5 bg-white border border-gea-200 rounded-full text-xs text-gea-700 font-semibold">{catProjs.length}</span>
                                 </button>
                                 {!isCollapsed && (
-                                    <table className="w-full text-left text-sm">
+                                    <table className="w-full text-left text-sm table-fixed">
                                         <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
                                                 <th className="p-4 text-slate-700 font-semibold">{t('proj.colName')}</th>
-                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colCountry')}</th>
-                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colNr')}</th>
-                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colStatus')}</th>
-                                                <th className="p-4 text-slate-700 font-semibold">{t('proj.colPeriod')}</th>
-                                                <th className="p-4"></th>
+                                                <th className="p-4 text-slate-700 font-semibold w-14">{t('proj.colCountry')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold w-24">{t('proj.colNr')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold w-36">{t('proj.colStatus')}</th>
+                                                <th className="p-4 text-slate-700 font-semibold w-44">{t('proj.colPeriod')}</th>
+                                                <th className="p-4 w-36"></th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-200">
@@ -147,15 +147,15 @@ const SetupProjView = ({ s, h }) => {
                                 <span className="ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded-full text-xs text-slate-600 font-semibold">{pastProjects.length}</span>
                             </button>
                             {pastProjectsExpanded && (
-                                <table className="w-full text-left text-sm">
+                                <table className="w-full text-left text-sm table-fixed">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
                                             <th className="p-4 text-slate-700 font-semibold">{t('proj.colName')}</th>
-                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colCountry')}</th>
-                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colNr')}</th>
-                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colStatus')}</th>
-                                            <th className="p-4 text-slate-700 font-semibold">{t('proj.colPeriod')}</th>
-                                            <th className="p-4"></th>
+                                            <th className="p-4 text-slate-700 font-semibold w-14">{t('proj.colCountry')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold w-24">{t('proj.colNr')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold w-36">{t('proj.colStatus')}</th>
+                                            <th className="p-4 text-slate-700 font-semibold w-44">{t('proj.colPeriod')}</th>
+                                            <th className="p-4 w-36"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200 opacity-75">

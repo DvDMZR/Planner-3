@@ -170,7 +170,7 @@ const SetupProjView = ({
       key: p.id,
       className: "hover:bg-slate-50 transition-colors"
     }, /*#__PURE__*/React.createElement("td", {
-      className: "p-4 max-w-0 overflow-hidden"
+      className: "p-4 overflow-hidden"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSelectedProjectDetails(p.id),
       className: "flex items-center gap-2 text-left group min-w-0 w-full"
@@ -257,21 +257,21 @@ const SetupProjView = ({
     }, cat), /*#__PURE__*/React.createElement("span", {
       className: "ml-2 px-2 py-0.5 bg-white border border-gea-200 rounded-full text-xs text-gea-700 font-semibold"
     }, catProjs.length)), !isCollapsed && /*#__PURE__*/React.createElement("table", {
-      className: "w-full text-left text-sm"
+      className: "w-full text-left text-sm table-fixed"
     }, /*#__PURE__*/React.createElement("thead", {
       className: "bg-slate-50 border-b border-slate-200"
     }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
       className: "p-4 text-slate-700 font-semibold"
     }, t('proj.colName')), /*#__PURE__*/React.createElement("th", {
-      className: "p-4 text-slate-700 font-semibold"
+      className: "p-4 text-slate-700 font-semibold w-14"
     }, t('proj.colCountry')), /*#__PURE__*/React.createElement("th", {
-      className: "p-4 text-slate-700 font-semibold"
+      className: "p-4 text-slate-700 font-semibold w-24"
     }, t('proj.colNr')), /*#__PURE__*/React.createElement("th", {
-      className: "p-4 text-slate-700 font-semibold"
+      className: "p-4 text-slate-700 font-semibold w-36"
     }, t('proj.colStatus')), /*#__PURE__*/React.createElement("th", {
-      className: "p-4 text-slate-700 font-semibold"
+      className: "p-4 text-slate-700 font-semibold w-44"
     }, t('proj.colPeriod')), /*#__PURE__*/React.createElement("th", {
-      className: "p-4"
+      className: "p-4 w-36"
     }))), /*#__PURE__*/React.createElement("tbody", {
       className: "divide-y divide-slate-200"
     }, catProjs.map(p => /*#__PURE__*/React.createElement(ProjectRow, {
@@ -294,21 +294,21 @@ const SetupProjView = ({
   }, t('proj.pastProjects')), /*#__PURE__*/React.createElement("span", {
     className: "ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded-full text-xs text-slate-600 font-semibold"
   }, pastProjects.length)), pastProjectsExpanded && /*#__PURE__*/React.createElement("table", {
-    className: "w-full text-left text-sm"
+    className: "w-full text-left text-sm table-fixed"
   }, /*#__PURE__*/React.createElement("thead", {
     className: "bg-slate-50 border-b border-slate-200"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "p-4 text-slate-700 font-semibold"
   }, t('proj.colName')), /*#__PURE__*/React.createElement("th", {
-    className: "p-4 text-slate-700 font-semibold"
+    className: "p-4 text-slate-700 font-semibold w-14"
   }, t('proj.colCountry')), /*#__PURE__*/React.createElement("th", {
-    className: "p-4 text-slate-700 font-semibold"
+    className: "p-4 text-slate-700 font-semibold w-24"
   }, t('proj.colNr')), /*#__PURE__*/React.createElement("th", {
-    className: "p-4 text-slate-700 font-semibold"
+    className: "p-4 text-slate-700 font-semibold w-36"
   }, t('proj.colStatus')), /*#__PURE__*/React.createElement("th", {
-    className: "p-4 text-slate-700 font-semibold"
+    className: "p-4 text-slate-700 font-semibold w-44"
   }, t('proj.colPeriod')), /*#__PURE__*/React.createElement("th", {
-    className: "p-4"
+    className: "p-4 w-36"
   }))), /*#__PURE__*/React.createElement("tbody", {
     className: "divide-y divide-slate-200 opacity-75"
   }, pastProjects.map(p => /*#__PURE__*/React.createElement(ProjectRow, {
