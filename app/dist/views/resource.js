@@ -369,9 +369,9 @@ const ResourceView = ({
     onClick: () => {
       if (timelineYear !== currentYear) {
         setTimelineYear(currentYear);
-        setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120);
+        setTimeout(() => scrollToCurrentWeek(resourceScrollRef, resourceWeeks, WEEK_W), 120);
       } else {
-        scrollToCurrentWeek(resourceScrollRef, 288);
+        scrollToCurrentWeek(resourceScrollRef, resourceWeeks, WEEK_W);
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"

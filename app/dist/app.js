@@ -21,6 +21,7 @@ function App() {
   // Dynamic Categories
   const [empCategories, setEmpCategories] = useState(['AS', 'CMS', 'CSS', 'HM', 'I&C', 'Other']);
   const [projCategories, setProjCategories] = useState(['AMS', 'AFS', 'CMS', 'Other']);
+  const [projTypes, setProjTypes] = useState([]);
   const [basicTasks, setBasicTasks] = useState(['Office']);
   const [basicTasksMeta, setBasicTasksMeta] = useState({}); // { [taskName]: { createdAt: ISO, permanent: bool, color?: string } }
   const [inactiveBasicTasks, setInactiveBasicTasks] = useState([]); // [{ name, createdAt }]
@@ -79,14 +80,16 @@ function App() {
   const resourceScrollRef = useRef(null);
   const timelineScrollRef = useRef(null);
 
-  // Scroll current week to the left edge (right after sticky column)
-  const scrollToCurrentWeek = useCallback((containerRef, stickyWidth) => {
+  // Scroll current week to the left edge (right after the sticky column).
+  // Uses index-based positioning so the result is exact regardless of the
+  // current scroll position or whether the column is virtualised off-screen.
+  const scrollToCurrentWeek = useCallback((containerRef, weeks, weekW) => {
     const container = containerRef?.current;
-    const th = currentWeekColRef?.current;
-    if (!container || !th) return;
-    const thRect = th.getBoundingClientRect();
-    const cRect = container.getBoundingClientRect();
-    container.scrollLeft = container.scrollLeft + (thRect.left - cRect.left) - stickyWidth;
+    if (!container || !weeks) return;
+    const currentWeek = getWeekString(new Date());
+    const idx = weeks.findIndex(w => w.id === currentWeek);
+    if (idx < 0) return;
+    container.scrollLeft = idx * weekW;
   }, []);
 
   // Scroll a specific week (by id) into view, just past the sticky column.
@@ -120,7 +123,10 @@ function App() {
     ibnWeek: '',
     color: 'gea',
     hourlyRate: DEFAULT_HOURLY_RATE,
-    billable: true
+    billable: true,
+    projType: '',
+    size: '',
+    sharepointLink: ''
   });
   const [editingProjectId, setEditingProjectId] = useState(null);
 
@@ -136,7 +142,8 @@ function App() {
     training: false,
     offtime: false,
     empCats: false,
-    projCats: false
+    projCats: false,
+    projTypes: false
   });
 
   // ── USER ROLES & SESSION ───────────────────────────────────────────────────
@@ -547,6 +554,7 @@ function App() {
           }
         }
         if (parsedData.projCategories) setProjCategories(parsedData.projCategories);
+        if (parsedData.projTypes !== undefined) setProjTypes(parsedData.projTypes || []);
         if (parsedData.basicTasks) {
           const loadedMeta = parsedData.basicTasksMeta || {};
           const loadedInactive = parsedData.inactiveBasicTasks || [];
@@ -833,6 +841,7 @@ function App() {
       costItems,
       empCategories,
       projCategories,
+      projTypes,
       basicTasks,
       basicTasksMeta,
       inactiveBasicTasks,
@@ -966,7 +975,7 @@ function App() {
         }
       }, 1500);
     }
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, projTypes, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
 
   // Force logout if the session user no longer exists in appUsers (deleted
   // between sessions, or role downgraded). Only fires once appUsers has
@@ -1049,6 +1058,7 @@ function App() {
       costItems,
       empCategories,
       projCategories,
+      projTypes,
       basicTasks,
       basicTasksMeta,
       inactiveBasicTasks,
@@ -1203,6 +1213,7 @@ function App() {
       costItems,
       empCategories,
       projCategories,
+      projTypes,
       basicTasks,
       basicTasksMeta,
       inactiveBasicTasks,
@@ -1217,7 +1228,7 @@ function App() {
       autoBackup,
       emailTemplate
     };
-  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
+  }, [employees, projects, assignments, expenses, costItems, empCategories, projCategories, projTypes, basicTasks, basicTasksMeta, inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks, inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks, invoiceRecipient, appUsers, auditLog, autoBackup, emailTemplate]);
 
   // Flush pending local save before the page unloads so a fast tab close
   // doesn't drop the most recent edits.
@@ -1247,6 +1258,7 @@ function App() {
     // wiping user-defined categories/tasks/inactive lists.
     if (data.empCategories?.length) setEmpCategories(data.empCategories);
     setProjCategories(prev => data.projCategories?.length > 0 ? data.projCategories : prev);
+    if (data.projTypes !== undefined) setProjTypes(data.projTypes || []);
     setBasicTasks(prev => data.basicTasks?.length > 0 ? data.basicTasks : prev);
     // Meta is a map that can legitimately be empty (all Basic Tasks
     // hardcoded, no user-created Other Tasks). Only skip when the remote
@@ -1536,11 +1548,11 @@ function App() {
   useEffect(() => {
     if (activeTab === 'resource') {
       if (scrollTarget?.weekId) return; // ResourceView handles it
-      const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 80);
+      const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, timelineWeeks, 140), 80);
       return () => clearTimeout(timer);
     }
     if (activeTab === 'project') {
-      const timer = setTimeout(() => scrollToCurrentWeek(timelineScrollRef, 256), 80);
+      const timer = setTimeout(() => scrollToCurrentWeek(timelineScrollRef, timelineWeeks, TIMELINE_WEEK_W), 80);
       return () => clearTimeout(timer);
     }
   }, [activeTab]);
@@ -2099,6 +2111,7 @@ function App() {
         }
         if (parsed.empCategories) setEmpCategories(parsed.empCategories);
         if (parsed.projCategories) setProjCategories(parsed.projCategories);
+        if (parsed.projTypes !== undefined) setProjTypes(parsed.projTypes || []);
         if (parsed.basicTasks) setBasicTasks(parsed.basicTasks);
         if (parsed.basicTasksMeta) setBasicTasksMeta(parsed.basicTasksMeta);
         if (parsed.inactiveBasicTasks) setInactiveBasicTasks(parsed.inactiveBasicTasks);
@@ -2285,7 +2298,10 @@ function App() {
         country: '',
         startWeek: weeks[0]?.id || '',
         ibnWeek: weeks[10]?.id || '',
-        color: nextColorId
+        color: nextColorId,
+        projType: '',
+        size: '',
+        sharepointLink: ''
       };
     };
     const save = () => {
@@ -2403,6 +2419,33 @@ function App() {
       value: c
     }, c)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "block text-xs text-slate-700 mb-1 font-semibold"
+    }, "Typ"), /*#__PURE__*/React.createElement("select", {
+      value: projForm.projType || '',
+      onChange: e => setProjForm({
+        ...projForm,
+        projType: e.target.value
+      }),
+      className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "\u2014 kein Typ \u2014"), projTypes.map(t => /*#__PURE__*/React.createElement("option", {
+      key: t,
+      value: t
+    }, t)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-slate-700 mb-1 font-semibold"
+    }, "Gr\xF6\xDFe (Size)"), /*#__PURE__*/React.createElement("input", {
+      type: "number",
+      min: "0",
+      step: "1",
+      value: projForm.size || '',
+      onChange: e => setProjForm({
+        ...projForm,
+        size: e.target.value
+      }),
+      placeholder: "z.B. 5",
+      className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-slate-700 mb-1 font-semibold"
     }, "Start (KW)"), /*#__PURE__*/React.createElement("input", {
       type: "week",
       value: projForm.startWeek,
@@ -2421,6 +2464,19 @@ function App() {
         ibnWeek: e.target.value
       }),
       className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "col-span-2"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "block text-xs text-slate-700 mb-1 font-semibold"
+    }, "SharePoint / Projektlink"), /*#__PURE__*/React.createElement("input", {
+      type: "url",
+      value: projForm.sharepointLink || '',
+      onChange: e => setProjForm({
+        ...projForm,
+        sharepointLink: e.target.value
+      }),
+      placeholder: "https://...",
+      className: "w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"
     }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
       className: "block text-xs text-slate-700 mb-2 font-semibold"
     }, "Farbe"), /*#__PURE__*/React.createElement("div", {
@@ -2699,6 +2755,7 @@ function App() {
     costItems,
     empCategories,
     projCategories,
+    projTypes,
     basicTasks,
     basicTasksMeta,
     inactiveBasicTasks,
@@ -2781,6 +2838,7 @@ function App() {
     setCostItems,
     setEmpCategories,
     setProjCategories,
+    setProjTypes,
     setBasicTasks,
     setBasicTasksMeta,
     setInactiveBasicTasks,

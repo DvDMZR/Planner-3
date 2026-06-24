@@ -318,9 +318,9 @@ const TimelineView = ({
     onClick: () => {
       if (timelineYear !== currentYear) {
         setTimelineYear(currentYear);
-        setTimeout(() => scrollToCurrentWeek(timelineScrollRef, 256), 120);
+        setTimeout(() => scrollToCurrentWeek(timelineScrollRef, timelineWeeks, TIMELINE_WEEK_W), 120);
       } else {
-        scrollToCurrentWeek(timelineScrollRef, 256);
+        scrollToCurrentWeek(timelineScrollRef, timelineWeeks, TIMELINE_WEEK_W);
       }
     },
     className: "px-3 py-1.5 bg-gea-100 text-gea-700 rounded-lg text-sm font-medium hover:bg-gea-200 transition-colors"
@@ -446,9 +446,9 @@ const TimelineView = ({
       }, /*#__PURE__*/React.createElement("td", {
         className: "p-3 border-b border-slate-200 sticky-col-divider bg-white sticky left-0 z-10 "
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2"
+        className: "flex items-center gap-1.5 min-w-0"
       }, /*#__PURE__*/React.createElement("div", {
-        className: `w-3 h-3 rounded-full ${pColor.dot}`
+        className: `w-3 h-3 rounded-full shrink-0 ${pColor.dot}`
       }), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setSelectedProjectDetails(proj.id);
@@ -456,10 +456,25 @@ const TimelineView = ({
         },
         className: "text-slate-900 font-medium flex-1 min-w-0 text-left truncate hover:text-gea-700 hover:underline transition-colors",
         title: "Projekt-Einstellungen \xF6ffnen"
-      }, proj.name), /*#__PURE__*/React.createElement("span", {
-        className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
+      }, proj.name), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 shrink-0 flex-wrap"
+      }, proj.projType && /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] bg-violet-50 text-violet-700 border border-violet-200 px-1 py-0.5 rounded font-medium"
+      }, proj.projType), proj.size != null && proj.size !== '' && /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1 py-0.5 rounded font-medium"
+      }, "S", proj.size), /*#__PURE__*/React.createElement("span", {
+        className: `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`,
         title: "Land"
-      }, cc))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
+      }, cc), proj.sharepointLink && /*#__PURE__*/React.createElement("a", {
+        href: proj.sharepointLink,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        onClick: e => e.stopPropagation(),
+        className: "text-slate-400 hover:text-gea-600 transition-colors",
+        title: "SharePoint \xF6ffnen"
+      }, /*#__PURE__*/React.createElement(IconExternalLink, {
+        size: 12
+      }))))), leftSpacerSpan > 0 && /*#__PURE__*/React.createElement("td", {
         colSpan: leftSpacerSpan,
         className: "border-b border-r border-slate-300 bg-white"
       }), visibleWeeks.map(w => {
