@@ -1,14 +1,14 @@
 const SetupCatsView = ({ s, h }) => {
     const { useState } = React;
     const {
-        empCategories, projCategories, basicTasks, basicTasksMeta,
+        empCategories, projCategories, projTypes, basicTasks, basicTasksMeta,
         inactiveBasicTasks, offtimeTasks, inactiveOfftimeTasks,
         inactiveSupportTasks, inactiveTrainingTasks, customTrainingTasks,
         expandedSetupCats, newEmpCat, newProjCat, newBasicTask, newOfftimeTask,
         t,
     } = s;
     const {
-        setEmpCategories, setProjCategories, setBasicTasks, setBasicTasksMeta,
+        setEmpCategories, setProjCategories, setProjTypes, setBasicTasks, setBasicTasksMeta,
         setInactiveBasicTasks, setOfftimeTasks, setInactiveOfftimeTasks,
         setInactiveSupportTasks, setInactiveTrainingTasks, setCustomTrainingTasks,
         setExpandedSetupCats, setNewEmpCat, setNewProjCat, setNewBasicTask, setNewOfftimeTask,
@@ -17,6 +17,38 @@ const SetupCatsView = ({ s, h }) => {
     const [newTrainingTask, setNewTrainingTask] = useState('');
     const [newOtherTask, setNewOtherTask] = useState('');
     const [inactiveOpen, setInactiveOpen] = useState(false);
+    const [newProjType, setNewProjType] = useState('');
+    const addProjType = () => {
+        const v = newProjType.trim();
+        if (!v || (projTypes||[]).includes(v)) return;
+        setProjTypes(prev => [...(prev||[]), v]);
+        setNewProjType('');
+    };
+    const ProjTypesEditor = ({ projTypes, setProjTypes }) => (
+        <div>
+            <div className="p-4 flex gap-2 border-b border-slate-200">
+                <input type="text" value={newProjType}
+                    onChange={e => setNewProjType(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addProjType()}
+                    placeholder="Neuer Projekttyp"
+                    className="flex-1 p-2 border border-slate-300 rounded text-sm"/>
+                <button onClick={addProjType}
+                    className="bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700">
+                    {t('btn.add')}
+                </button>
+            </div>
+            <ul className="divide-y divide-slate-100">
+                {(projTypes||[]).map(typ => (
+                    <li key={typ} className="px-4 py-3 flex justify-between items-center text-sm">
+                        <span className="text-slate-800">{typ}</span>
+                        <button onClick={() => setProjTypes(prev => (prev||[]).filter(x => x !== typ))}
+                            className="text-rose-500 hover:text-rose-700"><IconX size={16}/></button>
+                    </li>
+                ))}
+                {(projTypes||[]).length === 0 && <li className="p-6 text-sm text-slate-400 text-center">Noch keine Projekttypen definiert.</li>}
+            </ul>
+        </div>
+    );
 
     // Separate hardcoded Basic Tasks (no meta) from user-created Other Tasks (with meta).
     const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
@@ -349,6 +381,13 @@ const SetupCatsView = ({ s, h }) => {
                             ))}
                             {projCategories.length === 0 && <li className="p-6 text-sm text-slate-400 text-center">{t('cats.noProjCategories')}</li>}
                         </ul>
+                    </div>
+                ))}
+
+                {/* ── Projekt-Typen ──────────────────────────────────── */}
+                {section('projTypes', 'Projekt-Typen', (
+                    <div>
+                        <ProjTypesEditor projTypes={projTypes || []} setProjTypes={setProjTypes}/>
                     </div>
                 ))}
 

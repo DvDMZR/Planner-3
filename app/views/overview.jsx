@@ -100,14 +100,14 @@ const OverviewView = ({ s, h }) => {
                             <p className="text-xs text-slate-500 mt-1">aktiv</p>
                         </div>
                         <div className={`bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${avgUtil >= 100 ? 'border-rose-300 border-l-rose-500' : avgUtil >= 80 ? 'border-amber-300 border-l-amber-500' : 'border-slate-300 border-l-emerald-500'}`}
-                            onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }}
+                            onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, timelineWeeks, 140), 120); }}
                             title="Zur Ressourcenansicht – aktuelle KW">
                             <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.avgUtil')}</p>
                             <p className={`text-3xl font-bold mt-1 ${avgUtil >= 100 ? 'text-rose-600' : avgUtil >= 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{avgUtil}%</p>
                             <p className="text-xs text-slate-500 mt-1">{currentWeekStr}</p>
                         </div>
                         <div className={`bg-white border border-l-4 rounded-xl p-5 shadow-md cursor-pointer hover:shadow-lg transition-shadow ${overbookedCount > 0 ? 'border-rose-300 border-l-rose-500' : 'border-slate-300 border-l-slate-400'}`}
-                            onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, 288), 120); }}
+                            onClick={() => { setActiveTab('resource'); setTimeout(() => scrollToCurrentWeek(resourceScrollRef, timelineWeeks, 140), 120); }}
                             title="Zur Ressourcenansicht – aktuelle KW">
                             <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">{t('overview.overloaded')}</p>
                             <p className={`text-3xl font-bold mt-1 ${overbookedCount > 0 ? 'text-rose-600' : 'text-slate-800'}`}>{overbookedCount}</p>

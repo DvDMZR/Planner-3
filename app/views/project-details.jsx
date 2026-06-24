@@ -88,8 +88,11 @@ const ProjectDetailsView = ({ s, h }) => {
                         </div>
                         <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 flex-wrap">
                             <span className="flex items-center gap-1"><div className={`w-2 h-2 rounded-full ${resolveProjectColor(proj.color).dot}`}></div>{proj.category}</span>
+                            {proj.projType && <><span>·</span><span className="text-xs bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded font-medium">{proj.projType}</span></>}
+                            {proj.size != null && proj.size !== '' && <><span>·</span><span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-medium">Size {proj.size}</span></>}
                             <span>·</span><span>{proj.startWeek} – {proj.ibnWeek}</span>
                             {proj.address && <><span>·</span><span>{proj.address}</span></>}
+                            {proj.sharepointLink && <><span>·</span><a href={proj.sharepointLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gea-600 hover:text-gea-700 hover:underline"><IconExternalLink size={13}/> SharePoint</a></>}
                         </div>
                     </div>
 
@@ -111,7 +114,7 @@ const ProjectDetailsView = ({ s, h }) => {
                             <span className="text-sm font-medium text-slate-700">{t('projDetail.costsSubmitted')}</span>
                         </label>
                         <button onClick={() => {
-                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', country: proj.country || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id });
+                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', country: proj.country || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id, projType: proj.projType || '', size: proj.size != null ? String(proj.size) : '', sharepointLink: proj.sharepointLink || '' });
                             setEditingProjectId(proj.id);
                             setIsProjFormOpen(true);
                         }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">

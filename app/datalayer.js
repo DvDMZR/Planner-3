@@ -79,6 +79,7 @@ function buildSplitFiles(state) {
         : migrateExpensesToCostItems(state.expenses);
     const empCategories         = state.empCategories         || DEFAULT_TEAMS;
     const projCategories        = state.projCategories        || [];
+    const projTypes             = state.projTypes             || [];
     const basicTasks            = state.basicTasks            || [];
     const basicTasksMeta        = state.basicTasksMeta        || {};
     const inactiveBasicTasks    = state.inactiveBasicTasks    || [];
@@ -110,7 +111,7 @@ function buildSplitFiles(state) {
         'employees.json':     { employees },
         'projects.json':      { projects },
         'settings.json':      { invoiceRecipient, autoBackup, emailTemplate },
-        'category-defs.json': { empCategories, projCategories },
+        'category-defs.json': { empCategories, projCategories, projTypes },
         'tasks.json':         { basicTasks, basicTasksMeta, offtimeTasks, customTrainingTasks },
         'inactive.json':      { inactiveBasicTasks, inactiveOfftimeTasks,
                                 inactiveSupportTasks, inactiveTrainingTasks },
@@ -157,6 +158,7 @@ function mergeSplitFiles({ employees, projects, settings,
         expenses:         [],
         empCategories:      pick('empCategories',  categoryDefs, cat) || DEFAULT_TEAMS,
         projCategories:     pick('projCategories', categoryDefs, cat) || [],
+        projTypes:          pick('projTypes',      categoryDefs, cat) || [],
         basicTasks:         pick('basicTasks',         tasks, cat) || [],
         basicTasksMeta:     pick('basicTasksMeta',     tasks, cat) || {},
         offtimeTasks:       pick('offtimeTasks',       tasks, cat) || [],
