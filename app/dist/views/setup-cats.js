@@ -8,6 +8,7 @@ const SetupCatsView = ({
   const {
     empCategories,
     projCategories,
+    projTypes,
     basicTasks,
     basicTasksMeta,
     inactiveBasicTasks,
@@ -26,6 +27,7 @@ const SetupCatsView = ({
   const {
     setEmpCategories,
     setProjCategories,
+    setProjTypes,
     setBasicTasks,
     setBasicTasksMeta,
     setInactiveBasicTasks,
@@ -43,6 +45,43 @@ const SetupCatsView = ({
   const [newTrainingTask, setNewTrainingTask] = useState('');
   const [newOtherTask, setNewOtherTask] = useState('');
   const [inactiveOpen, setInactiveOpen] = useState(false);
+  const [newProjType, setNewProjType] = useState('');
+  const addProjType = () => {
+    const v = newProjType.trim();
+    if (!v || (projTypes || []).includes(v)) return;
+    setProjTypes(prev => [...(prev || []), v]);
+    setNewProjType('');
+  };
+  const ProjTypesEditor = ({
+    projTypes,
+    setProjTypes
+  }) => /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "p-4 flex gap-2 border-b border-slate-200"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: newProjType,
+    onChange: e => setNewProjType(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && addProjType(),
+    placeholder: "Neuer Projekttyp",
+    className: "flex-1 p-2 border border-slate-300 rounded text-sm"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: addProjType,
+    className: "bg-gea-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-gea-700"
+  }, t('btn.add'))), /*#__PURE__*/React.createElement("ul", {
+    className: "divide-y divide-slate-100"
+  }, (projTypes || []).map(typ => /*#__PURE__*/React.createElement("li", {
+    key: typ,
+    className: "px-4 py-3 flex justify-between items-center text-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-800"
+  }, typ), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setProjTypes(prev => (prev || []).filter(x => x !== typ)),
+    className: "text-rose-500 hover:text-rose-700"
+  }, /*#__PURE__*/React.createElement(IconX, {
+    size: 16
+  })))), (projTypes || []).length === 0 && /*#__PURE__*/React.createElement("li", {
+    className: "p-6 text-sm text-slate-400 text-center"
+  }, "Noch keine Projekttypen definiert.")));
 
   // Separate hardcoded Basic Tasks (no meta) from user-created Other Tasks (with meta).
   const hardcodedBasicTasks = basicTasks.filter(t => !basicTasksMeta?.[t]);
@@ -446,7 +485,10 @@ const SetupCatsView = ({
     size: 16
   })))), projCategories.length === 0 && /*#__PURE__*/React.createElement("li", {
     className: "p-6 text-sm text-slate-400 text-center"
-  }, t('cats.noProjCategories'))))), /*#__PURE__*/React.createElement("div", {
+  }, t('cats.noProjCategories'))))), section('projTypes', 'Projekt-Typen', /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(ProjTypesEditor, {
+    projTypes: projTypes || [],
+    setProjTypes: setProjTypes
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setInactiveOpen(o => !o),

@@ -203,7 +203,18 @@ const ProjectDetailsView = ({
     className: "flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: `w-2 h-2 rounded-full ${resolveProjectColor(proj.color).dot}`
-  }), proj.category), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.startWeek, " \u2013 ", proj.ibnWeek), proj.address && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.address)))), /*#__PURE__*/React.createElement("div", {
+  }), proj.category), proj.projType && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded font-medium"
+  }, proj.projType)), proj.size != null && proj.size !== '' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs bg-sky-50 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded font-medium"
+  }, "Size ", proj.size)), /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.startWeek, " \u2013 ", proj.ibnWeek), proj.address && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("span", null, proj.address)), proj.sharepointLink && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", null, "\xB7"), /*#__PURE__*/React.createElement("a", {
+    href: proj.sharepointLink,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    className: "flex items-center gap-1 text-gea-600 hover:text-gea-700 hover:underline"
+  }, /*#__PURE__*/React.createElement(IconExternalLink, {
+    size: 13
+  }), " SharePoint")))), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 flex-wrap"
   }, /*#__PURE__*/React.createElement(StatusBadge, {
     status: computeAutoStatus(proj),
@@ -242,7 +253,10 @@ const ProjectDetailsView = ({
         country: proj.country || '',
         startWeek: proj.startWeek,
         ibnWeek: proj.ibnWeek,
-        color: resolveProjectColor(proj.color).id
+        color: resolveProjectColor(proj.color).id,
+        projType: proj.projType || '',
+        size: proj.size != null ? String(proj.size) : '',
+        sharepointLink: proj.sharepointLink || ''
       });
       setEditingProjectId(proj.id);
       setIsProjFormOpen(true);
