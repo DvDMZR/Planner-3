@@ -67,6 +67,22 @@ const injectAdmin = (users) => {
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
 
+## v0.88 (2026-06-24)
+
+### Neue Felder & Planung
+- Projektfelder: **Typ** (aus verwaltbarer Liste), **Größe** (Zahl) und **SharePoint-Link** (URL) hinzugefügt.
+- Projekt-Typ-Liste ist unter Verwaltung → Kategorien pflegbar.
+- SharePoint-Link erscheint als Icon in Planung/Projekte und im Projekt-Header.
+- Planung/Projekte zeigt jetzt Name, Typ, Größe und Land pro Zeile.
+
+### Verwaltung/Projekte
+- Suchfeld zum Filtern nach Name, Nummer, Land, Typ und Kategorie.
+- Sortierung nach Name, Typ, Größe, Land, Status und Zeitraum (auf- und absteigend).
+- Titelzeile und "Neues Projekt"-Button bleiben beim Scrollen sichtbar (sticky).
+
+### Navigation
+- "Heute"-Button scrollt die aktuelle Kalenderwoche exakt an den linken Rand (Index-basiert, kein langsames Annähern mehr).
+
 ## v0.87 (2026-05-20)
 
 ### Datensicherheit & Privilege-Escalation
