@@ -306,17 +306,19 @@ const TimelineView = ({ s, h }) => {
                                                 return (
                                                 <tr key={proj.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="p-3 border-b border-slate-200 sticky-col-divider bg-white sticky left-0 z-10 ">
-                                                        <div className="flex items-center gap-1.5 min-w-0">
-                                                            <div className={`w-3 h-3 rounded-full shrink-0 ${pColor.dot}`}></div>
-                                                            <button
-                                                                onClick={() => { setSelectedProjectDetails(proj.id); setActiveTab('setup_proj'); }}
-                                                                className="text-slate-900 font-medium flex-1 min-w-0 text-left truncate hover:text-gea-700 hover:underline transition-colors"
-                                                                title="Projekt-Einstellungen öffnen">
-                                                                {proj.name}
-                                                            </button>
-                                                            <div className="flex items-center gap-1 shrink-0 flex-wrap">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                <div className={`w-3 h-3 rounded-full shrink-0 ${pColor.dot}`}></div>
+                                                                <button
+                                                                    onClick={() => { setSelectedProjectDetails(proj.id); setActiveTab('setup_proj'); }}
+                                                                    className="text-slate-900 font-medium min-w-0 text-left truncate hover:text-gea-700 hover:underline transition-colors"
+                                                                    title="Projekt-Einstellungen öffnen">
+                                                                    {proj.name}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 mt-1 flex-wrap">
                                                                 {proj.projType && <span className="text-[10px] bg-violet-50 text-violet-700 border border-violet-200 px-1 py-0.5 rounded font-medium">{proj.projType}</span>}
-                                                                {proj.size != null && proj.size !== '' && <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1 py-0.5 rounded font-medium">S{proj.size}</span>}
+                                                                {proj.size != null && proj.size !== '' && <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1 py-0.5 rounded font-medium">Größe {proj.size}</span>}
                                                                 <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cc === '??' ? 'bg-rose-50 border-rose-200 text-rose-600' : cc === '/' ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`} title="Land">{cc}</span>
                                                                 {proj.sharepointLink && <a href={proj.sharepointLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-slate-400 hover:text-gea-600 transition-colors" title="SharePoint öffnen"><IconExternalLink size={12}/></a>}
                                                             </div>
