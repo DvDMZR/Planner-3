@@ -492,8 +492,17 @@ const ResourceView = ({
       }
     }
   }, /*#__PURE__*/React.createElement("table", {
-    className: "w-full border-collapse text-sm text-left"
-  }, /*#__PURE__*/React.createElement("thead", {
+    className: "w-full border-collapse text-sm text-left table-fixed"
+  }, /*#__PURE__*/React.createElement("colgroup", null, /*#__PURE__*/React.createElement("col", {
+    style: {
+      width: STICKY_W
+    }
+  }), resourceWeeks.map(w => /*#__PURE__*/React.createElement("col", {
+    key: w.id,
+    style: {
+      width: WEEK_W
+    }
+  }))), /*#__PURE__*/React.createElement("thead", {
     className: "sticky top-0 bg-white z-20 shadow-sm"
   }, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
     className: "border-b border-slate-200 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 "
@@ -512,7 +521,7 @@ const ResourceView = ({
     return /*#__PURE__*/React.createElement("th", {
       key: w.id,
       ref: isCurrent ? currentWeekColRef : null,
-      className: `p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`
+      className: `p-3 border-b-2 border-r border-slate-300 text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`
     }, /*#__PURE__*/React.createElement("div", null, `${t('util.kw')} ${parseInt(w.id.split('-W')[1])}`), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-normal opacity-70"
     }, w.sub), w.holidays.length > 0 && /*#__PURE__*/React.createElement("div", {
@@ -570,7 +579,7 @@ const ResourceView = ({
         const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
         return /*#__PURE__*/React.createElement("td", {
           key: w.id,
-          className: `p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`,
+          className: `p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell overflow-hidden ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`,
           onClick: () => {
             if (!isDeleteMode) {
               setAssignContext({

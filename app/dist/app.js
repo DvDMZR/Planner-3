@@ -84,21 +84,13 @@ function App() {
     if (!container) return;
     const weekEl = currentWeekColRef?.current;
     if (weekEl) {
-      // Each scroll triggers visibleRange → re-render → column-width shift (oscillation).
-      // Re-apply after 2 rAFs until contentLeft is stable (max 8 iterations ≈ 256ms).
-      const settle = (lastCL, attempt) => {
-        const cRect = container.getBoundingClientRect();
-        const wRect = weekEl.getBoundingClientRect();
-        const stickyEl = container.querySelector('thead th:first-child');
-        const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
-        const colW = weekEl.offsetWidth || weekW;
-        const contentLeft = wRect.left - cRect.left + container.scrollLeft;
-        container.scrollLeft = Math.max(0, contentLeft - stickyW - colW);
-        if (attempt < 8 && Math.abs(contentLeft - lastCL) > 2) {
-          requestAnimationFrame(() => requestAnimationFrame(() => settle(contentLeft, attempt + 1)));
-        }
-      };
-      settle(-Infinity, 0);
+      const cRect = container.getBoundingClientRect();
+      const wRect = weekEl.getBoundingClientRect();
+      const stickyEl = container.querySelector('thead th:first-child');
+      const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
+      const colW = weekEl.offsetWidth || weekW;
+      const contentLeft = wRect.left - cRect.left + container.scrollLeft;
+      container.scrollLeft = Math.max(0, contentLeft - stickyW - colW);
       return;
     }
     // Fallback: ref unavailable (wrong year selected, pre-render).
