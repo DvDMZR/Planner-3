@@ -23,7 +23,7 @@ const TRANSLATIONS = {
         'nav.categories':   'Kategorien',
         'nav.systemExport': 'System & Export',
         'nav.history':      'Verlauf',
-        'nav.appTitle':     'Einsatzplanung v0.86',
+        'nav.appTitle':     'Einsatzplanung',
 
         // Auth
         'auth.administrator': 'Administrator',
@@ -481,7 +481,7 @@ const TRANSLATIONS = {
         'nav.categories':   'Categories',
         'nav.systemExport': 'System & Export',
         'nav.history':      'History',
-        'nav.appTitle':     'Deployment Planner v0.86',
+        'nav.appTitle':     'Deployment Planner',
 
         // Auth
         'auth.administrator': 'Administrator',
