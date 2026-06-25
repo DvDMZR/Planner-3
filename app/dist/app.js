@@ -79,18 +79,29 @@ function App() {
   const currentWeekColRef = useRef(null);
   const resourceScrollRef = useRef(null);
   const timelineScrollRef = useRef(null);
-
-  // Scroll current week to the left edge (right after the sticky column).
   const scrollToCurrentWeek = useCallback((containerRef, weeks, weekW) => {
     const container = containerRef?.current;
     if (!container) return;
+    const weekEl = currentWeekColRef?.current;
+    if (weekEl) {
+      // Derive the element's content-position from BoundingClientRect + current scrollLeft.
+      // This is stable across repeated clicks and handles non-uniform column widths
+      // caused by virtualisation spacers (spacer columns stay at min-w, visible columns
+      // with assignment content can be wider).
+      const weekRect = weekEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const contentLeft = weekRect.left - containerRect.left + container.scrollLeft;
+      const stickyEl = container.querySelector('thead th:first-child');
+      const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
+      const colW = weekEl.offsetWidth || weekW;
+      container.scrollLeft = Math.max(0, contentLeft - stickyW - colW);
+      return;
+    }
+    // Fallback: ref unavailable (wrong year selected, pre-render).
     const currentWeek = getWeekString(new Date());
     const idx = weeks ? weeks.findIndex(w => w.id === currentWeek) : -1;
     if (idx < 0) return;
-    // offsetWidth (own element width) is stable; offsetLeft is not reliable for table cells
-    const weekEl = currentWeekColRef?.current;
-    const actualWeekW = weekEl && weekEl.offsetWidth > 0 ? weekEl.offsetWidth : weekW;
-    container.scrollLeft = Math.max(0, (idx - 1) * actualWeekW);
+    container.scrollLeft = Math.max(0, (idx - 1) * weekW);
   }, [currentWeekColRef]);
 
   // Scroll a specific week (by id) into view, just past the sticky column.
