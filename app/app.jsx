@@ -85,12 +85,8 @@ function App() {
         const currentWeek = getWeekString(new Date());
         const idx = weeks.findIndex(w => w.id === currentWeek);
         if (idx < 0) return;
-        // Measure the sticky column so we know how much scroll area is visible
-        const stickyEl = container.querySelector('th:first-child, td.sticky');
-        const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
-        const visibleW = container.clientWidth - stickyW;
-        // Position so current week is at right edge with exactly 1 week remaining to the right
-        container.scrollLeft = Math.max(0, (idx + 2) * weekW - visibleW);
+        // 1 week before current at the left edge, current week is the second visible column
+        container.scrollLeft = Math.max(0, (idx - 1) * weekW);
     }, []);
 
     // Scroll a specific week (by id) into view, just past the sticky column.
@@ -107,7 +103,7 @@ function App() {
     const [empForm, setEmpForm] = useState({ name: '', category: '', weeklyHours: HOURS_PER_WEEK, email: '', role: '', notes: '' });
     const [editingEmpId, setEditingEmpId] = useState(null);
     const [isEmpFormOpen, setIsEmpFormOpen] = useState(false);
-    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', address: '', country: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true, projType: '', size: '', sharepointLink: '' });
+    const [projForm, setProjForm] = useState({ name: '', category: '', projectNumber: '', address: '', country: '', startWeek: '', ibnWeek: '', color: 'gea', hourlyRate: DEFAULT_HOURLY_RATE, billable: true, projType: '', size: '', sharepointLink: '', notes: '' });
     const [editingProjectId, setEditingProjectId] = useState(null);
 
     // Category Forms
@@ -1874,83 +1870,158 @@ function App() {
         if (!proj) return;
         const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
 
+        const fmt2 = n => n.toFixed(2);
+        const cc = resolveCountryCode(proj.country);
         const rows = [];
-        rows.push(["Rechnung für Projekt:", proj.name]);
-        rows.push(["Projektnummer:", proj.projectNumber || '']);
-        if (proj.address) rows.push(["Adresse:", proj.address]);
-        rows.push(["Datum:", new Date().toLocaleDateString('de-DE')]);
+        // ── Project details ─────────────────────────────────────
+        rows.push(["PROJEKTDETAILS"]);
+        rows.push(["Projekt", proj.name]);
+        rows.push(["Projektnummer", proj.projectNumber || '\u2013']);
+        if (proj.address)                           rows.push(["Adresse", proj.address]);
+        if (cc && cc !== '/')                       rows.push(["Land", cc]);
+        if (proj.projType)                          rows.push(["Typ", proj.projType]);
+        if (proj.size != null && proj.size !== '')  rows.push(["Gr\u00f6\u00dfe", proj.size]);
+        if (proj.ibnWeek)                           rows.push(["IBN-Woche", proj.ibnWeek]);
+        if (proj.notes)                             rows.push(["Notizen", proj.notes]);
+        rows.push(["Exportdatum", new Date().toLocaleDateString('de-DE')]);
         rows.push([]);
-        rows.push(["Position", "Mitarbeiter", "Details", "Menge", "Einzelpreis", "Gesamt"]);
 
-        laborLines.forEach(l => {
-            if (!l.included) return;
-            rows.push(["Dienstleistung", l.emp?.name || 'Unbekannt', "Arbeitszeit", `${l.hours} Std.`, `${l.rate} EUR`, `${l.cost.toFixed(2)} EUR`]);
-        });
-        costLines.forEach(({ ci, emp, included }) => {
-            if (!included) return;
-            (ci.lines || []).forEach(l => {
-                const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
-                const desc = [ci.description, l.comment].filter(Boolean).join(' – ');
-                if (l.type === 'hours') {
-                    const hrs = l.hours || 0, rate = l.hourlyRate || 0;
-                    rows.push([cfg.invoiceLabel, emp?.name || 'Unbekannt', desc || 'Arbeitszeit', `${hrs} Std.`, `${rate} EUR`, `${(hrs * rate).toFixed(2)} EUR`]);
-                } else {
-                    const amt = l.amount || 0;
-                    rows.push([cfg.invoiceLabel, emp?.name || 'Unbekannt', desc, "1", `${amt.toFixed(2)} EUR`, `${amt.toFixed(2)} EUR`]);
-                }
+        // ── Labor ───────────────────────────────────────────────
+        const includedLabor = laborLines.filter(l => l.included);
+        if (includedLabor.length > 0) {
+            rows.push(["PERSONALKOSTEN"]);
+            rows.push(["Mitarbeiter", "Stunden", "Stundensatz (EUR/h)", "Betrag (EUR)"]);
+            let laborTotal = 0;
+            includedLabor.forEach(l => {
+                rows.push([l.emp?.name || 'Unbekannt', String(l.hours), String(l.rate), fmt2(l.cost)]);
+                laborTotal += l.cost;
             });
-        });
+            rows.push(["Summe Personalkosten", "", "", fmt2(laborTotal)]);
+            rows.push([]);
+        }
 
-        rows.push([]);
-        rows.push(["", "", "", "", "Gesamt Netto:", `${total.toFixed(2)} EUR`]);
+        // ── Additional costs ────────────────────────────────────
+        const includedCosts = costLines.filter(c => c.included);
+        if (includedCosts.length > 0) {
+            rows.push(["ZUSATZKOSTEN"]);
+            rows.push(["Mitarbeiter", "Typ", "Beschreibung", "Menge", "Einzelpreis (EUR)", "Betrag (EUR)"]);
+            let costsTotal = 0;
+            includedCosts.forEach(({ ci, emp }) => {
+                (ci.lines || []).forEach(l => {
+                    const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                    const desc = [ci.description, l.comment].filter(Boolean).join(' \u2013 ');
+                    if (l.type === 'hours') {
+                        const hrs = l.hours || 0, rate = l.hourlyRate || 0;
+                        rows.push([emp?.name || 'Unbekannt', cfg.invoiceLabel, desc || 'Arbeitszeit', `${hrs} Std.`, String(rate), fmt2(hrs * rate)]);
+                        costsTotal += hrs * rate;
+                    } else {
+                        const amt = l.amount || 0;
+                        rows.push([emp?.name || 'Unbekannt', cfg.invoiceLabel, desc || '\u2013', "1", fmt2(amt), fmt2(amt)]);
+                        costsTotal += amt;
+                    }
+                });
+            });
+            rows.push(["Summe Zusatzkosten", "", "", "", "", fmt2(costsTotal)]);
+            rows.push([]);
+        }
 
-        const csvContent = "\uFEFF" + rows.map(e => e.join(";")).join("\n");
-        const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+        // ── Total ───────────────────────────────────────────────
+        rows.push(["GESAMT NETTO (EUR)", fmt2(total)]);
+
+        const csvContent = "\uFEFF" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `Rechnung_${proj.name.replace(/\s+/g, '_')}.csv`);
+        link.href = url;
+        link.download = `Rechnung_${proj.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
-        setIsInvoiceModalOpen(false);
-        setProjects(prev => prev.map(p => p.id === selectedProjectDetails ? {...p, invoiceStatus: 'exportiert'} : p));
+                setProjects(prev => prev.map(p => p.id === selectedProjectDetails ? {...p, invoiceStatus: 'exportiert'} : p));
     };
 
     const handleInvoiceSendEmail = () => {
         const proj = projectById.get(selectedProjectDetails);
         if (!proj) return;
         const { laborLines, costLines, total } = buildInvoiceData(proj, invoiceSelection);
-        const rows = [];
-        laborLines.forEach(l => {
-            if (!l.included) return;
-            rows.push(`  - ${l.emp?.name || 'Unbekannt'}: ${l.hours} Std. x ${l.rate} EUR/h = ${l.cost.toFixed(2)} EUR`);
-        });
-        costLines.forEach(({ ci, included }) => {
-            if (!included) return;
-            (ci.lines || []).forEach(l => {
-                const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
-                const desc = [ci.description, l.comment].filter(Boolean).join(' – ');
-                const detail = desc ? ` (${desc})` : '';
-                if (l.type === 'hours') {
-                    const hrs = l.hours || 0, rate = l.hourlyRate || 0;
-                    rows.push(`  - ${cfg.invoiceLabel}${detail}: ${hrs} Std. x ${rate} EUR/h = ${(hrs * rate).toFixed(2)} EUR`);
-                } else {
-                    rows.push(`  - ${cfg.invoiceLabel}${detail}: ${(l.amount || 0).toFixed(2)} EUR`);
-                }
-            });
-        });
+        const fmt2 = n => n.toFixed(2);
+        const cc = resolveCountryCode(proj.country);
+        const sep = '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
 
-        const subject = encodeURIComponent(`Rechnung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
-        const body = encodeURIComponent(
-            `Guten Tag,\n\nanbei sende ich die Rechnung fuer folgendes Projekt:\n\n` +
-            `Projekt: ${proj.name}\n` +
-            `Projektnummer: ${proj.projectNumber || '-'}\n` +
-            `Datum: ${new Date().toLocaleDateString('de-DE')}\n\n` +
-            `Positionen:\n${rows.join('\n')}\n\n` +
-            `Gesamtsumme (Netto): ${total.toFixed(2)} EUR\n\n` +
-            `Mit freundlichen Gruessen`
-        );
+        const lines = [];
+        lines.push('Guten Tag,');
+        lines.push('');
+        lines.push(`anbei die Kostenaufstellung fuer Projekt "${proj.name}".`);
+        lines.push('');
+
+        // Project details
+        lines.push(sep);
+        lines.push('PROJEKTDETAILS');
+        lines.push(sep);
+        lines.push(`Projekt:       ${proj.name}`);
+        lines.push(`Projektnummer: ${proj.projectNumber || '-'}`);
+        if (proj.address) lines.push(`Adresse:       ${proj.address}`);
+        if (cc && cc !== '/') lines.push(`Land:          ${cc}`);
+        if (proj.projType) lines.push(`Typ:           ${proj.projType}`);
+        if (proj.size != null && proj.size !== '') lines.push(`Groesse:       ${proj.size}`);
+        if (proj.ibnWeek) lines.push(`IBN-Woche:     ${proj.ibnWeek}`);
+        if (proj.notes) { lines.push(''); lines.push(`Notizen: ${proj.notes}`); }
+        lines.push(`Datum:         ${new Date().toLocaleDateString('de-DE')}`);
+        lines.push('');
+
+        // Labor
+        const includedLabor = laborLines.filter(l => l.included);
+        if (includedLabor.length > 0) {
+            lines.push(sep);
+            lines.push('PERSONALKOSTEN');
+            lines.push(sep);
+            let laborTotal = 0;
+            includedLabor.forEach(l => {
+                lines.push(`  ${l.emp?.name || 'Unbekannt'}: ${l.hours} Std. x ${l.rate} EUR/h = ${fmt2(l.cost)} EUR`);
+                laborTotal += l.cost;
+            });
+            lines.push(`  Summe: ${fmt2(laborTotal)} EUR`);
+            lines.push('');
+        }
+
+        // Additional costs
+        const includedCosts = costLines.filter(c => c.included);
+        if (includedCosts.length > 0) {
+            lines.push(sep);
+            lines.push('ZUSATZKOSTEN');
+            lines.push(sep);
+            let costsTotal = 0;
+            includedCosts.forEach(({ ci, emp }) => {
+                (ci.lines || []).forEach(l => {
+                    const cfg = COST_LINE_TYPES[l.type] || COST_LINE_TYPES.other;
+                    const desc = [ci.description, l.comment].filter(Boolean).join(' - ');
+                    const detail = desc ? ` (${desc})` : '';
+                    if (l.type === 'hours') {
+                        const hrs = l.hours || 0, rate = l.hourlyRate || 0;
+                        lines.push(`  ${emp?.name || 'Unbekannt'} - ${cfg.invoiceLabel}${detail}: ${hrs} Std. x ${rate} EUR/h = ${fmt2(hrs * rate)} EUR`);
+                        costsTotal += hrs * rate;
+                    } else {
+                        const amt = l.amount || 0;
+                        lines.push(`  ${emp?.name || 'Unbekannt'} - ${cfg.invoiceLabel}${detail}: ${fmt2(amt)} EUR`);
+                        costsTotal += amt;
+                    }
+                });
+            });
+            lines.push(`  Summe: ${fmt2(costsTotal)} EUR`);
+            lines.push('');
+        }
+
+        // Total
+        lines.push(sep);
+        lines.push(`GESAMT NETTO: ${fmt2(total)} EUR`);
+        lines.push(sep);
+        lines.push('');
+        lines.push('Mit freundlichen Gruessen');
+
+        const subject = encodeURIComponent(`Kostenaufstellung: ${proj.name} - ${new Date().toLocaleDateString('de-DE')}`);
+        const body = encodeURIComponent(lines.join('\n'));
         window.location.href = `mailto:${encodeURIComponent(invoiceRecipient)}?subject=${subject}&body=${body}`;
     };
 
@@ -1961,7 +2032,7 @@ function App() {
         const isEditing = !!editingProjectId;
         const emptyForm = () => {
             const nextColorId = PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id;
-            return { name: '', category: projCategories[0] || '', projectNumber: '', address: '', country: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: nextColorId, projType: '', size: '', sharepointLink: '' };
+            return { name: '', category: projCategories[0] || '', projectNumber: '', address: '', country: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: nextColorId, projType: '', size: '', sharepointLink: '', notes: '' };
         };
         const save = () => {
             if (!projForm.name.trim()) return;
@@ -2053,6 +2124,10 @@ function App() {
                             <div className="col-span-2">
                                 <label className="block text-xs text-slate-700 mb-1 font-semibold">SharePoint / Projektlink</label>
                                 <input type="url" value={projForm.sharepointLink || ''} onChange={e => setProjForm({...projForm, sharepointLink: e.target.value})} placeholder="https://..." className="w-full p-2 border border-slate-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"/>
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-xs text-slate-700 mb-1 font-semibold">Notizen</label>
+                                <textarea rows={3} value={projForm.notes || ''} onChange={e => setProjForm({...projForm, notes: e.target.value})} placeholder="Interne Hinweise, Besonderheiten …" className="w-full p-2 border border-slate-400 rounded text-sm resize-y focus:outline-none focus:ring-2 focus:ring-gea-400 focus:border-gea-500"/>
                             </div>
                         </div>
                         <div>

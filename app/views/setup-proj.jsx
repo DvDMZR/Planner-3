@@ -41,7 +41,7 @@ const SetupProjView = ({ s, h }) => {
         }
 
         const handleEditProject = (p) => {
-            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', address: p.address || '', country: p.country || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: resolveProjectColor(p.color).id, projType: p.projType || '', size: p.size != null ? String(p.size) : '', sharepointLink: p.sharepointLink || '' });
+            setProjForm({ name: p.name, category: p.category || projCategories[0] || '', projectNumber: p.projectNumber || '', address: p.address || '', country: p.country || '', startWeek: p.startWeek, ibnWeek: p.ibnWeek, color: resolveProjectColor(p.color).id, projType: p.projType || '', size: p.size != null ? String(p.size) : '', sharepointLink: p.sharepointLink || '', notes: p.notes || '' });
             setEditingProjectId(p.id);
             setIsProjFormOpen(true);
         };
@@ -179,7 +179,7 @@ const SetupProjView = ({ s, h }) => {
                                 <button
                                     onClick={() => {
                                         setEditingProjectId(null);
-                                        setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', address: '', country: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id, projType: '', size: '', sharepointLink: '' });
+                                        setProjForm({ name: '', category: projCategories[0] || '', projectNumber: '', address: '', country: '', startWeek: weeks[0]?.id || '', ibnWeek: weeks[10]?.id || '', color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id, projType: '', size: '', sharepointLink: '', notes: '' });
                                         setIsProjFormOpen(true);
                                     }}
                                     className="flex items-center gap-2 bg-gea-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gea-700 transition-colors shadow-sm shrink-0">

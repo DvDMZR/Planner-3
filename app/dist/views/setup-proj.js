@@ -154,7 +154,8 @@ const SetupProjView = ({
       color: resolveProjectColor(p.color).id,
       projType: p.projType || '',
       size: p.size != null ? String(p.size) : '',
-      sharepointLink: p.sharepointLink || ''
+      sharepointLink: p.sharepointLink || '',
+      notes: p.notes || ''
     });
     setEditingProjectId(p.id);
     setIsProjFormOpen(true);
@@ -388,7 +389,8 @@ const SetupProjView = ({
         color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length].id,
         projType: '',
         size: '',
-        sharepointLink: ''
+        sharepointLink: '',
+        notes: ''
       });
       setIsProjFormOpen(true);
     },

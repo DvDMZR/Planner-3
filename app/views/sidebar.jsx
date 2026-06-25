@@ -86,7 +86,7 @@ const _SidebarBase = ({ s, h }) => {
                     <div className="flex items-center gap-1.5">
                         <button onClick={() => setIsChangelogOpen(true)} className="flex items-center gap-1.5 text-gea-300 hover:text-white transition-colors group">
                             <span className="text-xs font-medium">{t('nav.appTitle')}</span>
-                            <span className="changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/></span>
+                            <span className="changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"><IconHistory size={12}/> {APP_VERSION}</span>
                         </button>
                     </div>
                 </div>
