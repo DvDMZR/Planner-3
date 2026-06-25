@@ -595,21 +595,21 @@ const CHANGELOG_CONTENT = `# Changelog
 // braces are substituted at send time. Conditional blocks
 // {{#comment}}…{{/comment}} render only when the variable is non-empty.
 const DEFAULT_EMAIL_TEMPLATE = {
-    subject: 'New assignment: {refLabel} ({weekRange})',
+    subject: 'Neue Planung: {refLabel} ({weekRange})',
     body: [
-        'Hi {firstName},',
+        'Hallo {firstName},',
         '',
-        'You have been scheduled for the following work:',
+        'du wurdest für folgenden Einsatz eingeplant:',
         '',
         '  {typeLabel}: {refLabel}',
-        '  Calendar week: {weekRange}',
-        '{{#comment}}  Note: {comment}{{/comment}}',
+        '  Kalenderwoche: {weekRange}',
+        '{{#comment}}  Hinweis: {comment}{{/comment}}',
         '{{#attachmentNote}}',
         '{attachmentNote}{{/attachmentNote}}',
         '',
-        'Please review the entry in the planner and let me know if there are any conflicts or questions.',
+        'Bitte prüfe den Eintrag im Planner und melde dich bei Fragen oder Terminkonflikten.',
         '',
-        'Best regards',
+        'Viele Grüße',
     ].join('\n'),
 };
 
