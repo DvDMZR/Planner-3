@@ -83,42 +83,30 @@ function App() {
     const container = containerRef?.current;
     if (!container) return;
     const weekEl = currentWeekColRef?.current;
-    const snap = label => {
-      const stickyEl = container.querySelector('thead th:first-child');
-      const weekRect = weekEl ? weekEl.getBoundingClientRect() : null;
-      const cRect = container.getBoundingClientRect();
-      return {
-        label,
-        scrollLeft: container.scrollLeft,
-        stickyW: stickyEl ? stickyEl.offsetWidth : '?',
-        weekOffsetW: weekEl ? weekEl.offsetWidth : '?',
-        weekLeft_rect: weekRect ? +(weekRect.left - cRect.left).toFixed(1) : '?',
-        contentLeft: weekRect ? +(weekRect.left - cRect.left + container.scrollLeft).toFixed(1) : '?'
-      };
-    };
     if (weekEl) {
-      const before = snap('BEFORE');
-      console.table([before]);
-      const containerRect = container.getBoundingClientRect();
-      const weekRect = weekEl.getBoundingClientRect();
-      const contentLeft = weekRect.left - containerRect.left + container.scrollLeft;
-      const stickyEl = container.querySelector('thead th:first-child');
-      const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
-      const colW = weekEl.offsetWidth || weekW;
-      const target = Math.max(0, contentLeft - stickyW - colW);
-      console.log(`[scroll] target=${target.toFixed(1)}  (contentLeft=${contentLeft.toFixed(1)} - stickyW=${stickyW} - colW=${colW})`);
-      container.scrollLeft = target;
+      const measure = () => {
+        const cRect = container.getBoundingClientRect();
+        const wRect = weekEl.getBoundingClientRect();
+        const stickyEl = container.querySelector('thead th:first-child');
+        const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
+        const colW = weekEl.offsetWidth || weekW;
+        const contentLeft = wRect.left - cRect.left + container.scrollLeft;
+        return {
+          contentLeft,
+          stickyW,
+          colW,
+          target: Math.max(0, contentLeft - stickyW - colW)
+        };
+      };
+      const m1 = measure();
+      console.log(`CLICK  sl=${container.scrollLeft.toFixed(0)}  cL=${m1.contentLeft.toFixed(1)}  colW=${m1.colW}  sW=${m1.stickyW}  →target=${m1.target.toFixed(1)}`);
+      container.scrollLeft = m1.target;
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        const after = snap('AFTER 2rAF');
-        console.table([after]);
-        const drift = container.scrollLeft - target;
-        if (Math.abs(drift) > 1) console.warn(`[scroll] BROWSER DRIFT: scrollLeft moved ${drift.toFixed(1)}px after set`);
-        const newCL = weekEl.getBoundingClientRect().left - container.getBoundingClientRect().left + container.scrollLeft;
-        if (Math.abs(newCL - contentLeft) > 1) console.warn(`[scroll] LAYOUT SHIFT: contentLeft ${contentLeft.toFixed(1)} → ${newCL.toFixed(1)} (Δ=${+(newCL - contentLeft).toFixed(1)})`);
+        const m2 = measure();
+        console.log(`2rAF   sl=${container.scrollLeft.toFixed(0)}  cL=${m2.contentLeft.toFixed(1)}  shift=${(m2.contentLeft - m1.contentLeft).toFixed(1)}  colW=${m2.colW}`);
       }));
       return;
     }
-    console.warn('[scroll] weekEl ref is NULL — using idx fallback');
     // Fallback: ref unavailable (wrong year selected, pre-render).
     const currentWeek = getWeekString(new Date());
     const idx = weeks ? weeks.findIndex(w => w.id === currentWeek) : -1;
