@@ -84,27 +84,21 @@ function App() {
     if (!container) return;
     const weekEl = currentWeekColRef?.current;
     if (weekEl) {
-      const measure = () => {
+      // Each scroll triggers visibleRange → re-render → column-width shift (oscillation).
+      // Re-apply after 2 rAFs until contentLeft is stable (max 8 iterations ≈ 256ms).
+      const settle = (lastCL, attempt) => {
         const cRect = container.getBoundingClientRect();
         const wRect = weekEl.getBoundingClientRect();
         const stickyEl = container.querySelector('thead th:first-child');
         const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
         const colW = weekEl.offsetWidth || weekW;
         const contentLeft = wRect.left - cRect.left + container.scrollLeft;
-        return {
-          contentLeft,
-          stickyW,
-          colW,
-          target: Math.max(0, contentLeft - stickyW - colW)
-        };
+        container.scrollLeft = Math.max(0, contentLeft - stickyW - colW);
+        if (attempt < 8 && Math.abs(contentLeft - lastCL) > 2) {
+          requestAnimationFrame(() => requestAnimationFrame(() => settle(contentLeft, attempt + 1)));
+        }
       };
-      const m1 = measure();
-      console.log(`CLICK  sl=${container.scrollLeft.toFixed(0)}  cL=${m1.contentLeft.toFixed(1)}  colW=${m1.colW}  sW=${m1.stickyW}  →target=${m1.target.toFixed(1)}`);
-      container.scrollLeft = m1.target;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const m2 = measure();
-        console.log(`2rAF   sl=${container.scrollLeft.toFixed(0)}  cL=${m2.contentLeft.toFixed(1)}  shift=${(m2.contentLeft - m1.contentLeft).toFixed(1)}  colW=${m2.colW}`);
-      }));
+      settle(-Infinity, 0);
       return;
     }
     // Fallback: ref unavailable (wrong year selected, pre-render).
