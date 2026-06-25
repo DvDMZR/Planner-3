@@ -1,4 +1,5 @@
 // ─── TEAM-SPLIT FILE LAYOUT ───────────────────────────────────────────────────
+const APP_VERSION = 'v0.89';
 const DEFAULT_TEAMS = ['AS', 'CMS', 'CSS', 'HM', 'I&C', 'Other'];
 const PLANNER_DATA_DIR = 'planner-data';
 const SCHEMA_VERSION = 4;
@@ -66,6 +67,20 @@ const injectAdmin = (users) => {
 
 // --- CHANGELOG ---
 const CHANGELOG_CONTENT = `# Changelog
+
+## v0.89 (2026-06-25)
+
+### UI / Allgemein
+- Versionsnummer jetzt im Sidebar-Header sichtbar (Changelog-Badge).
+- "Heute"-Button zeigt die aktuelle KW ganz links, eine Woche davor ist sichtbar.
+
+### Projekte
+- Neues Feld **Notizen** im Projekt-Formular (interner Freitext).
+- Notizen erscheinen im Kostenexport (CSV und E-Mail).
+
+### Kostenexport
+- CSV strukturiert in Abschnitte: Projektdetails, Personalkosten (pro MA), Zusatzkosten (pro MA + Typ), Gesamtsumme.
+- E-Mail-Text analog strukturiert mit Trennlinien und Summen je Abschnitt.
 
 ## v0.88 (2026-06-24)
 

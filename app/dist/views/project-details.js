@@ -256,7 +256,8 @@ const ProjectDetailsView = ({
         color: resolveProjectColor(proj.color).id,
         projType: proj.projType || '',
         size: proj.size != null ? String(proj.size) : '',
-        sharepointLink: proj.sharepointLink || ''
+        sharepointLink: proj.sharepointLink || '',
+        notes: proj.notes || ''
       });
       setEditingProjectId(proj.id);
       setIsProjFormOpen(true);

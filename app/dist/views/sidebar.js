@@ -207,7 +207,7 @@ const _SidebarBase = ({
     className: "changelog-glow bg-gea-700 group-hover:bg-gea-600 text-gea-300 group-hover:text-white text-xs px-1.5 py-0.5 rounded transition-colors flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(IconHistory, {
     size: 12
-  })))))), /*#__PURE__*/React.createElement("nav", {
+  }), " ", APP_VERSION))))), /*#__PURE__*/React.createElement("nav", {
     className: "flex-1 py-4 space-y-0.5 px-3 overflow-y-auto"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gea-500 uppercase tracking-wider mb-2 px-3 mt-4 font-semibold"

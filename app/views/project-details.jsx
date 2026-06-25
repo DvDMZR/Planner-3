@@ -114,7 +114,7 @@ const ProjectDetailsView = ({ s, h }) => {
                             <span className="text-sm font-medium text-slate-700">{t('projDetail.costsSubmitted')}</span>
                         </label>
                         <button onClick={() => {
-                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', country: proj.country || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id, projType: proj.projType || '', size: proj.size != null ? String(proj.size) : '', sharepointLink: proj.sharepointLink || '' });
+                            setProjForm({ name: proj.name, category: proj.category || projCategories[0] || '', projectNumber: proj.projectNumber || '', address: proj.address || '', country: proj.country || '', startWeek: proj.startWeek, ibnWeek: proj.ibnWeek, color: resolveProjectColor(proj.color).id, projType: proj.projType || '', size: proj.size != null ? String(proj.size) : '', sharepointLink: proj.sharepointLink || '', notes: proj.notes || '' });
                             setEditingProjectId(proj.id);
                             setIsProjFormOpen(true);
                         }} className="bg-white border border-slate-300 hover:bg-gea-50 hover:border-gea-400 text-slate-700 px-3 py-2 rounded-lg text-sm flex items-center gap-2 font-medium transition-colors">
