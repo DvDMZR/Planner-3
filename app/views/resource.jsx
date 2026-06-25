@@ -36,7 +36,7 @@ const ResourceView = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
-        const WEEK_W = 182;
+        const WEEK_W = 200;
         const STICKY_W = 288; // matches w-72
 
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
