@@ -85,7 +85,12 @@ function App() {
         const currentWeek = getWeekString(new Date());
         const idx = weeks.findIndex(w => w.id === currentWeek);
         if (idx < 0) return;
-        container.scrollLeft = idx * weekW;
+        // Measure the sticky column so we know how much scroll area is visible
+        const stickyEl = container.querySelector('th:first-child, td.sticky');
+        const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
+        const visibleW = container.clientWidth - stickyW;
+        // Position so current week is at right edge with exactly 1 week remaining to the right
+        container.scrollLeft = Math.max(0, (idx + 2) * weekW - visibleW);
     }, []);
 
     // Scroll a specific week (by id) into view, just past the sticky column.
