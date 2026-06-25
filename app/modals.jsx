@@ -203,7 +203,7 @@ const AssignmentModal = ({
         if (!empEmail) return;
         const filename = downloadIcs(data, lastWeek);
         const note = filename
-            ? `An Outlook calendar entry (${filename}) has been generated — please attach it to this email or open it directly in Outlook to send the invite.`
+            ? `Ein Outlook-Kalendereintrag (${filename}) wurde erstellt – bitte hänge ihn an diese E-Mail an oder öffne ihn direkt in Outlook, um die Einladung zu versenden.`
             : null;
         const { subject, body } = buildEmailDraft(data, lastWeek, note);
         const url = `mailto:${encodeURIComponent(empEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
