@@ -343,7 +343,11 @@ const ResourceView = ({ s, h }) => {
                         if (e.key === 'PageUp')     { e.preventDefault(); scrollWeeks(-4); }
                         if (e.key === 'PageDown')   { e.preventDefault(); scrollWeeks(4); }
                     }}>
-                    <table className="w-full border-collapse text-sm text-left">
+                    <table className="w-full border-collapse text-sm text-left table-fixed">
+                        <colgroup>
+                            <col style={{width: STICKY_W}}/>
+                            {resourceWeeks.map(w => <col key={w.id} style={{width: WEEK_W}}/>)}
+                        </colgroup>
                         <thead className="sticky top-0 bg-white z-20 shadow-sm">
                             <tr>
                                 <th className="border-b border-slate-200 sticky-col-divider w-72 bg-slate-50 sticky left-0 z-30 "></th>
@@ -365,7 +369,7 @@ const ResourceView = ({ s, h }) => {
                                     const isPast = w.id < currentWeek;
                                     return (
                                         <th key={w.id} ref={isCurrent ? currentWeekColRef : null}
-                                            className={`p-3 border-b-2 border-r border-slate-300 min-w-[140px] text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
+                                            className={`p-3 border-b-2 border-r border-slate-300 text-center font-medium ${isCurrent ? 'bg-gea-100 text-gea-800 border-b-gea-500' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
                                             <div>{`${t('util.kw')} ${parseInt(w.id.split('-W')[1])}`}</div>
                                             <div className="text-[10px] font-normal opacity-70">{w.sub}</div>
                                             {w.holidays.length > 0 && <div className="text-[9px] font-semibold text-amber-600 leading-tight mt-0.5 truncate" title={w.holidays.join(' · ')}>{w.holidays.join(' · ')}</div>}
@@ -412,7 +416,7 @@ const ResourceView = ({ s, h }) => {
                                                     const cellBg = isOfftime ? 'bg-slate-50 diagonal-stripes' : wAss.length === 0 ? 'bg-emerald-50/40' : isOverbooked ? 'bg-rose-50' : total >= 80 ? 'bg-amber-50' : 'bg-emerald-50/60';
                                                     return (
                                                         <td key={w.id}
-                                                            className={`p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`}
+                                                            className={`p-1.5 border-b border-r border-slate-300 relative transition-colors group/cell overflow-hidden ${isDeleteMode ? 'bg-rose-50/20' : 'cursor-pointer hover:bg-gea-50/30'} ${cellBg} ${w.id === currentWeek ? 'bg-gea-50/50 border-l border-l-gea-300 border-r-gea-300' : ''} ${w.id < currentWeek ? 'opacity-60' : ''}`}
                                                             onClick={() => { if (!isDeleteMode) { setAssignContext({ empId: emp.id, week: w.id }); setIsAssignModalOpen(true); } }}
                                                             onDragOver={e => { if (!isDeleteMode) e.preventDefault(); }}
                                                             onDrop={e => { if (!isDeleteMode) handleDrop(e, w.id, emp.id, true); }}>
