@@ -81,27 +81,16 @@ function App() {
   const timelineScrollRef = useRef(null);
 
   // Scroll current week to the left edge (right after the sticky column).
-  // Uses index-based positioning so the result is exact regardless of the
-  // current scroll position or whether the column is virtualised off-screen.
   const scrollToCurrentWeek = useCallback((containerRef, weeks, weekW) => {
     const container = containerRef?.current;
     if (!container) return;
-    // Prefer actual DOM measurements from the current-week column header ref
-    const weekEl = currentWeekColRef?.current;
-    if (weekEl) {
-      const stickyEl = container.querySelector('th:first-child');
-      const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
-      const actualWeekW = weekEl.offsetWidth || weekW;
-      // Current week as 2nd visible column: 1 week of prev-week visible to the left
-      container.scrollLeft = Math.max(0, weekEl.offsetLeft - stickyW - actualWeekW);
-      return;
-    }
-    // Fallback: index-based (used before the table has rendered)
-    if (!weeks) return;
     const currentWeek = getWeekString(new Date());
-    const idx = weeks.findIndex(w => w.id === currentWeek);
+    const idx = weeks ? weeks.findIndex(w => w.id === currentWeek) : -1;
     if (idx < 0) return;
-    container.scrollLeft = Math.max(0, (idx - 1) * weekW);
+    // offsetWidth (own element width) is stable; offsetLeft is not reliable for table cells
+    const weekEl = currentWeekColRef?.current;
+    const actualWeekW = weekEl && weekEl.offsetWidth > 0 ? weekEl.offsetWidth : weekW;
+    container.scrollLeft = Math.max(0, (idx - 1) * actualWeekW);
   }, [currentWeekColRef]);
 
   // Scroll a specific week (by id) into view, just past the sticky column.
