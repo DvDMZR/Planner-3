@@ -80,20 +80,47 @@ function App() {
         const container = containerRef?.current;
         if (!container) return;
         const weekEl = currentWeekColRef?.current;
+
+        const snap = (label) => {
+            const stickyEl = container.querySelector('thead th:first-child');
+            const weekRect  = weekEl ? weekEl.getBoundingClientRect() : null;
+            const cRect     = container.getBoundingClientRect();
+            return {
+                label,
+                scrollLeft:     container.scrollLeft,
+                stickyW:        stickyEl ? stickyEl.offsetWidth : '?',
+                weekOffsetW:    weekEl ? weekEl.offsetWidth : '?',
+                weekLeft_rect:  weekRect ? +(weekRect.left - cRect.left).toFixed(1) : '?',
+                contentLeft:    weekRect ? +((weekRect.left - cRect.left) + container.scrollLeft).toFixed(1) : '?',
+            };
+        };
+
         if (weekEl) {
-            // Derive the element's content-position from BoundingClientRect + current scrollLeft.
-            // This is stable across repeated clicks and handles non-uniform column widths
-            // caused by virtualisation spacers (spacer columns stay at min-w, visible columns
-            // with assignment content can be wider).
-            const weekRect = weekEl.getBoundingClientRect();
+            const before = snap('BEFORE');
+            console.table([before]);
+
             const containerRect = container.getBoundingClientRect();
+            const weekRect = weekEl.getBoundingClientRect();
             const contentLeft = weekRect.left - containerRect.left + container.scrollLeft;
             const stickyEl = container.querySelector('thead th:first-child');
             const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
             const colW = weekEl.offsetWidth || weekW;
-            container.scrollLeft = Math.max(0, contentLeft - stickyW - colW);
+            const target = Math.max(0, contentLeft - stickyW - colW);
+            console.log(`[scroll] target=${target.toFixed(1)}  (contentLeft=${contentLeft.toFixed(1)} - stickyW=${stickyW} - colW=${colW})`);
+            container.scrollLeft = target;
+
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const after = snap('AFTER 2rAF');
+                console.table([after]);
+                const drift = container.scrollLeft - target;
+                if (Math.abs(drift) > 1) console.warn(`[scroll] BROWSER DRIFT: scrollLeft moved ${drift.toFixed(1)}px after set`);
+                const newCL = (weekEl.getBoundingClientRect().left - container.getBoundingClientRect().left) + container.scrollLeft;
+                if (Math.abs(newCL - contentLeft) > 1) console.warn(`[scroll] LAYOUT SHIFT: contentLeft ${contentLeft.toFixed(1)} → ${newCL.toFixed(1)} (Δ=${+(newCL-contentLeft).toFixed(1)})`);
+            }));
             return;
         }
+
+        console.warn('[scroll] weekEl ref is NULL — using idx fallback');
         // Fallback: ref unavailable (wrong year selected, pre-render).
         const currentWeek = getWeekString(new Date());
         const idx = weeks ? weeks.findIndex(w => w.id === currentWeek) : -1;
