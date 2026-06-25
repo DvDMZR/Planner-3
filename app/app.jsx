@@ -81,13 +81,24 @@ function App() {
     // current scroll position or whether the column is virtualised off-screen.
     const scrollToCurrentWeek = useCallback((containerRef, weeks, weekW) => {
         const container = containerRef?.current;
-        if (!container || !weeks) return;
+        if (!container) return;
+        // Prefer actual DOM measurements from the current-week column header ref
+        const weekEl = currentWeekColRef?.current;
+        if (weekEl) {
+            const stickyEl = container.querySelector('th:first-child');
+            const stickyW = stickyEl ? stickyEl.offsetWidth : 0;
+            const actualWeekW = weekEl.offsetWidth || weekW;
+            // Current week as 2nd visible column: 1 week of prev-week visible to the left
+            container.scrollLeft = Math.max(0, weekEl.offsetLeft - stickyW - actualWeekW);
+            return;
+        }
+        // Fallback: index-based (used before the table has rendered)
+        if (!weeks) return;
         const currentWeek = getWeekString(new Date());
         const idx = weeks.findIndex(w => w.id === currentWeek);
         if (idx < 0) return;
-        // 1 week before current at the left edge, current week is the second visible column
         container.scrollLeft = Math.max(0, (idx - 1) * weekW);
-    }, []);
+    }, [currentWeekColRef]);
 
     // Scroll a specific week (by id) into view, just past the sticky column.
     // Used by the Auslastung-cell → Ressourcen jump.
