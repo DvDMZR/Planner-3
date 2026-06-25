@@ -136,7 +136,7 @@ const ResourceView = ({
     openInvoiceModal,
     scrollToCurrentWeek
   } = h;
-  const WEEK_W = 140; // matches min-w-[140px]
+  const WEEK_W = 182;
   const STICKY_W = 288; // matches w-72
 
   const [scrollInfo, setScrollInfo] = React.useState({
