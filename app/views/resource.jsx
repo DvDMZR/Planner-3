@@ -36,7 +36,7 @@ const ResourceView = ({ s, h }) => {
         handleSaveAssignment, handleDeleteAssignment, handleDeleteAssignmentSeries,
         handleDrop, exportData, importData, buildInvoiceData, openInvoiceModal,
         scrollToCurrentWeek } = h;
-        const WEEK_W = 200;
+        const WEEK_W = 220;
         const STICKY_W = 288; // matches w-72
 
         const [scrollInfo, setScrollInfo] = React.useState({ progress: 0, label: '' });
@@ -435,7 +435,7 @@ const ResourceView = ({ s, h }) => {
 
                                                                     if (a.type === 'project') {
                                                                         const p = projectById.get(a.reference);
-                                                                        label = p ? p.name : t('resource.unknown');
+                                                                        label = p ? [p.projType, p.size, p.name].filter(Boolean).join(' ') : t('resource.unknown');
                                                                         if (p) {
                                                                             const pc = resolveProjectColor(p.color);
                                                                             color = pc.chip;

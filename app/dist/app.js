@@ -1557,7 +1557,7 @@ function App() {
   useEffect(() => {
     if (activeTab === 'resource') {
       if (scrollTarget?.weekId) return; // ResourceView handles it
-      const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, timelineWeeks, 200), 80);
+      const timer = setTimeout(() => scrollToCurrentWeek(resourceScrollRef, timelineWeeks, 220), 80);
       return () => clearTimeout(timer);
     }
     if (activeTab === 'project') {
